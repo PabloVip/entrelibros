@@ -88,7 +88,10 @@ h2 { margin-top: 48px; font-size: clamp(1.35rem, 1.15rem + .8vw, 1.8rem); }
 
 .shelf { position: relative; display: flex; align-items: flex-end; justify-content: center; gap: 0; height: 380px; padding: 0 8px; }
 .shelf::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 18px; background: linear-gradient(#9C6A42, var(--madera)); border-radius: 3px 3px 0 0; box-shadow: 0 -2px 0 rgba(0, 0, 0, .15) inset; }
-.books { display: flex; align-items: flex-end; height: calc(100% - 18px); margin-bottom: 18px; }
+.books { display: flex; align-items: flex-end; height: calc(100% - 18px); margin-bottom: 18px; flex: 1 1 0; min-width: 0; overflow: hidden; }
+.books-left { justify-content: flex-end; }
+.books-right { justify-content: flex-start; padding-left: 12px; }
+.book { flex: none; }
 .book { width: 26px; height: 78%; border-radius: 3px 3px 0 0; margin-right: 2px; position: relative; background: var(--lomo-1); }
 .book::before, .book::after { content: ""; position: absolute; left: 4px; right: 4px; height: 3px; background: rgba(255, 255, 255, .28); }
 .book::before { top: 14%; } .book::after { top: 19%; }
@@ -98,9 +101,9 @@ h2 { margin-top: 48px; font-size: clamp(1.35rem, 1.15rem + .8vw, 1.8rem); }
 .book:nth-child(6n+5) { background: var(--lomo-5); height: 82%; width: 20px; }
 .book:nth-child(6n+6) { background: var(--lomo-6); height: 74%; width: 28px; }
 .book.leaning { transform: rotate(-8deg); transform-origin: bottom left; margin-left: 10px; }
-.nook { margin: 0 6px 18px; width: 250px; height: calc(100% - 26px); border-radius: 4px 4px 0 0; overflow: hidden; background: #0E1320;
+.nook { flex: none; margin: 0 6px 18px; width: 250px; height: calc(100% - 26px); border-radius: 4px 4px 0 0; overflow: hidden; background: #0E1320;
         box-shadow: 0 0 0 6px #2B2118, 0 0 60px 6px rgba(244, 185, 66, .35); animation: encender 1.6s .3s both ease-out; }
-.nook img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.nook img { width: 100%; height: 100%; object-fit: cover; display: block; transform: scale(1.4); transform-origin: 55% 60%; } /* la imagen ya es un book nook: se amplía para que el hueco muestre la escena */
 @keyframes encender {
   from { filter: brightness(.35) saturate(.6); box-shadow: 0 0 0 6px #2B2118, 0 0 0 0 rgba(244, 185, 66, 0); }
   to   { filter: none;                          box-shadow: 0 0 0 6px #2B2118, 0 0 60px 6px rgba(244, 185, 66, .35); }
@@ -370,3 +373,4 @@ input[type=email], input[type=password], input[type=date], input:not([type]) { f
 .kpi-link { text-decoration: none; color: inherit; }
 .kpi-link:hover { border-color: var(--accent); }
 .nowrap { white-space: nowrap; }
+.card-noimg { display: block; aspect-ratio: 400 / 420; background: var(--noche); }

@@ -18,8 +18,8 @@ export function productCard(item) {
   return `
     <article class="card ${soldOut ? 'is-soldout' : ''}">
       <a class="card-media" href="${href}">
-        <img src="${escapeHtml(item.image_url ?? 'img/productos/placeholder.svg')}"
-             alt="${escapeHtml(item.image_alt ?? item.name)}" loading="lazy" width="400" height="420">
+        ${item.image_url ? `<img src="${escapeHtml(item.image_url)}"
+             alt="${escapeHtml(item.image_alt ?? item.name)}" loading="lazy" width="400" height="420">` : '<span class="card-noimg" aria-hidden="true"></span>'}
         <span class="badge badge-${escapeHtml(item.product_type)}">${TYPE_LABELS[item.product_type]}</span>
         ${soldOut ? '<span class="badge badge-soldout">Agotado</span>' : ''}
       </a>
