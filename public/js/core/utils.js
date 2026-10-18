@@ -23,3 +23,8 @@ export function qs(selector, root = document) {
 export function param(name) {
   return new URLSearchParams(location.search).get(name);
 }
+
+const dateFmt = new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' });
+export function formatDate(value) {
+  return value ? dateFmt.format(new Date(value)) : '';
+}

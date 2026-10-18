@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Eventos · Back-office · Entrelibros</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="eventos" class="admin">
+  <div class="academic-banner" role="note">
+    <strong>Prototipo académico</strong> · Grado en Ingeniería Informática (UCAM).
+    Tienda ficticia sin actividad comercial: no introduzcas datos personales reales ni medios de pago reales.
+  </div>
+  <header id="site-header" class="site-header"></header>
+  <main class="container" id="contenido">
+    <h1>Eventos de negocio</h1>
+    <p class="lead">Registro de lo que ocurre en el proceso de compra. Se puede exportar para analizarlo o integrarlo con otros sistemas.</p>
+
+    <section aria-labelledby="funnel-title">
+      <h2 id="funnel-title" class="h3">Embudo</h2>
+      <ol id="funnel" class="funnel"></ol>
+    </section>
+
+    <form id="event-filters" class="toolbar">
+      <label>Tipo
+        <select name="type" id="f-type"><option value="">Todos</option></select>
+      </label>
+      <label>Desde <input name="from" type="date"></label>
+      <label>Hasta <input name="to" type="date"></label>
+      <label>Id de pedido <input name="orderId" type="number" min="1" inputmode="numeric"></label>
+    </form>
+
+    <div class="results-bar">
+      <p id="events-count" class="results-count" aria-live="polite"></p>
+      <div class="export-actions">
+        <button type="button" id="export-csv" class="btn btn-secondary">Exportar CSV</button>
+        <button type="button" id="export-json" class="btn btn-secondary">Exportar JSON</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr><th>Fecha</th><th>Tipo</th><th>Origen</th><th>Entidad</th><th>Pedido</th><th>Sesión</th><th>Datos</th></tr>
+        </thead>
+        <tbody id="events"><tr><td colspan="7">Cargando…</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="js/pages/admin/events.js"></script>
+</body>
+</html>

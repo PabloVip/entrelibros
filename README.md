@@ -50,6 +50,14 @@ python3 -m http.server 8000 -d public
 | Portada | `index.html` | Temáticas y kits destacados |
 | Catálogo | `catalogo.html` | Filtros por tipo (kit / accesorio / recambio), temática, dificultad, iluminación, ancho y precio; búsqueda y orden. Los filtros quedan en la URL. |
 | Ficha | `producto.html?slug=…` | Variantes con precio y stock, características, productos compatibles. Registra `product.viewed`. |
+| Back-office · acceso | `admin.html` | Login con Supabase Auth; solo usuarios de `admin_users`. |
+| Back-office · pedidos | `admin-pedidos.html` | Indicadores, filtro por estado y búsqueda por nº de pedido o email. |
+| Back-office · detalle | `admin-pedido.html?id=…` | Líneas, importes con IVA desglosado, pagos, historial, eventos y cambio de estado. |
+| Back-office · eventos | `admin-eventos.html` | Embudo de compra, filtros y exportación a CSV / JSON. |
+
+> Las páginas del back-office son públicas (GitHub Pages es estático), pero los datos no:
+> las políticas RLS solo devuelven pedidos y eventos a usuarios de `admin_users`, y los
+> cambios de estado los valida la función `admin_update_order_status` en el servidor.
 
 ## Imágenes
 Las ilustraciones de `public/img/productos/` son provisionales y se generan con
