@@ -1,30 +1,27 @@
-// Portada TEMPORAL: comprueba la conexión con Supabase. Se sustituye por la portada real.
+// Portada: temáticas y kits destacados (los de dificultad principiante primero).
 import { renderLayout } from '../core/layout.js';
-import { supabase } from '../core/supabase.js';
+import { fetchThemes, fetchCatalog } from '../repositories/catalogRepository.js';
+import { productCard } from '../components/productCard.js';
+import { escapeHtml } from '../core/utils.js';
 
 renderLayout();
 
-const box = document.getElementById('db-status');
-
-async function checkConnection() {
-  const tables = ['themes', 'products', 'product_variants', 'shipping_methods'];
-  const results = await Promise.all(
-    tables.map(t => supabase.from(t).select('*', { count: 'exact', head: true }))
-  );
-
-  const failed = results.find(r => r.error);
-  if (failed) {
-    box.className = 'status error';
-    box.textContent = `Error de conexión: ${failed.error.message}`;
-    return;
-  }
-
-  box.className = 'status ok';
-  box.textContent = 'Conexión correcta · ' +
-    tables.map((t, i) => `${t}: ${results[i].count}`).join(' · ');
+async function renderThemes() {
+  const themes = await fetchThemes();
+  document.getElementById('themes').innerHTML = themes.map(t => `
+    <a class="theme-tile" href="catalogo.html?tema=${encodeURIComponent(t.slug)}">
+      <strong>${escapeHtml(t.name)}</strong>
+      <span>${escapeHtml(t.description ?? '')}</span>
+    </a>`).join('');
 }
 
-checkConnection().catch(err => {
-  box.className = 'status error';
-  box.textContent = `Error de conexión: ${err.message}`;
+async function renderFeatured() {
+  const { items } = await fetchCatalog({ type: 'kit', sort: 'precio_asc', limit: 4 });
+  document.getElementById('featured').innerHTML = items.map(productCard).join('');
+}
+
+Promise.all([renderThemes(), renderFeatured()]).catch(err => {
+  console.error(err);
+  document.getElementById('featured').innerHTML =
+    '<p class="empty error">No se ha podido conectar con la tienda. Inténtalo de nuevo en unos segundos.</p>';
 });

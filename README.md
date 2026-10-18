@@ -20,7 +20,7 @@ entre libros (*book nooks*). Tarea 1 · Soluciones Informáticas para la Empresa
 
 ### 1. Base de datos (Supabase)
 1. Crear un proyecto en <https://supabase.com>.
-2. En **SQL Editor**, ejecutar en orden: `01_schema.sql`, `02_policies.sql`, `03_functions.sql` (y `04_seed.sql` con los datos de prueba).
+2. En **SQL Editor**, ejecutar en orden: `01_schema.sql`, `02_policies.sql`, `03_functions.sql` y `04_seed.sql` (datos de prueba ficticios; se puede re-ejecutar para dejar la tienda limpia).
 3. En **Project Settings > API**, copiar la *Project URL* y la *publishable key* (anon) en `public/js/config.js`.
    Esa clave es pública por diseño; **nunca** usar la *secret / service_role key* en el front.
 
@@ -42,3 +42,15 @@ python3 -m http.server 8000 -d public
 ### 4. Despliegue (GitHub Pages)
 1. Subir el repositorio a GitHub.
 2. **Settings > Pages > Source: GitHub Actions**. El workflow `.github/workflows/pages.yml` publica `public/` en cada push a `main`.
+
+## Páginas
+
+| Página | Fichero | Qué hace |
+|---|---|---|
+| Portada | `index.html` | Temáticas y kits destacados |
+| Catálogo | `catalogo.html` | Filtros por tipo (kit / accesorio / recambio), temática, dificultad, iluminación, ancho y precio; búsqueda y orden. Los filtros quedan en la URL. |
+| Ficha | `producto.html?slug=…` | Variantes con precio y stock, características, productos compatibles. Registra `product.viewed`. |
+
+## Imágenes
+Las ilustraciones de `public/img/productos/` son provisionales y se generan con
+`python3 tools/generar_ilustraciones.py`.

@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>Inicio · Entrelibros</title>
+  <meta name="description" content="Escenas en miniatura para colocar entre tus libros: calles japonesas, bibliotecas, cafeterías y mundos fantásticos.">
+  <title>Entrelibros · Escenas en miniatura para tu estantería</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body data-page="inicio">
@@ -15,9 +16,32 @@
   <header id="site-header" class="site-header"></header>
 
   <main class="container" id="contenido">
-    <h1>Entrelibros</h1>
-    <p>Comprobación de conexión con la base de datos (temporal):</p>
-    <div id="db-status" class="status">Conectando…</div>
+    <section class="hero">
+      <div>
+        <h1>Un pequeño mundo entre tus libros</h1>
+        <p class="lead">Kits de escenas en miniatura para montar y colocar en tu estantería: callejones japoneses,
+          bibliotecas infinitas, cafeterías bajo la lluvia y torres de dragones. Con o sin iluminación.</p>
+        <p><a class="btn" href="catalogo.html?tipo=kit">Ver kits</a>
+           <a class="btn btn-secondary" href="catalogo.html">Todo el catálogo</a></p>
+      </div>
+      <img src="img/productos/callejon-kioto-sakura.svg" alt="Ilustración de un callejón japonés colocado entre libros" width="400" height="420">
+    </section>
+
+    <section aria-labelledby="themes-title">
+      <h2 id="themes-title">Explora por temática</h2>
+      <div id="themes" class="themes"></div>
+    </section>
+
+    <section aria-labelledby="featured-title">
+      <h2 id="featured-title">Kits para empezar</h2>
+      <div id="featured" class="grid"></div>
+    </section>
+
+    <section class="types" aria-label="Tipos de producto">
+      <a href="catalogo.html?tipo=kit"><strong>Kits completos</strong><span>Todo lo necesario para montar la escena.</span></a>
+      <a href="catalogo.html?tipo=accesorio"><strong>Accesorios</strong><span>Iluminación, cubiertas, libros en miniatura y pintura.</span></a>
+      <a href="catalogo.html?tipo=recambio"><strong>Recambios</strong><span>Piezas de repuesto para tus kits.</span></a>
+    </section>
   </main>
 
   <footer id="site-footer" class="site-footer"></footer>
