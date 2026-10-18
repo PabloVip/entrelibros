@@ -1,5 +1,5 @@
 -- =========================================================
--- Entrelibros · Checkout: descuentos y creación de pedidos (Nino)
+-- Entrelibros · Checkout: descuentos, pedidos, pago simulado y confirmación (Nino)
 -- Ejecutar DESPUÉS de 01 → 04. Se puede ejecutar varias veces:
 -- todas las funciones usan "create or replace".
 --
@@ -260,3 +260,166 @@ begin
 end $$;
 
 grant execute on function public.create_order(jsonb, jsonb, jsonb, text, text, text) to anon, authenticated;
+
+-- ---------------------------------------------------------
+-- simulate_payment: pago SIMULADO de un pedido en estado "creado"
+--   p_method: 'tarjeta_simulada' | 'bizum_simulado'
+--   Tarjetas de prueba: 4242 4242 4242 4242 → aprobada
+--                       4000 0000 0000 0002 → rechazada
+--   Cualquier otra tarjeta → error (nunca se acepta una tarjeta real)
+--   Bizum simulado → siempre aprobado
+-- Devuelve {order_number, status, transaction_ref, amount, failure_reason}
+-- ---------------------------------------------------------
+create or replace function public.simulate_payment(
+  p_order_number text,
+  p_method       text,
+  p_card_number  text default null
+) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  v_order   public.orders%rowtype;
+  v_card    text := regexp_replace(coalesce(p_card_number, ''), '[\s-]', '', 'g');
+  v_status  text;
+  v_reason  text;
+  v_ref     text;
+  v_item    record;
+begin
+  if p_method is null or p_method not in ('tarjeta_simulada', 'bizum_simulado') then
+    raise exception 'Método de pago no válido' using errcode = '22023';
+  end if;
+
+  -- "for update" bloquea la fila del pedido: si llegan dos pagos a la vez, el segundo
+  -- espera y después ve que el pedido ya no está en "creado"
+  select * into v_order from public.orders
+   where order_number = upper(btrim(p_order_number)) for update;
+  if not found then
+    raise exception 'Pedido no encontrado' using errcode = 'P0002';
+  end if;
+  if v_order.status <> 'creado' then
+    raise exception 'Este pedido ya está pagado o no admite pagos' using errcode = '22023';
+  end if;
+
+  -- 1) Resultado del simulador
+  if p_method = 'bizum_simulado' then
+    v_status := 'aprobado';
+    v_card   := null;
+  elsif v_card = '4242424242424242' then
+    v_status := 'aprobado';
+  elsif v_card = '4000000000000002' then
+    v_status := 'rechazado';
+    v_reason := 'Tarjeta de prueba rechazada por el simulador';
+  else
+    raise exception 'Usa una tarjeta de prueba' using errcode = '22023';
+  end if;
+
+  -- 2) Si se aprueba, se descuenta el stock. El "and stock >= cantidad" hace que la
+  --    resta solo ocurra si hay unidades: con dos compras a la vez nunca queda en negativo.
+  --    Si una línea falla, el bloque begin/exception deshace también las restas anteriores.
+  if v_status = 'aprobado' then
+    begin
+      for v_item in
+        select variant_id, product_name, sum(quantity) as quantity
+        from public.order_items where order_id = v_order.id
+        group by variant_id, product_name
+        order by variant_id                -- mismo orden siempre: evita bloqueos cruzados
+      loop
+        update public.product_variants set stock = stock - v_item.quantity
+         where id = v_item.variant_id and stock >= v_item.quantity;
+        if not found then
+          v_reason := format('No queda stock suficiente de "%s"', v_item.product_name);
+          raise exception using errcode = 'P0001';   -- salta al exception de abajo
+        end if;
+      end loop;
+    exception when sqlstate 'P0001' then
+      v_status := 'rechazado';
+    end;
+  end if;
+
+  -- 3) Registro del pago con una referencia ficticia única (solo los 4 últimos dígitos)
+  for i in 1..5 loop
+    v_ref := 'SIM-' || to_char(now() at time zone 'Europe/Madrid', 'YYYYMMDD') || '-' || public._random_code(6);
+    begin
+      insert into public.payments (order_id, method, amount, status, transaction_ref, card_last4, failure_reason)
+      values (v_order.id, p_method, v_order.total, v_status, v_ref, right(v_card, 4), v_reason);
+      exit;
+    exception when unique_violation then
+      if i = 5 then raise; end if;
+    end;
+  end loop;
+
+  -- 4) Aprobado → pago_simulado. Rechazado → sigue en "creado" y se puede reintentar.
+  if v_status = 'aprobado' then
+    update public.orders set status = 'pago_simulado' where id = v_order.id;
+    insert into public.order_status_history (order_id, from_status, to_status, changed_by, note)
+    values (v_order.id, 'creado', 'pago_simulado', 'sistema', 'Pago ' || v_ref);
+  end if;
+
+  perform public._emit_event('payment.simulated', 'servidor', null, 'payment', v_ref,
+    jsonb_build_object('order_number', v_order.order_number, 'method', p_method,
+                       'status', v_status, 'amount', v_order.total),
+    v_order.id, v_order.customer_id);
+
+  return jsonb_build_object('order_number', v_order.order_number, 'status', v_status,
+    'transaction_ref', v_ref, 'amount', v_order.total, 'failure_reason', v_reason);
+end $$;
+
+grant execute on function public.simulate_payment(text, text, text) to anon, authenticated;
+
+-- ---------------------------------------------------------
+-- get_order_summary: datos para la página de confirmación
+-- El navegador no puede leer "orders" (RLS). Esta función devuelve el pedido
+-- SOLO si coinciden el número de pedido Y el email del cliente; si no, null
+-- (sin decir cuál de los dos falla, para no dar pistas).
+-- ---------------------------------------------------------
+create or replace function public.get_order_summary(p_order_number text, p_email text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare
+  v_result jsonb;
+begin
+  if p_order_number is null or p_email is null then
+    raise exception 'Indica el número de pedido y el email' using errcode = '22023';
+  end if;
+
+  select jsonb_build_object(
+    'order_number',    o.order_number,
+    'status',          o.status,
+    'created_at',      o.created_at,
+    'customer_name',   c.full_name,
+    'subtotal',        o.subtotal,
+    'discount_code',   o.discount_code,
+    'discount_amount', o.discount_amount,
+    'shipping_cost',   o.shipping_cost,
+    'tax_rate',        o.tax_rate,
+    'tax_amount',      o.tax_amount,
+    'total',           o.total,
+    'shipping', jsonb_build_object(
+      'method',   s.name,
+      'eta_min',  s.eta_days_min,
+      'eta_max',  s.eta_days_max,
+      'name',     o.ship_name,
+      'address',  o.ship_address,
+      'city',     o.ship_city,
+      'postcode', o.ship_postcode,
+      'province', o.ship_province,
+      'notes',    o.customer_notes),
+    'items', (select coalesce(jsonb_agg(jsonb_build_object(
+                'product_name', i.product_name, 'variant_name', i.variant_name, 'sku', i.sku,
+                'unit_price', i.unit_price, 'quantity', i.quantity, 'line_total', i.line_total) order by i.id), '[]'::jsonb)
+              from public.order_items i where i.order_id = o.id),
+    'payment', (select jsonb_build_object(
+                  'method', p.method, 'status', p.status, 'amount', p.amount,
+                  'transaction_ref', p.transaction_ref, 'card_last4', p.card_last4,
+                  'failure_reason', p.failure_reason, 'created_at', p.created_at)
+                from public.payments p where p.order_id = o.id
+                order by p.created_at desc, p.id desc limit 1))
+  into v_result
+  from public.orders o
+  join public.customers c on c.id = o.customer_id
+  join public.shipping_methods s on s.id = o.shipping_method_id
+  where o.order_number = upper(btrim(p_order_number))
+    and c.email = lower(btrim(p_email));
+
+  return v_result;  -- null si no coincide
+end $$;
+
+grant execute on function public.get_order_summary(text, text) to anon, authenticated;
