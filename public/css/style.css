@@ -186,6 +186,22 @@ input[aria-invalid=true], textarea[aria-invalid=true] { border-color: var(--erro
   .field-row { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* ---------- Pago y confirmación ---------- */
+.narrow-md { max-width: 680px; }
+.field[hidden] { display: none; } /* .field usa display:flex, que si no ganaría al atributo hidden */
+.pay-order { display: flex; flex-wrap: wrap; gap: 12px 40px; margin-bottom: 16px; }
+.pay-order p { margin: 0; }
+.pay-amount { font-size: 1.4rem; }
+.pay-order + .note { margin-bottom: 16px; }
+.note code { white-space: nowrap; }
+/* en el móvil la columna de precio unitario sobra: así los importes caben sin scroll */
+@media (max-width: 560px) {
+  .data-table .hide-sm { display: none; }
+  .order-grid { grid-template-columns: minmax(0, 1fr); }
+  .order-grid .data-table th, .order-grid .data-table td { padding: 8px; }
+  .order-grid .data-table td:first-child { overflow-wrap: anywhere; }
+}
+
 /* ---------- Back-office ---------- */
 .admin-tag { font-size: .75rem; font-weight: 600; background: var(--text); color: #fff; padding: 2px 8px; border-radius: 999px; vertical-align: middle; }
 .admin-user { color: var(--muted); font-size: .85rem; }

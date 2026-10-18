@@ -43,6 +43,24 @@ export function validateForm(values) {
   return errors;
 }
 
+// ---------- Pago simulado ----------
+export const ORDER_NUMBER_RE = /^EL-[0-9]{8}-[A-Z0-9]{4}$/;
+
+// Únicas tarjetas que acepta el simulador (las mismas que comprueba simulate_payment)
+export const TEST_CARDS = [
+  { number: '4242 4242 4242 4242', result: 'aprobada' },
+  { number: '4000 0000 0000 0002', result: 'rechazada' },
+];
+
+/**
+ * Devuelve los 16 dígitos si es una tarjeta de prueba, o null.
+ * Así un número real nunca sale del navegador: ni siquiera llega al servidor.
+ */
+export function testCardDigits(value) {
+  const digits = String(value ?? '').replace(/[\s-]/g, '');
+  return TEST_CARDS.some(c => c.number.replaceAll(' ', '') === digits) ? digits : null;
+}
+
 // Último pedido creado en esta pestaña: pago.html lo usa para enseñar el importe y,
 // al aprobarse, enlazar a la confirmación (que pide el email). sessionStorage se borra al cerrar la pestaña.
 // Si el navegador lo bloquea, getLastOrder() devuelve null y pago.html pide el email.

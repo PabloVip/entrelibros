@@ -31,3 +31,21 @@ export async function createOrder({ customer, shipping, items, shippingCode, dis
   if (error) throw error;
   return data;
 }
+
+/** Pago simulado. Devuelve {order_number, status, transaction_ref, amount, failure_reason}. */
+export async function simulatePayment(orderNumber, method, cardNumber) {
+  const { data, error } = await supabase.rpc('simulate_payment', {
+    p_order_number: orderNumber,
+    p_method:       method,
+    p_card_number:  cardNumber || null,
+  });
+  if (error) throw error;
+  return data;
+}
+
+/** Pedido para la confirmación; null si el número y el email no coinciden. */
+export async function getOrderSummary(orderNumber, email) {
+  const { data, error } = await supabase.rpc('get_order_summary', { p_order_number: orderNumber, p_email: email });
+  if (error) throw error;
+  return data;
+}
