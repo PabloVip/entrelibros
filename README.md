@@ -183,7 +183,7 @@ En el repositorio, ve a **Settings → Pages → Source: GitHub Actions**. El wo
 - **Stock sin reservar.** El stock se comprueba al crear el pedido, pero solo se reserva al pagar: dos clientes pueden crear pedidos por las últimas unidades y solo el primero que pague las consigue.
 - **Carrito local.** El carrito se guarda en el navegador (`localStorage`) y no se sincroniza entre dispositivos.
 - **Sin notificaciones.** No se envían emails de confirmación ni de seguimiento.
-- **Fotos de ambientación.** Representan la temática de cada producto, no el producto real, porque la tienda es ficticia.
+- **Imágenes ilustrativas.** Las de los kits están generadas con IA (Google Gemini) y las de accesorios y recambios son fotos de ambientación de Unsplash. Ninguna muestra un producto real, porque la tienda es ficticia.
 
 ## 9. Uso de IA
 
@@ -191,25 +191,28 @@ En el desarrollo se han usado herramientas de IA generativa. El detalle (tareas,
 
 ## 10. Créditos de las imágenes
 
-Fotos de [Unsplash](https://unsplash.com), con la [licencia de Unsplash](https://unsplash.com/license) (uso gratuito, también comercial, sin necesidad de atribución; la incluimos por cortesía). Están recortadas a 800×840 px y comprimidas.
+- **Kits (10):** imágenes generadas con IA (Google Gemini) a partir de una descripción de cada escena; se declaran en el anexo de IA de la memoria.
+- **Accesorios y recambios (8):** fotos de [Unsplash](https://unsplash.com) con la [licencia de Unsplash](https://unsplash.com/license) (uso gratuito sin necesidad de atribución; la incluimos por cortesía).
 
-| Producto | Autor | Foto |
-|---|---|---|
-| Callejón de Kioto en flor | Flora Hon | [Unsplash](https://unsplash.com/photos/a-narrow-street-lined-with-wooden-buildings-SNecSSyXxVs) |
-| Tienda de ramen nocturna | Dao En Wong | [Unsplash](https://unsplash.com/photos/a-japanese-restaurant-glowing-at-night-H0yI-8zL5TM) |
-| Biblioteca infinita | Zoshua Colah | [Unsplash](https://unsplash.com/photos/a-long-library-aisle-lined-with-books-eR96tng0pyk) |
-| Archivo del alquimista | Barnabas Davoti | [Unsplash](https://unsplash.com/photos/an-old-apothecary-with-shelves-of-medicine-bottles-mFtl_nQsFsc) |
-| Café parisino de 1920 | Emily Moynihan | [Unsplash](https://unsplash.com/photos/classic-parisian-building-with-le-champ-de-mars-cafe-Bla3cBH3HPg) |
-| Librería de la esquina bajo la lluvia | Annie Spratt | [Unsplash](https://unsplash.com/photos/bookshop-window-display-with-vintage-books-fvN13WT4X88) |
-| Bosque de las hadas | Maksim Shutov | [Unsplash](https://unsplash.com/photos/a-trail-in-the-woods-with-many-branches-hanging-over-it-XXBGU-Tbr1U) |
-| Torre del dragón | Maryam Tello | [Unsplash](https://unsplash.com/photos/a-winding-spiral-stone-staircase-descends-into-a-historic-building-oe-drdmpmmo) |
-| Callejón de Praga | Kevin Andre | [Unsplash](https://unsplash.com/photos/a-cobblestone-street-with-a-building-in-the-background-9Q1t_docbak) |
-| Despacho del detective victoriano | Sebastien LE DEROUT | [Unsplash](https://unsplash.com/photos/3YvcEkx2CAI) |
-| Kit LED USB universal | Zishan khan | [Unsplash](https://unsplash.com/photos/assorted-colored-led-lights-NHnW3cmrCeo) |
-| Set de libros en miniatura | Alan Cheung | [Unsplash](https://unsplash.com/photos/many-small-open-books-arranged-on-a-wooden-surface-bAOopOtWkbc) |
-| Cubierta antipolvo de metacrilato | T | [Unsplash](https://unsplash.com/photos/diorama-displayed-in-a-framed-box-on-brick-wall-Lj8Cllwi8Tw) |
-| Set de pintura y acabados | Jennie Razumnaya | [Unsplash](https://unsplash.com/photos/a-group-of-brushes-XbcfTH69aAc) |
-| Recambio: farolillos de papel | Leongsan | [Unsplash](https://unsplash.com/photos/four-japanese-lanterns-hanging-in-a-row-MFFkjcTF-i0) |
-| Recambio: tira LED 30 cm | superlightingled | [Unsplash](https://unsplash.com/photos/a-large-group-of-lights-IGPhiyH9t-A) |
-| Recambio: ventanas de acetato | Adrien Olichon | [Unsplash](https://unsplash.com/photos/photo-of-multicolored-glass-mosaic-windowpane-wGXRVgvCVWA) |
-| Recambio: piezas pequeñas Callejón de Praga | Josh Davies | [Unsplash](https://unsplash.com/photos/laser-cut-wooden-pieces-on-a-cardboard-surface-ZgmkmQp62P0) |
+Todas están recortadas a 800×840 px y comprimidas.
+
+| Producto | Origen |
+|---|---|
+| Callejón de Kioto en flor | Generada con IA (Google Gemini) |
+| Tienda de ramen nocturna | Generada con IA (Google Gemini) |
+| Biblioteca infinita | Generada con IA (Google Gemini) |
+| Archivo del alquimista | Generada con IA (Google Gemini) |
+| Café parisino de 1920 | Generada con IA (Google Gemini) |
+| Librería de la esquina bajo la lluvia | Generada con IA (Google Gemini) |
+| Bosque de las hadas | Generada con IA (Google Gemini) |
+| Torre del dragón | Generada con IA (Google Gemini) |
+| Callejón de Praga | Generada con IA (Google Gemini) |
+| Despacho del detective victoriano | Generada con IA (Google Gemini) |
+| Kit LED USB universal | Foto de Zishan khan en [Unsplash](https://unsplash.com/photos/assorted-colored-led-lights-NHnW3cmrCeo) |
+| Set de libros en miniatura | Foto de Alan Cheung en [Unsplash](https://unsplash.com/photos/many-small-open-books-arranged-on-a-wooden-surface-bAOopOtWkbc) |
+| Cubierta antipolvo de metacrilato | Foto de T en [Unsplash](https://unsplash.com/photos/diorama-displayed-in-a-framed-box-on-brick-wall-Lj8Cllwi8Tw) |
+| Set de pintura y acabados | Foto de Jennie Razumnaya en [Unsplash](https://unsplash.com/photos/a-group-of-brushes-XbcfTH69aAc) |
+| Recambio: farolillos de papel | Foto de Leongsan en [Unsplash](https://unsplash.com/photos/four-japanese-lanterns-hanging-in-a-row-MFFkjcTF-i0) |
+| Recambio: tira LED 30 cm | Foto de superlightingled en [Unsplash](https://unsplash.com/photos/a-large-group-of-lights-IGPhiyH9t-A) |
+| Recambio: ventanas de acetato | Foto de Adrien Olichon en [Unsplash](https://unsplash.com/photos/photo-of-multicolored-glass-mosaic-windowpane-wGXRVgvCVWA) |
+| Recambio: piezas pequeñas Callejón de Praga | Foto de Josh Davies en [Unsplash](https://unsplash.com/photos/laser-cut-wooden-pieces-on-a-cardboard-surface-ZgmkmQp62P0) |

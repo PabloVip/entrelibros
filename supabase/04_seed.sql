@@ -120,10 +120,13 @@ from (values
 ) as v(slug, sku, name, lit, finish, price, stock, weight, is_default)
 join public.products p on p.slug = v.slug;
 
--- ---------- IMÁGENES (fotos de ambientación de Unsplash en public/img/productos/; créditos en el README) ----------
+-- ---------- IMÁGENES (public/img/productos/; créditos en el README) ----------
+-- Kits: imagen del book nook generada con IA. Accesorios y recambios: foto de ambientación de Unsplash.
 insert into public.product_images (product_id, url, alt_text, sort_order)
 select p.id, 'img/productos/' || p.slug || '.jpg',
-       'Fotografía de ambientación: ' || p.name, 0
+       case when p.product_type = 'kit'
+            then 'Book nook ' || p.name || ' colocado entre libros en una estantería (imagen generada con IA)'
+            else 'Fotografía de ambientación: ' || p.name end, 0
 from public.products p;
 
 -- ---------- COMPATIBILIDAD accesorio/recambio → kit ----------
