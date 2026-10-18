@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Soporte · Back-office · Entrelibros</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="soporte" class="admin">
+  <div class="academic-banner" role="note">
+    <strong>Prototipo académico</strong> · Grado en Ingeniería Informática (UCAM).
+    Tienda ficticia sin actividad comercial: no introduzcas datos personales reales ni medios de pago reales.
+  </div>
+  <header id="site-header" class="site-header"></header>
+  <main class="container" id="contenido">
+    <h1>Soporte postventa</h1>
+    <p class="lead">Incidencias que envían los clientes desde la página de soporte.</p>
+
+    <form id="support-filters" class="toolbar">
+      <label>Estado
+        <select name="status">
+          <option value="pendientes">Pendientes (abiertas y en curso)</option>
+          <option value="">Todas</option>
+          <option value="abierta">Abiertas</option>
+          <option value="en_curso">En curso</option>
+          <option value="resuelta">Resueltas</option>
+        </select>
+      </label>
+      <label>Motivo
+        <select name="reason"><option value="">Todos</option></select>
+      </label>
+    </form>
+
+    <p id="support-count" class="results-count" aria-live="polite"></p>
+    <p id="support-msg" class="form-msg" role="status"></p>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr><th>Incidencia</th><th>Fecha</th><th>Cliente</th><th>Motivo</th><th>Pedido</th><th>Mensaje</th><th>Estado</th><th><span class="visually-hidden">Acciones</span></th></tr>
+        </thead>
+        <tbody id="tickets"><tr><td colspan="8">Cargando…</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="js/pages/admin/support.js"></script>
+</body>
+</html>

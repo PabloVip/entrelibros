@@ -4,6 +4,7 @@ import { signOut } from './auth.js';
 
 const NAV = [
   { id: 'pedidos', href: 'admin-pedidos.html', label: 'Pedidos' },
+  { id: 'soporte', href: 'admin-soporte.html', label: 'Soporte' },
   { id: 'eventos', href: 'admin-eventos.html', label: 'Eventos' },
 ];
 
