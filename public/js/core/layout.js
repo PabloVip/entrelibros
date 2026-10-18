@@ -1,0 +1,35 @@
+// Cabecera y pie comunes. Cada página llama a renderLayout() al cargar.
+import { APP_NAME } from '../config.js';
+import { escapeHtml } from './utils.js';
+
+const NAV = [
+  { id: 'inicio',   href: 'index.html',    label: 'Inicio' },
+  { id: 'catalogo', href: 'catalogo.html', label: 'Catálogo' },
+  { id: 'soporte',  href: 'soporte.html',  label: 'Soporte' },
+  { id: 'carrito',  href: 'carrito.html',  label: 'Carrito' },
+];
+
+export function renderLayout() {
+  const current = document.body.dataset.page;
+
+  const header = document.getElementById('site-header');
+  if (header) {
+    header.innerHTML = `
+      <div class="container header-inner">
+        <a class="logo" href="index.html">${escapeHtml(APP_NAME)}</a>
+        <nav aria-label="Principal">
+          ${NAV.map(item => `
+            <a href="${item.href}" ${item.id === current ? 'aria-current="page"' : ''}>${item.label}</a>
+          `).join('')}
+        </nav>
+      </div>`;
+  }
+
+  const footer = document.getElementById('site-footer');
+  if (footer) {
+    footer.innerHTML = `
+      <div class="container">
+        ${escapeHtml(APP_NAME)} · Proyecto de la asignatura Soluciones Informáticas para la Empresa · ${new Date().getFullYear()}
+      </div>`;
+  }
+}
