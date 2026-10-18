@@ -1,0 +1,131 @@
+// Soporte postventa: crea una incidencia con create_support_request (emite support.requested).
+import { renderLayout } from '../core/layout.js';
+import { createSupportRequest } from '../repositories/supportRepository.js';
+import { REASONS, MESSAGE_MAX, validateSupport } from '../services/supportService.js';
+import { escapeHtml, param } from '../core/utils.js';
+
+renderLayout();
+
+const root = document.getElementById('support');
+const FIELDS = ['email', 'orderNumber', 'reason', 'message'];
+
+function renderForm() {
+  // desde la confirmación del pedido se llega con ?pedido=…&email=… y se rellenan solos
+  const orderNumber = (param('pedido') ?? '').trim().toUpperCase();
+  const email = (param('email') ?? '').trim();
+  root.innerHTML = `
+    <form id="support-form" class="card-form" novalidate>
+      <div class="field">
+        <label for="f-email">Email</label>
+        <input id="f-email" name="email" type="email" autocomplete="email" required maxlength="254"
+               value="${escapeHtml(email)}" aria-describedby="err-email">
+        <p id="err-email" class="field-error"></p>
+      </div>
+      <div class="field">
+        <label for="f-orderNumber">Número de pedido <span class="muted">(opcional)</span></label>
+        <input id="f-orderNumber" name="orderNumber" type="text" maxlength="16" placeholder="EL-20261018-AB12"
+               value="${escapeHtml(orderNumber)}" aria-describedby="hint-order err-orderNumber">
+        <small id="hint-order" class="muted">Solo se asocia a la incidencia si coincide con el email del pedido.</small>
+        <p id="err-orderNumber" class="field-error"></p>
+      </div>
+      <div class="field">
+        <label for="f-reason">Motivo</label>
+        <select id="f-reason" name="reason" required aria-describedby="err-reason">
+          <option value="">Elige un motivo…</option>
+          ${Object.entries(REASONS).map(([value, label]) => `<option value="${value}">${escapeHtml(label)}</option>`).join('')}
+        </select>
+        <p id="err-reason" class="field-error"></p>
+      </div>
+      <div class="field">
+        <label for="f-message">Mensaje</label>
+        <textarea id="f-message" name="message" rows="6" maxlength="${MESSAGE_MAX}" required
+                  aria-describedby="message-count err-message"></textarea>
+        <small id="message-count" class="muted">0 / ${MESSAGE_MAX}</small>
+        <p id="err-message" class="field-error"></p>
+      </div>
+      <button type="submit" class="btn">Enviar incidencia</button>
+      <p id="support-msg" class="form-msg" role="alert"></p>
+    </form>`;
+}
+
+function formValues(form) {
+  return {
+    email: form.elements.email.value.trim().toLowerCase(),
+    orderNumber: form.elements.orderNumber.value.trim().toUpperCase(),
+    reason: form.elements.reason.value,
+    message: form.elements.message.value.trim(),
+  };
+}
+
+/** Marca los campos incorrectos y devuelve el foco al primero. */
+function showErrors(form, errors) {
+  for (const name of FIELDS) {
+    const text = errors[name] ?? '';
+    document.getElementById(`err-${name}`).textContent = text;
+    if (text) form.elements[name].setAttribute('aria-invalid', 'true');
+    else form.elements[name].removeAttribute('aria-invalid');
+  }
+  const first = FIELDS.find(name => errors[name]);
+  if (first) form.elements[first].focus();
+}
+
+function renderDone(result, values) {
+  root.innerHTML = `
+    <div class="panel" role="status">
+      <h2 class="h3">Incidencia registrada</h2>
+      <p>Tu número de incidencia es <strong class="pay-amount">${escapeHtml(result.ticket_number)}</strong>.
+        Guárdalo para cualquier consulta.</p>
+      ${values.orderNumber
+        ? (result.order_linked
+          ? `<p>La hemos asociado al pedido <strong>${escapeHtml(values.orderNumber)}</strong>.</p>`
+          : `<p class="note">No hemos podido asociar el pedido ${escapeHtml(values.orderNumber)}: el número no coincide
+               con el email indicado. La incidencia se ha registrado igualmente.</p>`)
+        : ''}
+      <p class="muted">Es un prototipo: nadie va a contestar, pero la incidencia queda guardada y visible en el back-office.</p>
+      <p><a href="index.html">Volver a la tienda</a></p>
+    </div>`;
+}
+
+/** Errores del servidor: los de validación (22023) ya vienen en español. */
+function supportErrorText(err) {
+  if (err?.code === '22023') return err.message;
+  if (err?.code === 'PGRST202') return 'El soporte todavía no está disponible: falta activar la función en el servidor.';
+  return 'No se ha podido enviar la incidencia. Revisa tu conexión e inténtalo de nuevo.';
+}
+
+async function submit(form) {
+  const msg = document.getElementById('support-msg');
+  const values = formValues(form);
+  const errors = validateSupport(values);
+  showErrors(form, errors);
+  if (Object.keys(errors).length) {
+    msg.textContent = 'Revisa los campos marcados.';
+    msg.className = 'form-msg error';
+    return;
+  }
+
+  const btn = form.querySelector('button[type=submit]');
+  btn.disabled = true;
+  msg.textContent = 'Enviando…';
+  msg.className = 'form-msg';
+  try {
+    renderDone(await createSupportRequest(values), values);
+  } catch (err) {
+    console.error(err);
+    msg.textContent = supportErrorText(err);
+    msg.className = 'form-msg error';
+    btn.disabled = false;
+  }
+}
+
+renderForm();
+const form = document.getElementById('support-form');
+form.addEventListener('submit', e => {
+  e.preventDefault();
+  submit(form);
+});
+form.addEventListener('input', e => {
+  if (e.target.name === 'message') {
+    document.getElementById('message-count').textContent = `${e.target.value.length} / ${MESSAGE_MAX}`;
+  }
+});
