@@ -1,5 +1,5 @@
 -- =========================================================
--- Entrelibros · Checkout: descuentos, pedidos, pago simulado y confirmación (Nino)
+-- Entrelibros · Checkout: descuentos, pedidos, pago simulado, confirmación y soporte (Nino)
 -- Ejecutar DESPUÉS de 01 → 04. Se puede ejecutar varias veces:
 -- todas las funciones usan "create or replace".
 --
@@ -423,3 +423,70 @@ begin
 end $$;
 
 grant execute on function public.get_order_summary(text, text) to anon, authenticated;
+
+-- ---------------------------------------------------------
+-- create_support_request: incidencia de postventa
+--   p_reason: pieza_faltante | pieza_danada | retraso_envio | duda_montaje | otro
+-- El pedido se enlaza SOLO si su número y el email coinciden; si no, la incidencia
+-- se registra igual, sin pedido (order_linked = false), y la página lo avisa.
+-- Devuelve {ticket_number, order_linked}
+-- ---------------------------------------------------------
+create or replace function public.create_support_request(
+  p_email        text,
+  p_order_number text,
+  p_reason       text,
+  p_message      text
+) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  v_email       text := lower(btrim(p_email));
+  v_message     text := btrim(p_message);
+  v_order_num   text := nullif(upper(btrim(p_order_number)), '');
+  v_order_id    bigint;
+  v_customer_id bigint;
+  v_ticket      text;
+begin
+  if v_email is null or char_length(v_email) > 254 or v_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then
+    raise exception 'El email no es válido' using errcode = '22023';
+  end if;
+  if p_reason is null or p_reason not in ('pieza_faltante', 'pieza_danada', 'retraso_envio', 'duda_montaje', 'otro') then
+    raise exception 'Elige un motivo de la lista' using errcode = '22023';
+  end if;
+  if v_message is null or char_length(v_message) not between 10 and 2000 then
+    raise exception 'El mensaje debe tener entre 10 y 2000 caracteres' using errcode = '22023';
+  end if;
+  if char_length(v_order_num) > 30 then
+    raise exception 'El número de pedido no es válido' using errcode = '22023';
+  end if;
+
+  -- pedido y cliente solo si el número y el email son del mismo cliente
+  if v_order_num is not null then
+    select o.id, o.customer_id into v_order_id, v_customer_id
+    from public.orders o join public.customers c on c.id = o.customer_id
+    where o.order_number = v_order_num and c.email = v_email;
+  end if;
+  if v_customer_id is null then
+    select id into v_customer_id from public.customers where email = v_email;
+  end if;
+
+  -- número de incidencia SOP-AAAAMMDD-XXXX; si ya existe, se genera otro
+  for i in 1..5 loop
+    v_ticket := 'SOP-' || to_char(now() at time zone 'Europe/Madrid', 'YYYYMMDD') || '-' || public._random_code(4);
+    begin
+      insert into public.support_requests (ticket_number, order_id, customer_email, reason, message)
+      values (v_ticket, v_order_id, v_email, p_reason, v_message);
+      exit;
+    exception when unique_violation then
+      if i = 5 then raise; end if;
+    end;
+  end loop;
+
+  perform public._emit_event('support.requested', 'servidor', null, 'support', v_ticket,
+    jsonb_build_object('ticket_number', v_ticket, 'reason', p_reason,
+                       'order_number', case when v_order_id is not null then v_order_num end),
+    v_order_id, v_customer_id);
+
+  return jsonb_build_object('ticket_number', v_ticket, 'order_linked', v_order_id is not null);
+end $$;
+
+grant execute on function public.create_support_request(text, text, text, text) to anon, authenticated;
