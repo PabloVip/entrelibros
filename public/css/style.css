@@ -42,7 +42,7 @@ h1 { font-size: clamp(1.8rem, 1.3rem + 2vw, 2.6rem); }
 .site-header { background: var(--noche); color: #E7EAF1; }
 .header-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 16px; padding-bottom: 16px; flex-wrap: wrap; }
 .logo { font-family: var(--f-titulo); font-weight: 700; font-size: 1.45rem; text-decoration: none; color: #FFFFFF; display: inline-flex; align-items: center; gap: 10px; }
-.logo::before { content: ""; width: 14px; height: 22px; border-radius: 2px; background: var(--luz); box-shadow: 0 0 14px rgba(244, 185, 66, .55); }
+.logo::before { content: ""; width: 30px; height: 30px; flex: none; background: url('../img/favicon.svg') center / contain no-repeat; filter: drop-shadow(0 0 8px rgba(244, 185, 66, .35)); }
 .site-header nav { display: flex; gap: 22px; flex-wrap: wrap; align-items: center; }
 .site-header nav a { text-decoration: none; color: #E7EAF1; padding-bottom: 2px; border-bottom: 2px solid transparent; }
 .site-header nav a:hover { color: #FFFFFF; border-bottom-color: rgba(244, 185, 66, .5); }
