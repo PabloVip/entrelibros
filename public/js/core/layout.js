@@ -40,7 +40,10 @@ export function renderLayout() {
   if (footer) {
     footer.innerHTML = `
       <div class="container">
-        ${escapeHtml(APP_NAME)} · Proyecto de la asignatura Soluciones Informáticas para la Empresa · ${new Date().getFullYear()}
+        <p><strong>${escapeHtml(APP_NAME)}</strong></p>
+        <p>Escenas en miniatura para colocar entre tus libros. Tienda ficticia: proyecto de la asignatura
+          Soluciones Informáticas para la Empresa (UCAM), ${new Date().getFullYear()}.</p>
+        <p><a href="soporte.html">Soporte postventa</a></p>
       </div>`;
   }
 }

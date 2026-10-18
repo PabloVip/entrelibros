@@ -6,13 +6,29 @@ import { escapeHtml } from '../core/utils.js';
 
 renderLayout();
 
+// Foto que representa cada temática en la portada (decisión de presentación, no de datos)
+const THEME_PHOTO = {
+  'calle-japonesa': 'callejon-kioto-sakura',
+  'biblioteca':     'biblioteca-infinita',
+  'cafeteria':      'libreria-esquina-lluvia',
+  'fantasia':       'torre-del-dragon',
+  'ciudad-europea': 'callejon-praga',
+  'misterio':       'despacho-detective-victoriano',
+};
+
 async function renderThemes() {
   const themes = await fetchThemes();
-  document.getElementById('themes').innerHTML = themes.map(t => `
+  document.getElementById('themes').innerHTML = themes.map(t => {
+    const photo = THEME_PHOTO[t.slug];
+    return `
     <a class="theme-tile" href="catalogo.html?tema=${encodeURIComponent(t.slug)}">
-      <strong>${escapeHtml(t.name)}</strong>
-      <span>${escapeHtml(t.description ?? '')}</span>
-    </a>`).join('');
+      ${photo ? `<img src="img/productos/${photo}.jpg" alt="" loading="lazy" width="400" height="300">` : ''}
+      <span class="theme-text">
+        <strong>${escapeHtml(t.name)}</strong>
+        <span>${escapeHtml(t.description ?? '')}</span>
+      </span>
+    </a>`;
+  }).join('');
 }
 
 async function renderFeatured() {
