@@ -294,6 +294,25 @@ from (values
 join public.products p on p.slug = v.slug
 join public.product_variants pv on pv.product_id = p.id and pv.is_default;
 
+-- ---------- INCIDENCIAS DE SOPORTE DE EJEMPLO ----------
+insert into public.support_requests (ticket_number, order_id, customer_email, reason, message, status, created_at)
+select v.ticket, o.id, v.email, v.reason, v.msg, v.status, now() - v.ago
+from (values
+  ('SOP-20261011-3HQK', 'EL-20261009-K7Q2', 'lucia.martin@entrelibros.test', 'pieza_danada',
+   'Uno de los farolillos de papel llegó roto. El resto del kit está perfecto.', 'resuelta', interval '7 days'),
+  ('SOP-20261016-8WNA', 'EL-20261015-M2X8', 'marta.sanchez@entrelibros.test', 'duda_montaje',
+   'No encuentro en las instrucciones dónde va la pieza del toldo (paso 12).', 'en_curso', interval '2 days'),
+  ('SOP-20261017-C5RT', null, 'visitante@example.com', 'otro',
+   '¿Vendéis los kits ya montados? Me gustaría regalar uno.', 'abierta', interval '20 hours')
+) as v(ticket, order_num, email, reason, msg, status, ago)
+left join public.orders o on o.order_number = v.order_num;
+
+insert into public.events (event_type, source, occurred_at, order_id, entity_type, entity_id, payload)
+select 'support.requested', 'servidor', s.created_at, s.order_id, 'support', s.ticket_number,
+       jsonb_build_object('ticket_number', s.ticket_number, 'reason', s.reason,
+                          'order_number', (select order_number from public.orders where id = s.order_id))
+from public.support_requests s;
+
 -- ---------- ADMIN DEL BACK-OFFICE ----------
 -- 1) Authentication > Users > Add user: admin@entrelibros.test + contraseña de prueba
 -- 2) Después ejecutar:
