@@ -1,6 +1,7 @@
 // Cabecera y pie comunes. Cada página llama a renderLayout() al cargar.
 import { APP_NAME } from '../config.js';
 import { escapeHtml } from './utils.js';
+import { count as cartCount } from '../services/cartService.js';
 
 const NAV = [
   { id: 'inicio',   href: 'index.html',    label: 'Inicio' },
@@ -8,6 +9,12 @@ const NAV = [
   { id: 'soporte',  href: 'soporte.html',  label: 'Soporte' },
   { id: 'carrito',  href: 'carrito.html',  label: 'Carrito' },
 ];
+
+function navLabel(item) {
+  if (item.id !== 'carrito') return item.label;
+  // número de artículos del carrito; si está vacío, el CSS lo oculta
+  return `${item.label} <span id="cart-count" class="cart-count">${cartCount() || ''}</span>`;
+}
 
 export function renderLayout() {
   const current = document.body.dataset.page;
@@ -19,10 +26,14 @@ export function renderLayout() {
         <a class="logo" href="index.html">${escapeHtml(APP_NAME)}</a>
         <nav aria-label="Principal">
           ${NAV.map(item => `
-            <a href="${item.href}" ${item.id === current ? 'aria-current="page"' : ''}>${item.label}</a>
+            <a href="${item.href}" ${item.id === current ? 'aria-current="page"' : ''}>${navLabel(item)}</a>
           `).join('')}
         </nav>
       </div>`;
+    // cartService avisa cada vez que cambia el carrito
+    document.addEventListener('entrelibros:cart-changed', e => {
+      document.getElementById('cart-count').textContent = e.detail.count || '';
+    });
   }
 
   const footer = document.getElementById('site-footer');

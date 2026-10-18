@@ -125,6 +125,39 @@ input[type=search], input[type=number], select { font: inherit; padding: 8px 10p
   .hero img { max-width: 260px; }
 }
 
+/* ---------- Carrito ---------- */
+.form-msg.ok { color: var(--ok); }
+.cart-count { display: inline-block; min-width: 1.5em; padding: 0 6px; border-radius: 999px; background: var(--accent); color: var(--accent-contrast); font-size: .75rem; font-weight: 700; line-height: 1.6; text-align: center; }
+.cart-count:empty { display: none; }
+/* minmax(0, …): la tabla hace scroll dentro de su caja en vez de ensanchar la página */
+.cart-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; align-items: start; }
+.cart-item { display: flex; gap: 12px; align-items: center; }
+.cart-item img { width: 64px; height: auto; flex: none; border-radius: 8px; border: 1px solid var(--border); background: #f3ece2; }
+input.cart-qty { width: 72px; }
+input.cart-qty:disabled { background: var(--bg); color: var(--muted); }
+.line-problem { margin: 4px 0 0; font-size: .85rem; font-weight: 600; color: var(--error); }
+.cart-summary { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 12px; }
+.cart-summary p { margin: 0; }
+.cart-summary .btn { text-align: center; }
+.cart-subtotal { display: flex; justify-content: space-between; font-size: 1.15rem; }
+.note ul { margin: 6px 0 0; padding-left: 20px; }
+.note + .cart-layout { margin-top: 16px; }
+
+@media (max-width: 800px) {
+  .cart-layout { grid-template-columns: minmax(0, 1fr); }
+  .cart-summary { position: static; }
+}
+/* En el móvil cada línea es una tarjeta: producto arriba; cantidad, importe y eliminar debajo */
+@media (max-width: 560px) {
+  .cart-table, .cart-table tbody { display: block; }
+  .cart-table tr { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px 12px; padding: 12px; border-bottom: 1px solid var(--border); }
+  /* .data-table.cart-table: más específico que las reglas de .data-table del back-office (van después) */
+  .data-table.cart-table td { display: block; padding: 0; border: 0; }
+  .data-table.cart-table thead, .data-table.cart-table .hide-sm { display: none; }
+  .cart-table td:first-child { grid-column: 1 / -1; }
+  .cart-item img { width: 48px; }
+}
+
 /* ---------- Back-office ---------- */
 .admin-tag { font-size: .75rem; font-weight: 600; background: var(--text); color: #fff; padding: 2px 8px; border-radius: 999px; vertical-align: middle; }
 .admin-user { color: var(--muted); font-size: .85rem; }

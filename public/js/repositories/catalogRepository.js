@@ -61,6 +61,19 @@ export async function fetchProductBySlug(slug) {
 }
 
 /**
+ * Precio y stock actuales de varias variantes (para revisar el carrito).
+ * RLS oculta lo que ya no está a la venta: la variante no viene, o viene con product = null.
+ */
+export async function fetchVariantsByIds(ids) {
+  const { data, error } = await supabase
+    .from('product_variants')
+    .select('id, sku, name, price, stock, product:products ( id, slug, name )')
+    .in('id', ids);
+  if (error) throw error;
+  return data;
+}
+
+/**
  * Productos relacionados por compatibilidad:
  *  - si es un kit → accesorios y recambios compatibles con él
  *  - si es accesorio/recambio → kits con los que es compatible
