@@ -269,9 +269,14 @@ cross join (values
 ) as v(type, source, entity, offs);
 
 -- Navegación previa: visitas a ficha y productos añadidos al carrito
+-- Mismo formato que la web: product.viewed → id del producto + {slug};
+-- cart.item_added → id de la VARIANTE (la de por defecto) + {sku, quantity, unit_price}
 insert into public.events (event_type, source, occurred_at, session_id, entity_type, entity_id, payload)
-select v.type, 'web', now() - v.ago, v.sess, v.entity, p.id::text,
-       jsonb_build_object('slug', p.slug) || v.extra
+select v.type, 'web', now() - v.ago, v.sess, v.entity,
+       case when v.type = 'cart.item_added' then pv.id::text else p.id::text end,
+       case when v.type = 'cart.item_added'
+            then jsonb_build_object('sku', pv.sku, 'unit_price', pv.price) || v.extra
+            else jsonb_build_object('slug', p.slug) || v.extra end
 from (values
   ('product.viewed',  'callejon-kioto-sakura', 'seed-visita-1', 'product', '{}'::jsonb,                interval '9 days 1 hour'),
   ('cart.item_added', 'callejon-kioto-sakura', 'seed-visita-1', 'cart',    '{"quantity":1}'::jsonb,   interval '9 days 50 minutes'),
@@ -286,7 +291,8 @@ from (values
   ('cart.item_added', 'tienda-ramen-nocturna', 'seed-visita-5', 'cart',    '{"quantity":1}'::jsonb,   interval '11 hours'),  -- carrito abandonado
   ('product.viewed',  'biblioteca-infinita',   'seed-visita-6', 'product', '{}'::jsonb,                interval '6 hours')
 ) as v(type, slug, sess, entity, extra, ago)
-join public.products p on p.slug = v.slug;
+join public.products p on p.slug = v.slug
+join public.product_variants pv on pv.product_id = p.id and pv.is_default;
 
 -- ---------- ADMIN DEL BACK-OFFICE ----------
 -- 1) Authentication > Users > Add user: admin@entrelibros.test + contraseña de prueba
