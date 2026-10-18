@@ -158,6 +158,34 @@ input.cart-qty:disabled { background: var(--bg); color: var(--muted); }
   .cart-item img { width: 48px; }
 }
 
+/* ---------- Checkout ---------- */
+input[type=text], input[type=tel], textarea { font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--text); width: 100%; }
+textarea { resize: vertical; }
+input[aria-invalid=true], textarea[aria-invalid=true] { border-color: var(--error); }
+.checkout-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
+.note + .checkout-layout { margin-top: 16px; }
+.form-section { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+/* sin línea entre secciones: en un fieldset la legend se dibuja encima del borde */
+.form-section + .form-section { margin-top: 16px; }
+.form-section legend { padding: 0; margin-bottom: 4px; font-weight: 700; }
+.field-row { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 12px; }
+.field-error { margin: 0; font-size: .85rem; color: var(--error); }
+.field-error:empty { display: none; }
+.ship-info { grid-column: 2 / -1; font-size: .8rem; color: var(--muted); }
+.discount-row { display: flex; gap: 8px; }
+.discount-row input { flex: 1; text-transform: uppercase; }
+.summary-lines li, .summary-row { display: flex; justify-content: space-between; gap: 12px; }
+.summary-lines { font-size: .9rem; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+#summary-totals { display: flex; flex-direction: column; gap: 6px; }
+.small { font-size: .85rem; }
+
+@media (max-width: 800px) {
+  .checkout-layout { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 420px) {
+  .field-row { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* ---------- Back-office ---------- */
 .admin-tag { font-size: .75rem; font-weight: 600; background: var(--text); color: #fff; padding: 2px 8px; border-radius: 999px; vertical-align: middle; }
 .admin-user { color: var(--muted); font-size: .85rem; }
