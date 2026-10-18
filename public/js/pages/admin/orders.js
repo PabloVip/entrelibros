@@ -2,6 +2,7 @@
 import { requireAdmin } from '../../core/auth.js';
 import { renderAdminLayout } from '../../core/adminLayout.js';
 import { listOrders } from '../../repositories/ordersRepository.js';
+import { countPendingSupport } from '../../repositories/supportAdminRepository.js';
 import { STATUS_LABELS, summarize } from '../../services/orderService.js';
 import { statusBadge } from '../../components/statusBadge.js';
 import { escapeHtml, money, formatDate } from '../../core/utils.js';
@@ -18,12 +19,13 @@ form.status.insertAdjacentHTML('beforeend',
 const params = new URLSearchParams(location.search);
 if (params.get('estado') in STATUS_LABELS) form.status.value = params.get('estado');
 
-function renderKpis(orders) {
+function renderKpis(orders, pendingSupport) {
   const k = summarize(orders);
   document.getElementById('kpis').innerHTML = `
     <div class="kpi"><span>Pedidos</span><strong>${k.total}</strong></div>
     <div class="kpi"><span>Por preparar</span><strong>${k.toPrepare}</strong></div>
-    <div class="kpi"><span>Incidencias</span><strong>${k.incidents}</strong></div>
+    <div class="kpi"><span>Pedidos con incidencia</span><strong>${k.incidents}</strong></div>
+    <a class="kpi kpi-link" href="admin-soporte.html"><span>Soporte pendiente</span><strong>${pendingSupport ?? '—'}</strong></a>
     <div class="kpi"><span>Facturado (simulado)</span><strong>${money(k.revenue)}</strong></div>`;
 }
 
@@ -33,7 +35,6 @@ async function load() {
   history.replaceState(null, '', status ? `?estado=${status}` : location.pathname);
   try {
     const orders = await listOrders({ status, q });
-    if (!status && !q) renderKpis(orders);
     tbody.innerHTML = orders.length ? orders.map(o => `
       <tr>
         <td><a href="admin-pedido.html?id=${o.id}">${escapeHtml(o.order_number)}</a></td>
@@ -56,5 +57,7 @@ form.q.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout
 form.addEventListener('submit', e => { e.preventDefault(); load(); });
 
 // KPIs siempre sobre el total, aunque se entre con filtro
-listOrders().then(renderKpis).catch(console.error);
+Promise.all([listOrders(), countPendingSupport().catch(() => null)])
+  .then(([orders, pending]) => renderKpis(orders, pending))
+  .catch(console.error);
 load();

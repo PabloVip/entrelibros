@@ -3,6 +3,9 @@ import { requireAdmin } from '../../core/auth.js';
 import { renderAdminLayout } from '../../core/adminLayout.js';
 import { getOrder, updateOrderStatus } from '../../repositories/ordersRepository.js';
 import { listEvents } from '../../repositories/eventsRepository.js';
+import { listSupportRequests } from '../../repositories/supportAdminRepository.js';
+import { REASONS } from '../../services/supportService.js';
+import { supportBadge } from '../../components/supportBadge.js';
 import { STATUS_LABELS, PAYMENT_LABELS, METHOD_LABELS, nextStatuses } from '../../services/orderService.js';
 import { statusBadge } from '../../components/statusBadge.js';
 import { escapeHtml, money, formatDate, param } from '../../core/utils.js';
@@ -33,7 +36,7 @@ function itemsTable(o) {
     </table>`;
 }
 
-function render(o, events) {
+function render(o, events, tickets) {
   const next = nextStatuses(o.status);
   const history = [...o.history].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
   document.title = `${o.order_number} · Back-office · Entrelibros`;
@@ -97,6 +100,15 @@ function render(o, events) {
       </section>
 
       <section class="panel span-2">
+        <h2 class="h3">Incidencias de soporte</h2>
+        ${tickets.length ? `<ul class="plain">${tickets.map(t => `
+          <li>${supportBadge(t.status)} <strong>${escapeHtml(t.ticket_number)}</strong> · ${escapeHtml(REASONS[t.reason] ?? t.reason)}
+            <small class="muted">· ${formatDate(t.created_at)}</small><br><small>${escapeHtml(t.message)}</small></li>`).join('')}</ul>
+          <p><a href="admin-soporte.html?estado=">Ver todas en Soporte →</a></p>`
+          : '<p class="muted">Sin incidencias de soporte.</p>'}
+      </section>
+
+      <section class="panel span-2">
         <h2 class="h3">Eventos del pedido</h2>
         ${events.length ? `<ul class="plain">${events.map(ev => `
           <li><code>${escapeHtml(ev.event_type)}</code> <small class="muted">${formatDate(ev.occurred_at)} · ${escapeHtml(ev.source)}</small></li>`).join('')}</ul>`
@@ -139,9 +151,11 @@ function confirmInline(form, text) {
 async function load() {
   try {
     if (!Number.isInteger(id) || id < 1) throw new Error('not-found');
-    const [order, events] = await Promise.all([getOrder(id), listEvents({ orderId: id }, 50)]);
+    const [order, events, tickets] = await Promise.all([
+      getOrder(id), listEvents({ orderId: id }, 50), listSupportRequests({ orderId: id, status: undefined }),
+    ]);
     if (!order) throw new Error('not-found');
-    render(order, events);
+    render(order, events, tickets);
   } catch (err) {
     if (err.message !== 'not-found') console.error(err);
     root.innerHTML = `<p class="empty error">${err.message === 'not-found' ? 'Pedido no encontrado.' : 'No se ha podido cargar el pedido.'}</p>`;

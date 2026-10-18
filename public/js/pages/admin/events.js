@@ -15,7 +15,7 @@ const COLUMNS = ['event_id', 'event_type', 'occurred_at', 'source', 'session_id'
                  'customer_id', 'order_id', 'entity_type', 'entity_id', 'payload'];
 
 form.type.insertAdjacentHTML('beforeend',
-  [...FUNNEL, 'order.status_changed'].map(t => `<option value="${t}">${t}</option>`).join(''));
+  [...FUNNEL, 'order.status_changed', 'support.status_changed'].map(t => `<option value="${t}">${t}</option>`).join(''));
 
 const pedido = Number(new URLSearchParams(location.search).get('pedido'));
 if (Number.isInteger(pedido) && pedido > 0) form.orderId.value = pedido;

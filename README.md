@@ -20,7 +20,7 @@ entre libros (*book nooks*). Tarea 1 · Soluciones Informáticas para la Empresa
 
 ### 1. Base de datos (Supabase)
 1. Crear un proyecto en <https://supabase.com>.
-2. En **SQL Editor**, ejecutar en orden: `01_schema.sql`, `02_policies.sql`, `03_functions.sql` y `04_seed.sql` (datos de prueba ficticios; se puede re-ejecutar para dejar la tienda limpia).
+2. En **SQL Editor**, ejecutar en orden: `01_schema.sql`, `02_policies.sql`, `03_functions.sql`, `05_checkout.sql`, `06_soporte_admin.sql` y `04_seed.sql` (datos de prueba ficticios; se puede re-ejecutar para dejar la tienda limpia).
 3. En **Project Settings > API**, copiar la *Project URL* y la *publishable key* (anon) en `public/js/config.js`.
    Esa clave es pública por diseño; **nunca** usar la *secret / service_role key* en el front.
 
@@ -53,6 +53,7 @@ python3 -m http.server 8000 -d public
 | Back-office · acceso | `admin.html` | Login con Supabase Auth; solo usuarios de `admin_users`. |
 | Back-office · pedidos | `admin-pedidos.html` | Indicadores, filtro por estado y búsqueda por nº de pedido o email. |
 | Back-office · detalle | `admin-pedido.html?id=…` | Líneas, importes con IVA desglosado, pagos, historial, eventos y cambio de estado. |
+| Back-office · soporte | `admin-soporte.html` | Incidencias de postventa con filtro por estado y motivo; atender, resolver y reabrir (función `admin_update_support_status`). |
 | Back-office · eventos | `admin-eventos.html` | Embudo de compra, filtros y exportación a CSV / JSON. |
 
 > Las páginas del back-office son públicas (GitHub Pages es estático), pero los datos no:

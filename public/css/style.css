@@ -265,3 +265,17 @@ input[type=email], input[type=password], input[type=date], input:not([type]) { f
   .toolbar select, .toolbar input { min-width: 0; width: 100%; }
   .toolbar label { flex: 1 1 140px; }
 }
+
+/* ---------- Back-office · soporte ---------- */
+.support-abierta  { background: #fbe3e1; color: #8a2a24; }
+.support-en_curso { background: #fff1d6; color: #7a5200; }
+.support-resuelta { background: #e2f3e5; color: #22602f; }
+.msg-cell { max-width: 320px; }
+.msg-cell summary { cursor: pointer; }
+.msg-cell details p { margin: 6px 0 0; }
+.actions { white-space: nowrap; }
+.actions .btn + .btn { margin-left: 6px; }
+.btn-small { padding: 5px 10px; font-size: .82rem; }
+.kpi-link { text-decoration: none; color: inherit; }
+.kpi-link:hover { border-color: var(--accent); }
+.nowrap { white-space: nowrap; }
