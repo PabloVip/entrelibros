@@ -5,6 +5,7 @@ import {
   TYPE_LABELS, DIFFICULTY_LABELS, dimensionsLabel, defaultVariant,
 } from '../services/catalogService.js';
 import { track, EVENTS } from '../services/eventService.js';
+import '../services/cartService.js'; // escucha 'entrelibros:add-to-cart' y guarda la línea
 import { productCard } from '../components/productCard.js';
 import { escapeHtml, money, param } from '../core/utils.js';
 
