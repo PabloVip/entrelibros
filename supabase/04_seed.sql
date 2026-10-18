@@ -183,6 +183,111 @@ insert into public.customers (email, full_name, phone) values
   ('marta.sanchez@entrelibros.test', 'Marta Sánchez Prueba', '600000003'),
   ('carlos.lopez@entrelibros.test',  'Carlos López Prueba',  '600000004');
 
+-- ---------- PEDIDOS HISTÓRICOS DE EJEMPLO (para el back-office) ----------
+-- Reglas de cálculo (las mismas que debe aplicar create_order):
+--   subtotal = Σ líneas (PVP con IVA) · descuento sobre el subtotal
+--   envío gratis si (subtotal - descuento) >= free_from
+--   total = subtotal - descuento + envío · IVA desglosado = total - total / 1,21
+insert into public.orders (order_number, customer_id, status, subtotal, discount_code, discount_amount,
+  shipping_method_id, shipping_cost, tax_amount, total, ship_name, ship_address, ship_city,
+  ship_postcode, ship_province, customer_notes, created_at)
+select v.num, c.id, v.status, v.subtotal, v.code, v.disc, s.id, v.ship, v.tax, v.total,
+       c.full_name, v.addr, v.city, v.cp, v.prov, v.notes, now() - v.ago
+from (values
+  ('EL-20261009-K7Q2', 'lucia.martin@entrelibros.test',  'entregado',             54.80, null,       0.00, 'estandar', 4.95, 10.37, 59.75,
+   'Calle Ficticia 1, 2º B',    'Murcia',  '30001', 'Murcia',   null,                       interval '9 days'),
+  ('EL-20261013-R4D9', 'javier.ruiz@entrelibros.test',   'pendiente_preparacion', 87.80, 'OTONO15', 13.17, 'estandar', 0.00, 12.95, 74.63,
+   'Avenida Inventada 22',      'Cartagena','30201', 'Murcia',  'Es un regalo, sin factura', interval '5 days'),
+  ('EL-20261015-M2X8', 'marta.sanchez@entrelibros.test', 'enviado',               69.80, 'NOOK5',    5.00, 'express',  8.95, 12.80, 73.75,
+   'Plaza de Prueba 3',         'Alicante','03001', 'Alicante', null,                       interval '3 days'),
+  ('EL-20261017-T9F1', 'carlos.lopez@entrelibros.test',  'creado',                37.90, null,       0.00, 'punto',    2.95,  7.09, 40.85,
+   'Calle Simulada 45',         'Lorca',   '30800', 'Murcia',   null,                       interval '1 day')
+) as v(num, email, status, subtotal, code, disc, ship_code, ship, tax, total, addr, city, cp, prov, notes, ago)
+join public.customers c on c.email = v.email
+join public.shipping_methods s on s.code = v.ship_code
+order by v.ago desc;  -- ids en orden cronológico
+
+insert into public.order_items (order_id, variant_id, product_name, variant_name, sku, unit_price, quantity, line_total)
+select o.id, pv.id, p.name, pv.name, pv.sku, pv.price, v.qty, pv.price * v.qty
+from (values
+  ('EL-20261009-K7Q2', 'EL-KIO-LED',  1),
+  ('EL-20261009-K7Q2', 'EL-REC-FAR6', 1),
+  ('EL-20261013-R4D9', 'EL-DRA-LED',  1),
+  ('EL-20261013-R4D9', 'EL-ACC-PINT', 1),
+  ('EL-20261015-M2X8', 'EL-PAR-SL',   2),
+  ('EL-20261017-T9F1', 'EL-HAD-LED',  1)
+) as v(num, sku, qty)
+join public.orders o on o.order_number = v.num
+join public.product_variants pv on pv.sku = v.sku
+join public.products p on p.id = pv.product_id;
+
+insert into public.payments (order_id, method, amount, status, transaction_ref, card_last4, failure_reason, created_at)
+select o.id, v.method, o.total, v.status, v.ref, v.last4, v.reason, o.created_at + interval '2 minutes'
+from (values
+  ('EL-20261009-K7Q2', 'tarjeta_simulada', 'aprobado',  'SIM-PAY-0001', '4242', null),
+  ('EL-20261013-R4D9', 'tarjeta_simulada', 'aprobado',  'SIM-PAY-0002', '4242', null),
+  ('EL-20261015-M2X8', 'bizum_simulado',   'aprobado',  'SIM-PAY-0003', null,   null),
+  ('EL-20261017-T9F1', 'tarjeta_simulada', 'rechazado', 'SIM-PAY-0004', '0002', 'Tarjeta de prueba rechazada por el simulador')
+) as v(num, method, status, ref, last4, reason)
+join public.orders o on o.order_number = v.num;
+
+insert into public.order_status_history (order_id, from_status, to_status, changed_by, note, created_at)
+select o.id, v.from_s, v.to_s, v.who, v.note, o.created_at + v.after
+from (values
+  ('EL-20261009-K7Q2', null,                    'creado',                'sistema',       null,                 interval '0'),
+  ('EL-20261009-K7Q2', 'creado',                'pago_simulado',         'sistema',       'Pago SIM-PAY-0001',  interval '2 minutes'),
+  ('EL-20261009-K7Q2', 'pago_simulado',         'pendiente_preparacion', 'Admin pruebas', null,                 interval '3 hours'),
+  ('EL-20261009-K7Q2', 'pendiente_preparacion', 'enviado',               'Admin pruebas', 'Seguimiento SIM-123', interval '1 day'),
+  ('EL-20261009-K7Q2', 'enviado',               'entregado',             'Admin pruebas', null,                 interval '4 days'),
+  ('EL-20261013-R4D9', null,                    'creado',                'sistema',       null,                 interval '0'),
+  ('EL-20261013-R4D9', 'creado',                'pago_simulado',         'sistema',       'Pago SIM-PAY-0002',  interval '2 minutes'),
+  ('EL-20261013-R4D9', 'pago_simulado',         'pendiente_preparacion', 'Admin pruebas', null,                 interval '1 day'),
+  ('EL-20261015-M2X8', null,                    'creado',                'sistema',       null,                 interval '0'),
+  ('EL-20261015-M2X8', 'creado',                'pago_simulado',         'sistema',       'Pago SIM-PAY-0003',  interval '2 minutes'),
+  ('EL-20261015-M2X8', 'pago_simulado',         'pendiente_preparacion', 'Admin pruebas', null,                 interval '5 hours'),
+  ('EL-20261015-M2X8', 'pendiente_preparacion', 'enviado',               'Admin pruebas', 'Exprés 24 h',        interval '1 day'),
+  ('EL-20261017-T9F1', null,                    'creado',                'sistema',       null,                 interval '0')
+) as v(num, from_s, to_s, who, note, after)
+join public.orders o on o.order_number = v.num;
+
+-- Eventos coherentes con esos pedidos (embudo de compra)
+insert into public.events (event_type, source, occurred_at, session_id, customer_id, order_id, entity_type, entity_id, payload)
+select v.type, v.source, o.created_at + v.offs, 'seed-' || o.order_number, o.customer_id,
+       case when v.type in ('order.created','payment.simulated','order.status_changed') then o.id end,
+       v.entity, case v.entity when 'order' then o.id::text when 'payment' then p.transaction_ref else null end,
+       case v.type
+         when 'checkout.started'  then jsonb_build_object('subtotal', o.subtotal)
+         when 'order.created'     then jsonb_build_object('order_number', o.order_number, 'total', o.total, 'items', (select count(*) from public.order_items i where i.order_id = o.id))
+         when 'payment.simulated' then jsonb_build_object('order_number', o.order_number, 'method', p.method, 'status', p.status, 'amount', p.amount)
+         else '{}'::jsonb end
+from public.orders o
+join public.payments p on p.order_id = o.id
+cross join (values
+  ('checkout.started',  'web',      'checkout', interval '-3 minutes'),
+  ('order.created',     'servidor', 'order',    interval '0'),
+  ('payment.simulated', 'servidor', 'payment',  interval '2 minutes')
+) as v(type, source, entity, offs);
+
+-- Navegación previa: visitas a ficha y productos añadidos al carrito
+insert into public.events (event_type, source, occurred_at, session_id, entity_type, entity_id, payload)
+select v.type, 'web', now() - v.ago, v.sess, v.entity, p.id::text,
+       jsonb_build_object('slug', p.slug) || v.extra
+from (values
+  ('product.viewed',  'callejon-kioto-sakura', 'seed-visita-1', 'product', '{}'::jsonb,                interval '9 days 1 hour'),
+  ('cart.item_added', 'callejon-kioto-sakura', 'seed-visita-1', 'cart',    '{"quantity":1}'::jsonb,   interval '9 days 50 minutes'),
+  ('product.viewed',  'torre-del-dragon',      'seed-visita-2', 'product', '{}'::jsonb,                interval '5 days 2 hours'),
+  ('product.viewed',  'biblioteca-infinita',   'seed-visita-2', 'product', '{}'::jsonb,                interval '5 days 1 hour'),
+  ('cart.item_added', 'torre-del-dragon',      'seed-visita-2', 'cart',    '{"quantity":1}'::jsonb,   interval '5 days 30 minutes'),
+  ('product.viewed',  'cafeteria-paris-1920',  'seed-visita-3', 'product', '{}'::jsonb,                interval '3 days 1 hour'),
+  ('cart.item_added', 'cafeteria-paris-1920',  'seed-visita-3', 'cart',    '{"quantity":2}'::jsonb,   interval '3 days 40 minutes'),
+  ('product.viewed',  'bosque-de-las-hadas',   'seed-visita-4', 'product', '{}'::jsonb,                interval '1 day 1 hour'),
+  ('cart.item_added', 'bosque-de-las-hadas',   'seed-visita-4', 'cart',    '{"quantity":1}'::jsonb,   interval '1 day 20 minutes'),
+  ('product.viewed',  'tienda-ramen-nocturna', 'seed-visita-5', 'product', '{}'::jsonb,                interval '12 hours'),
+  ('cart.item_added', 'tienda-ramen-nocturna', 'seed-visita-5', 'cart',    '{"quantity":1}'::jsonb,   interval '11 hours'),  -- carrito abandonado
+  ('product.viewed',  'biblioteca-infinita',   'seed-visita-6', 'product', '{}'::jsonb,                interval '6 hours')
+) as v(type, slug, sess, entity, extra, ago)
+join public.products p on p.slug = v.slug;
+
 -- ---------- ADMIN DEL BACK-OFFICE ----------
 -- 1) Authentication > Users > Add user: admin@entrelibros.test + contraseña de prueba
 -- 2) Después ejecutar:
