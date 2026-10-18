@@ -125,6 +125,12 @@ form.addEventListener('submit', e => {
   submit(form);
 });
 form.addEventListener('input', e => {
+  // un campo marcado con error se limpia en cuanto su valor pasa a ser válido
+  if (FIELDS.includes(e.target.name) && e.target.getAttribute('aria-invalid') === 'true'
+      && !validateSupport(formValues(form))[e.target.name]) {
+    e.target.removeAttribute('aria-invalid');
+    document.getElementById(`err-${e.target.name}`).textContent = '';
+  }
   if (e.target.name === 'message') {
     document.getElementById('message-count').textContent = `${e.target.value.length} / ${MESSAGE_MAX}`;
   }

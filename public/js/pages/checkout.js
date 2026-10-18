@@ -259,6 +259,12 @@ function bindForm() {
     if (e.target.name === 'shipping') renderSummary();
   });
   form.addEventListener('input', e => {
+    // un campo marcado con error se limpia en cuanto su valor pasa a ser válido
+    if (FIELDS.includes(e.target.name) && e.target.getAttribute('aria-invalid') === 'true'
+        && !validateForm(formValues(form))[e.target.name]) {
+      e.target.removeAttribute('aria-invalid');
+      document.getElementById(`err-${e.target.name}`).textContent = '';
+    }
     if (e.target.name === 'notes') {
       document.getElementById('notes-count').textContent = `${e.target.value.length} / 500`;
     }
