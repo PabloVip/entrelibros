@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Catálogo · Entrelibros</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="catalogo">
+  <div class="academic-banner" role="note">
+    <strong>Prototipo académico</strong> · Grado en Ingeniería Informática (UCAM).
+    Tienda ficticia sin actividad comercial: no introduzcas datos personales reales ni medios de pago reales.
+  </div>
+  <header id="site-header" class="site-header"></header>
+
+  <main class="container" id="contenido">
+    <h1>Catálogo</h1>
+
+    <div class="catalog-layout">
+      <form id="filters" class="filters" aria-label="Filtros del catálogo">
+        <div class="field">
+          <label for="f-q">Buscar</label>
+          <input id="f-q" name="q" type="search" maxlength="60" placeholder="Kioto, dragón…">
+        </div>
+
+        <fieldset class="field">
+          <legend>Tipo de producto</legend>
+          <label><input type="radio" name="type" value="" checked> Todos</label>
+          <label><input type="radio" name="type" value="kit"> Kits completos</label>
+          <label><input type="radio" name="type" value="accesorio"> Accesorios</label>
+          <label><input type="radio" name="type" value="recambio"> Recambios</label>
+        </fieldset>
+
+        <div class="field">
+          <label for="f-theme">Temática</label>
+          <select id="f-theme" name="theme"><option value="">Todas</option></select>
+        </div>
+
+        <div class="field">
+          <label for="f-difficulty">Dificultad de montaje</label>
+          <select id="f-difficulty" name="difficulty">
+            <option value="">Cualquiera</option>
+            <option value="principiante">Principiante</option>
+            <option value="intermedio">Intermedio</option>
+            <option value="avanzado">Avanzado</option>
+          </select>
+        </div>
+
+        <fieldset class="field">
+          <legend>Iluminación</legend>
+          <label><input type="radio" name="lighting" value="" checked> Indiferente</label>
+          <label><input type="radio" name="lighting" value="con"> Disponible con luz</label>
+          <label><input type="radio" name="lighting" value="sin"> Disponible sin luz</label>
+        </fieldset>
+
+        <div class="field">
+          <label for="f-width">Ancho máximo (hueco en la estantería)</label>
+          <select id="f-width" name="maxWidth"><option value="">Cualquiera</option></select>
+        </div>
+
+        <div class="field">
+          <label for="f-price">Precio máximo (€)</label>
+          <input id="f-price" name="maxPrice" type="number" min="1" max="1000" step="1" inputmode="numeric" placeholder="Sin límite">
+        </div>
+
+        <button type="reset" class="btn btn-secondary">Quitar filtros</button>
+      </form>
+
+      <section aria-labelledby="results-title">
+        <div class="results-bar">
+          <p id="results-title" class="results-count" aria-live="polite">Cargando…</p>
+          <label class="sort">Ordenar por
+            <select id="f-sort" name="sort" form="filters"></select>
+          </label>
+        </div>
+        <div id="results" class="grid"></div>
+      </section>
+    </div>
+  </main>
+
+  <footer id="site-footer" class="site-footer"></footer>
+  <script type="module" src="js/pages/catalog.js"></script>
+</body>
+</html>
