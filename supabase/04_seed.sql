@@ -120,10 +120,10 @@ from (values
 ) as v(slug, sku, name, lit, finish, price, stock, weight, is_default)
 join public.products p on p.slug = v.slug;
 
--- ---------- IMÁGENES (ilustraciones provisionales en public/img/productos/) ----------
+-- ---------- IMÁGENES (fotos de ambientación de Unsplash en public/img/productos/; créditos en el README) ----------
 insert into public.product_images (product_id, url, alt_text, sort_order)
-select p.id, 'img/productos/' || p.slug || '.svg',
-       'Ilustración de ' || p.name || ' colocado entre libros', 0
+select p.id, 'img/productos/' || p.slug || '.jpg',
+       'Fotografía de ambientación: ' || p.name, 0
 from public.products p;
 
 -- ---------- COMPATIBILIDAD accesorio/recambio → kit ----------
