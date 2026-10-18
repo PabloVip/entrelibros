@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Pedidos · Back-office · Entrelibros</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="pedidos" class="admin">
+  <div class="academic-banner" role="note">
+    <strong>Prototipo académico</strong> · Grado en Ingeniería Informática (UCAM).
+    Tienda ficticia sin actividad comercial: no introduzcas datos personales reales ni medios de pago reales.
+  </div>
+  <header id="site-header" class="site-header"></header>
+  <main class="container" id="contenido">
+    <h1>Pedidos</h1>
+    <section id="kpis" class="kpis" aria-label="Resumen"></section>
+
+    <form id="order-filters" class="toolbar" role="search">
+      <label>Estado
+        <select name="status" id="f-status"><option value="">Todos</option></select>
+      </label>
+      <label>Buscar
+        <input name="q" type="search" maxlength="60" placeholder="Nº de pedido o email">
+      </label>
+    </form>
+
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr><th>Pedido</th><th>Fecha</th><th>Cliente</th><th class="num">Artículos</th><th class="num">Total</th><th>Estado</th></tr>
+        </thead>
+        <tbody id="orders"><tr><td colspan="6">Cargando…</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="js/pages/admin/orders.js"></script>
+</body>
+</html>
