@@ -97,6 +97,7 @@ const exact = {
 
   // ---------- Catálogo ----------
   'Filtros del catálogo': 'Catalogue filters',
+  'Buscar y filtrar': 'Search and filter',
   'Buscar': 'Search',
   'Kioto, dragón…': 'Kyoto, dragon…',
   'Tipo de producto': 'Product type',

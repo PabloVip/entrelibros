@@ -22,6 +22,12 @@
     <h1>Catálogo</h1>
 
     <div class="catalog-layout">
+      <!-- Solo en el móvil: los filtros empiezan plegados (ocupan casi dos pantallas) y este botón los abre.
+           El número es cuántos filtros hay aplicados. En escritorio el CSS lo oculta. -->
+      <button type="button" id="filters-toggle" class="btn btn-secondary filters-toggle"
+              aria-controls="filters" aria-expanded="false">
+        Buscar y filtrar <span id="filters-active" class="nav-count"></span>
+      </button>
       <form id="filters" class="filters" aria-label="Filtros del catálogo">
         <div class="field">
           <label for="f-q">Buscar</label>

@@ -165,6 +165,8 @@ input[type=search], input[type=number], select { font: inherit; padding: 8px 10p
 .results-count { margin: 0; color: var(--muted); }
 .sort { display: flex; align-items: center; gap: 8px; font-size: .9rem; }
 .sort select { width: auto; }
+/* Botón "Buscar y filtrar": solo existe en el móvil (se muestra en la media query de "Móvil") */
+.filters-toggle { display: none; }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
 .grid[aria-busy=true] { opacity: .5; }
@@ -220,6 +222,12 @@ input[type=search], input[type=number], select { font: inherit; padding: 8px 10p
   .hero, .catalog-layout, .product, .product-details, .types { grid-template-columns: 1fr; }
   .filters { position: static; }
   .hero img { max-width: 260px; }
+  .catalog-layout { gap: 16px; }
+  .filters-toggle { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; }
+  /* flecha dibujada con dos bordes: hacia abajo si está plegado, hacia arriba si está abierto */
+  .filters-toggle::after { content: ""; width: 7px; height: 7px; margin: -4px 0 0 2px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); }
+  .filters-toggle[aria-expanded=true]::after { margin-top: 4px; transform: rotate(-135deg); }
+  .filters:not(.is-open) { display: none; } /* plegados hasta que se pulsa el botón */
 }
 
 /* ---------- Carrito ---------- */

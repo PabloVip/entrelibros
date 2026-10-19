@@ -67,9 +67,24 @@ async function load(filters) {
   }
 }
 
+// Móvil: el botón "Buscar y filtrar" abre y cierra el panel de filtros (en escritorio no se ve).
+const toggle = document.getElementById('filters-toggle');
+toggle.addEventListener('click', () => {
+  const open = toggle.getAttribute('aria-expanded') !== 'true';
+  toggle.setAttribute('aria-expanded', String(open)); // los lectores de pantalla anuncian "expandido/contraído"
+  form.classList.toggle('is-open', open);
+});
+
+/** Número de filtros aplicados junto al botón (el orden no cuenta como filtro). Vacío si no hay ninguno. */
+function showActiveCount(f) {
+  const n = Object.keys(f).filter(k => k !== 'sort').length;
+  document.getElementById('filters-active').textContent = n || '';
+}
+
 function onChange() {
   const f = readForm();
   applyToForm(f);
+  showActiveCount(f);
   history.replaceState(null, '', `catalogo.html${filtersToQuery(f)}`);
   load(f);
 }
@@ -89,5 +104,6 @@ form.addEventListener('reset', () => setTimeout(onChange)); // tras limpiar el f
   }
   const f = filtersFromUrl();
   applyToForm(f);
+  showActiveCount(f); // p. ej. al llegar desde la portada con "Kits de hasta 13 cm"
   load(f);
 })();
