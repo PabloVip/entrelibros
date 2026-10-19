@@ -67,7 +67,7 @@ export function renderLayout() {
         <p><strong>${escapeHtml(APP_NAME)}</strong></p>
         <p>Escenas en miniatura para colocar entre tus libros. Tienda ficticia: proyecto de la asignatura
           Soluciones Informáticas para la Empresa (UCAM), ${new Date().getFullYear()}.</p>
-        <p><a href="soporte.html">Soporte postventa</a></p>
+        <p><a href="soporte.html">Soporte postventa</a> · <a href="privacidad.html">Política de privacidad</a></p>
       </div>`;
   }
 }

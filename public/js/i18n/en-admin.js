@@ -367,6 +367,43 @@ const exact = {
   'No se ha podido entrar con Google (¿cancelaste el acceso?). Inténtalo de nuevo o entra con tu email.':
     'Could not sign in with Google (did you cancel?). Try again or sign in with your email.',
   'El acceso con Google no está activado en la tienda.': 'Google sign-in is not enabled in the shop.',
+  // ---------- Política de privacidad ----------
+  'Política de privacidad': 'Privacy policy',
+  'política de privacidad': 'privacy policy',
+  'Más información en la': 'More information in the',
+  'Última actualización: 19 de octubre de 2026': 'Last updated: 19 October 2026',
+  'Quiénes somos': 'Who we are',
+  'Entrelibros es una tienda ficticia creada como proyecto de la asignatura Soluciones Informáticas para la Empresa del Grado en Ingeniería Informática de la Universidad Católica de Murcia (UCAM). No vende productos reales ni cobra ningún importe: los pagos son simulados.':
+    'Entrelibros is a fictitious shop created as a project for the course Business IT Solutions of the Computer Engineering degree at the Catholic University of Murcia (UCAM). It does not sell real products or charge any amount: payments are simulated.',
+  'Responsables del proyecto: Pablo Vicente Juan y Nino Iraci, estudiantes de la UCAM.': 'Project owners: Pablo Vicente Juan and Nino Iraci, UCAM students.',
+  'Qué datos tratamos': 'What data we process',
+  'Si creas una cuenta: tu nombre, tu email y, si lo indicas, tu teléfono.': 'If you create an account: your name, your email and, if you provide it, your phone number.',
+  'Si entras con Google: el nombre, el email y la foto de perfil que Google comparte con nosotros. No recibimos tu contraseña de Google.':
+    'If you sign in with Google: the name, email and profile picture Google shares with us. We never receive your Google password.',
+  'Si haces un pedido: los datos de envío que escribas (dirección, ciudad, código postal y provincia) y los productos del pedido.':
+    'If you place an order: the shipping details you enter (address, city, postcode and province) and the products in the order.',
+  'Si abres una incidencia: tu email, el número de pedido y el mensaje.': 'If you open a support request: your email, the order number and the message.',
+  'Datos de uso anónimos: qué productos se ven, qué se añade al carrito y qué pedidos se crean, con un identificador de sesión aleatorio que no te identifica.':
+    'Anonymous usage data: which products are viewed, what is added to the cart and which orders are created, with a random session identifier that does not identify you.',
+  'Para qué los usamos': 'What we use it for',
+  'Solo para que la tienda funcione: crear tu cuenta, mostrarte tus pedidos, simular el envío y atender incidencias, y para estudiar el funcionamiento del prototipo dentro de la asignatura. No los usamos para publicidad, no los vendemos y no los compartimos con nadie más.':
+    'Only to make the shop work: creating your account, showing your orders, simulating shipping and handling support requests, and to study how the prototype works as part of the course. We do not use it for advertising, we do not sell it and we do not share it with anyone else.',
+  'Dónde se guardan': 'Where it is stored',
+  'Los datos se guardan en Supabase, el servicio de base de datos y cuentas que usa la tienda. Los correos de la cuenta (confirmar el email y cambiar la contraseña) se envían a través de Brevo. Si entras con Google, el acceso pasa por Google. La web se publica en GitHub Pages.':
+    'Data is stored in Supabase, the database and accounts service the shop uses. Account emails (email confirmation and password changes) are sent through Brevo. If you sign in with Google, the sign-in goes through Google. The website is hosted on GitHub Pages.',
+  'En tu navegador guardamos el carrito, los favoritos, el idioma elegido y la sesión iniciada (almacenamiento local). No usamos cookies de publicidad ni de seguimiento.':
+    'In your browser we store the cart, favourites, chosen language and your signed-in session (local storage). We do not use advertising or tracking cookies.',
+  'Cuánto tiempo': 'How long',
+  'Mientras dure el proyecto académico. Al terminar la evaluación de la asignatura se borrarán las cuentas y los pedidos de prueba.':
+    'For as long as the academic project lasts. When the course assessment ends, the test accounts and orders will be deleted.',
+  'Tus derechos': 'Your rights',
+  'Puedes ver y cambiar tus datos en': 'You can view and change your data in',
+  '. Para pedir que borremos tu cuenta y tus datos, o para cualquier duda sobre privacidad, abre una incidencia en':
+    '. To ask us to delete your account and data, or for any privacy question, open a request in',
+  'con el motivo "Otro motivo".': 'with the reason "Other reason".',
+  'Recomendación': 'Recommendation',
+  'Como es un prototipo, te pedimos que uses datos de prueba: un nombre inventado, una dirección ficticia y nunca tarjetas reales.':
+    'As this is a prototype, please use test data: a made-up name, a fictitious address and never real cards.',
   // checkout con cuenta
   '¿Tienes cuenta?': 'Have an account?',
   'Entra': 'Sign in',

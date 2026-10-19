@@ -141,6 +141,7 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago. E
 | Ficha de producto | `producto.html?slug=…` |
 | Favoritos (guardados en el navegador) | `favoritos.html` |
 | Mi cuenta: entrar, crear cuenta, recuperar contraseña, mis pedidos, mis incidencias y mis datos | `cuenta.html` |
+| Política de privacidad (la pide Google para el acceso con Google) | `privacidad.html` |
 | Carrito | `carrito.html` |
 | Checkout | `checkout.html` |
 | Pago simulado | `pago.html?pedido=…` |

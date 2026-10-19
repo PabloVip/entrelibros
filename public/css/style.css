@@ -567,3 +567,6 @@ input[type=email], input[type=password], input[type=date], input:not([type]) { f
 .btn-google { width: 100%; text-align: center; }
 .or-line { display: flex; align-items: center; gap: 10px; margin: 0; font-size: .82rem; color: var(--muted); }
 .or-line::before, .or-line::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.legal h2 { font-size: 1.25rem; margin-top: 28px; }
+.legal ul { padding-left: 20px; }
+.legal li { margin-bottom: 6px; }

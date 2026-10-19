@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Política de privacidad de Entrelibros, tienda ficticia de un proyecto académico de la UCAM.">
+  <title>Política de privacidad · Entrelibros</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="img/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+  <meta name="theme-color" content="#1D2537">
+</head>
+<body data-page="privacidad">
+  <div class="academic-banner" role="note">
+    <strong>Prototipo académico</strong> · Grado en Ingeniería Informática (UCAM).
+    Tienda ficticia sin actividad comercial: no introduzcas datos personales reales ni medios de pago reales.
+  </div>
+  <header id="site-header" class="site-header"></header>
+
+  <main class="container narrow-md legal" id="contenido">
+    <h1>Política de privacidad</h1>
+    <p class="lead">Última actualización: 19 de octubre de 2026</p>
+
+    <h2>Quiénes somos</h2>
+    <p>Entrelibros es una tienda ficticia creada como proyecto de la asignatura Soluciones Informáticas para la Empresa
+      del Grado en Ingeniería Informática de la Universidad Católica de Murcia (UCAM). No vende productos reales ni cobra
+      ningún importe: los pagos son simulados.</p>
+    <p>Responsables del proyecto: Pablo Vicente Juan y Nino Iraci, estudiantes de la UCAM.</p>
+
+    <h2>Qué datos tratamos</h2>
+    <ul>
+      <li>Si creas una cuenta: tu nombre, tu email y, si lo indicas, tu teléfono.</li>
+      <li>Si entras con Google: el nombre, el email y la foto de perfil que Google comparte con nosotros. No recibimos tu contraseña de Google.</li>
+      <li>Si haces un pedido: los datos de envío que escribas (dirección, ciudad, código postal y provincia) y los productos del pedido.</li>
+      <li>Si abres una incidencia: tu email, el número de pedido y el mensaje.</li>
+      <li>Datos de uso anónimos: qué productos se ven, qué se añade al carrito y qué pedidos se crean, con un identificador de sesión aleatorio que no te identifica.</li>
+    </ul>
+
+    <h2>Para qué los usamos</h2>
+    <p>Solo para que la tienda funcione: crear tu cuenta, mostrarte tus pedidos, simular el envío y atender incidencias,
+      y para estudiar el funcionamiento del prototipo dentro de la asignatura. No los usamos para publicidad, no los vendemos
+      y no los compartimos con nadie más.</p>
+
+    <h2>Dónde se guardan</h2>
+    <p>Los datos se guardan en Supabase, el servicio de base de datos y cuentas que usa la tienda. Los correos de la cuenta
+      (confirmar el email y cambiar la contraseña) se envían a través de Brevo. Si entras con Google, el acceso pasa por
+      Google. La web se publica en GitHub Pages.</p>
+    <p>En tu navegador guardamos el carrito, los favoritos, el idioma elegido y la sesión iniciada (almacenamiento local).
+      No usamos cookies de publicidad ni de seguimiento.</p>
+
+    <h2>Cuánto tiempo</h2>
+    <p>Mientras dure el proyecto académico. Al terminar la evaluación de la asignatura se borrarán las cuentas y los pedidos de prueba.</p>
+
+    <h2>Tus derechos</h2>
+    <p>Puedes ver y cambiar tus datos en <a href="cuenta.html">Mi cuenta</a>. Para pedir que borremos tu cuenta y tus datos,
+      o para cualquier duda sobre privacidad, abre una incidencia en <a href="soporte.html">Soporte</a> con el motivo "Otro motivo".</p>
+
+    <h2>Recomendación</h2>
+    <p>Como es un prototipo, te pedimos que uses datos de prueba: un nombre inventado, una dirección ficticia y nunca tarjetas reales.</p>
+  </main>
+
+  <footer id="site-footer" class="site-footer"></footer>
+  <script type="module" src="js/core/i18n.js"></script>
+  <script type="module">
+    import { renderLayout } from './js/core/layout.js';
+    renderLayout();
+  </script>
+</body>
+</html>

@@ -93,6 +93,7 @@ function renderGuest(notice) {
           <span>Entiendo que es una tienda ficticia y uso un email de prueba o mío, sin datos reales de pago.</span></label>
         <p id="err-register-terms" class="field-error"></p>
         <button type="submit" class="btn">Crear cuenta</button>
+        <p class="muted small">Más información en la <a href="privacidad.html">política de privacidad</a>.</p>
         <p class="form-msg" role="alert"></p>
       </form>
     </div>`;
