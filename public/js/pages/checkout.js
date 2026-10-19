@@ -8,6 +8,7 @@ import { getCart, clearCart, refreshFromCatalog, lineProblem, subtotal } from '.
 import { estimate, shippingCost, validateForm, saveLastOrder } from '../services/checkoutService.js';
 import { track, EVENTS } from '../services/eventService.js';
 import { escapeHtml, money } from '../core/utils.js';
+import { prefillCheckout } from '../components/checkoutAccount.js';
 
 renderLayout();
 
@@ -324,6 +325,7 @@ function bindForm() {
     renderForm(priceChanges);
     renderSummary();
     bindForm();
+    prefillCheckout(document.getElementById('checkout-form')); // datos de "Mi cuenta" (Pablo)
 
     track(EVENTS.CHECKOUT_STARTED, {
       entityType: 'checkout',

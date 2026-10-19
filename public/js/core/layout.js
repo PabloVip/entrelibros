@@ -4,7 +4,8 @@ import { escapeHtml } from './utils.js';
 import { langSwitchHtml } from './i18n.js';
 import { count as cartCount } from '../services/cartService.js';
 import { count as favoritesCount } from '../services/favoritesService.js';
-import { HEART } from '../components/icons.js';
+import { HEART, USER } from '../components/icons.js';
+import { supabase } from './supabase.js';
 
 const NAV = [
   { id: 'inicio',    href: 'index.html',     label: 'Inicio' },
@@ -12,12 +13,14 @@ const NAV = [
   { id: 'soporte',   href: 'soporte.html',   label: 'Soporte' },
   { id: 'favoritos', href: 'favoritos.html', label: 'Favoritos' },
   { id: 'carrito',   href: 'carrito.html',   label: 'Carrito' },
+  { id: 'cuenta',    href: 'cuenta.html',    label: 'Mi cuenta' },
 ];
 
 function navLabel(item) {
   // número de favoritos y de artículos del carrito; si es 0, el CSS lo oculta.
   // En el móvil "Favoritos" se ve como un corazón para que la cabecera quepa en una línea.
   if (item.id === 'favoritos') return `${HEART}<span class="nav-label">${item.label}</span> <span id="fav-count" class="nav-count">${favoritesCount() || ''}</span>`;
+  if (item.id === 'cuenta')    return `${USER}<span class="nav-label" id="account-label">${item.label}</span>`;
   if (item.id === 'carrito')   return `${item.label} <span id="cart-count" class="nav-count">${cartCount() || ''}</span>`;
   return item.label;
 }
@@ -37,6 +40,10 @@ export function renderLayout() {
           ${langSwitchHtml()}
         </nav>
       </div>`;
+    // "Entrar" si no hay sesión; "Mi cuenta" si la hay (la sesión de Supabase se lee del navegador)
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) document.getElementById('account-label').textContent = 'Entrar';
+    }).catch(() => {});
     // cartService y favoritesService avisan cada vez que cambia su lista
     document.addEventListener('entrelibros:cart-changed', e => {
       document.getElementById('cart-count').textContent = e.detail.count || '';

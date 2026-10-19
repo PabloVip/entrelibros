@@ -38,7 +38,7 @@ function render() {
   document.getElementById('customers-count').textContent = `${list.length} ${list.length === 1 ? 'cliente' : 'clientes'}`;
   tbody.innerHTML = list.length ? list.map(c => `
     <tr>
-      <td><strong>${escapeHtml(c.full_name)}</strong><br>
+      <td><strong>${escapeHtml(c.full_name)}</strong> ${c.user_id ? '<span class="pill pill-ok">Con cuenta</span>' : '<span class="pill">Invitado</span>'}<br>
         <a href="admin-pedidos.html?q=${encodeURIComponent(c.email)}">${escapeHtml(c.email)}</a></td>
       <td>${escapeHtml(c.phone ?? '—')}</td>
       <td class="num">${c.ordersCount}${c.ordersCount !== c.paidCount ? `<br><small>${c.paidCount} pagados</small>` : ''}</td>
@@ -56,6 +56,7 @@ function renderKpis() {
   const spent = buyers.reduce((s, c) => s + c.spent, 0);
   document.getElementById('kpis').innerHTML = `
     <div class="kpi"><span>Clientes</span><strong>${customers.length}</strong></div>
+    <div class="kpi"><span>Con cuenta registrada</span><strong>${customers.filter(c => c.user_id).length}</strong></div>
     <div class="kpi"><span>Con compras pagadas</span><strong>${buyers.length}</strong></div>
     <div class="kpi"><span>Repiten (2+ pedidos)</span><strong>${repeat}</strong></div>
     <div class="kpi"><span>Gasto medio por cliente</span><strong>${money(buyers.length ? spent / buyers.length : 0)}</strong></div>`;
@@ -79,7 +80,7 @@ document.getElementById('export-csv').addEventListener('click', () => {
   const rows = filtered().map(c => ({
     id: c.id, nombre: c.full_name, email: c.email, telefono: c.phone ?? '', pedidos: c.ordersCount,
     pedidos_pagados: c.paidCount, gasto: c.spent.toFixed(2), ticket_medio: c.avg.toFixed(2),
-    ultimo_pedido: c.last?.order_number ?? '', alta: c.created_at,
+    ultimo_pedido: c.last?.order_number ?? '', cuenta: c.user_id ? 'si' : 'no', alta: c.created_at,
   }));
   exportCsv(rows, Object.keys(rows[0] ?? { id: '' }), `clientes-${new Date().toISOString().slice(0, 10)}.csv`);
 });

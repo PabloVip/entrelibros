@@ -41,7 +41,7 @@ export async function trafficSince(isoDate) {
 export async function listCustomers() {
   const { data, error } = await supabase
     .from('customers')
-    .select('id, full_name, email, phone, created_at, orders ( id, order_number, status, total, created_at )')
+    .select('*, orders ( id, order_number, status, total, created_at )') // * incluye user_id (09_cuentas_clientes.sql)
     .order('created_at', { ascending: false })
     .limit(1000);
   if (error) throw error;

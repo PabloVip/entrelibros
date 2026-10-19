@@ -550,3 +550,17 @@ input[type=email], input[type=password], input[type=date], input:not([type]) { f
 .stock-input { width: 84px !important; padding: 5px 8px !important; }
 .variants-table { min-width: 640px; }
 .variants-table td:first-child input { min-width: 150px; }
+
+/* ---------- Mi cuenta ---------- */
+.auth-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
+.account-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.stack-lg { display: flex; flex-direction: column; gap: 20px; }
+@media (max-width: 860px) { .auth-grid, .account-grid { grid-template-columns: minmax(0, 1fr); } }
+.card-form .h3 { margin: 0; }
+.card-form input[readonly] { background: var(--papel); color: var(--muted); }
+.hint { margin: 0; font-size: .8rem; color: var(--muted); font-weight: 400; }
+.show-pw, .check-line { display: flex; gap: 8px; align-items: flex-start; font-size: .88rem; }
+.show-pw input, .check-line input { width: auto; margin-top: 3px; }
+.account-notice { margin: 0 0 18px; }
+.account-hint { margin: 0 0 12px; }
+.card-form .form-msg:empty { display: none; }

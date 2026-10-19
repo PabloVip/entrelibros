@@ -23,7 +23,8 @@ Autores: Pablo ([@PabloVip](https://github.com/PabloVip)) y Nino Iraci ([@ninoir
 4. Paga con una **tarjeta de prueba** o con Bizum simulado.
 5. Verás la confirmación con el número de pedido (`EL-AAAAMMDD-XXXX`).
 6. Opcional: abre una incidencia en **Soporte** indicando ese número y el mismo email.
-7. Entra en el **back-office**: panel con ventas y alertas, pedidos (cambio de estado), productos (alta, edición, stock, imágenes), clientes, soporte, eventos y ajustes (descuentos, envíos y temáticas).
+7. Opcional: crea una cuenta en **Mi cuenta** (recibirás un correo para confirmarla). Con sesión, el checkout se rellena solo y ves tus pedidos e incidencias.
+8. Entra en el **back-office**: panel con ventas y alertas, pedidos (cambio de estado), productos (alta, edición, stock, imágenes), clientes, soporte, eventos y ajustes (descuentos, envíos y temáticas).
 
 ## 2. Datos y usuarios de prueba
 
@@ -121,6 +122,8 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago. E
 | `product.published` / `product.archived` | Un admin publica o archiva un producto | back-office |
 | `stock.adjusted` | Cambia el stock de una variante (desde la ficha o el listado) | back-office |
 | `discount.saved` / `shipping_method.saved` / `theme.saved` / `theme.deleted` | Cambios en los ajustes de la tienda | back-office |
+| `customer.registered` | Un cliente crea su cuenta | servidor (trigger de Auth) |
+| `customer.profile_updated` | Un cliente cambia sus datos en "Mi cuenta" | web (`update_my_profile`) |
 
 - **Dónde se guardan:** en la tabla `events`, un registro de solo inserción, sin claves foráneas a propósito. Cada evento lleva `event_id` (UUID), tipo, fecha, origen, sesión anónima, cliente, pedido, entidad y `payload` JSON.
 - **Seguridad:** desde el navegador solo se aceptan los cuatro eventos de navegación, mediante una lista blanca en `log_event`. Los de negocio los emite el propio servidor, así que no se pueden falsificar.
@@ -137,6 +140,7 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago. E
 | Catálogo con filtros (en la URL, compartibles) | `catalogo.html` |
 | Ficha de producto | `producto.html?slug=…` |
 | Favoritos (guardados en el navegador) | `favoritos.html` |
+| Mi cuenta: entrar, crear cuenta, recuperar contraseña, mis pedidos, mis incidencias y mis datos | `cuenta.html` |
 | Carrito | `carrito.html` |
 | Checkout | `checkout.html` |
 | Pago simulado | `pago.html?pedido=…` |
@@ -170,6 +174,7 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago. E
    6. `07_favoritos.sql`
    7. `04_seed.sql`
    8. `08_admin_catalogo.sql`
+   9. `09_cuentas_clientes.sql`
 
    Todos se pueden volver a ejecutar. `04_seed.sql` deja la tienda con los datos de prueba iniciales; si se vuelve a cargar, hay que ejecutar después `08_admin_catalogo.sql` (rellena los textos en inglés de los productos de ejemplo).
 3. En **Project Settings → API**, copia la *Project URL* y la *publishable key* en `public/js/config.js`. Esa clave es pública por diseño; **nunca** pongas la *secret / service_role key* en el front.
@@ -182,7 +187,13 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago. E
    select id, 'Admin pruebas' from auth.users where email = 'admin@entrelibros.test'
    on conflict (user_id) do nothing;
    ```
-3. En **Authentication → URL Configuration**, pon como *Site URL* la de la web publicada.
+3. En **Authentication → URL Configuration**, pon como *Site URL* la de la web publicada y añade en *Redirect URLs* `https://pablovip.github.io/entrelibros/**` y `http://localhost:8000/**` (los enlaces de los correos vuelven a `cuenta.html`).
+
+### Cuentas de cliente y correos
+- **Registro e inicio de sesión** con Supabase Auth (email y contraseña). En **Authentication → Sign In / Providers → Email** deja activado *Confirm email*: la cuenta no se puede usar hasta abrir el enlace del correo.
+- **Correos en español:** copia las plantillas de `supabase/correos/` en **Authentication → Emails → Templates** (confirmar cuenta y cambiar contraseña).
+- **Servidor de correo:** el de Supabase por defecto solo entrega a los emails del equipo del proyecto (Organization → Team) y unos pocos correos por hora. Para la demo basta con invitar al equipo las cuentas que se vayan a usar; para que cualquiera pueda registrarse hay que configurar un SMTP propio (por ejemplo Brevo o Resend, con plan gratuito) en **Authentication → Emails → SMTP Settings**.
+- **Qué hace el servidor** (`09_cuentas_clientes.sql`): al registrarse se crea la ficha de cliente o se enlaza con la que ya existía si había comprado como invitado con ese email. Con el email confirmado, RLS deja a cada cliente leer **solo** sus datos, pedidos, líneas, pagos, historial e incidencias. El perfil se cambia con `update_my_profile`.
 
 ### Ejecutar en local
 Los módulos ES necesitan servirse por HTTP; no basta con abrir el fichero:
@@ -200,7 +211,8 @@ En el repositorio, ve a **Settings → Pages → Source: GitHub Actions**. El wo
 
 - **Back-office público en cuanto a páginas.** GitHub Pages es estático, así que cualquiera puede abrir `admin*.html`, pero sin una sesión de administrador las políticas RLS no devuelven ningún dato.
 - **Sin límite de peticiones.** La API no limita cuántos pedidos o incidencias se pueden crear por minuto. En producción haría falta *rate limiting* o un captcha.
-- **Clientes sin cuenta.** Los clientes se identifican solo por email y no hay registro ni inicio de sesión. Si un email ya existe, no se actualizan su nombre ni su teléfono.
+- **Cuenta opcional.** Se puede comprar sin cuenta (solo con el email). Si un email ya existe y se compra como invitado, no se actualizan su nombre ni su teléfono. No hay inicio de sesión con Google ni borrado de cuenta desde la web.
+- **Correos de Supabase.** Sin SMTP propio, Supabase solo envía a los emails del equipo del proyecto y con un límite de correos por hora.
 - **Pago de pedidos ajenos.** Quien conozca el número de un pedido sin pagar puede simular su pago.
 - **Email en la URL.** El email va en la URL de la confirmación (`pedido.html?…&email=…`) y queda en el historial del navegador.
 - **Stock sin reservar.** El stock se comprueba al crear el pedido, pero solo se reserva al pagar: dos clientes pueden crear pedidos por las últimas unidades y solo el primero que pague las consigue.

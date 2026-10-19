@@ -1,4 +1,4 @@
-// Diccionario español → inglés del back-office de catálogo y ajustes (Pablo).
+// Diccionario español → inglés de las partes de Pablo: back-office de catálogo y ajustes, y "Mi cuenta".
 // Va aparte de en.js para que cada uno pueda añadir textos sin pisarse.
 // Mismo formato que en.js: exact (texto completo) y patterns (partes variables).
 
@@ -294,6 +294,98 @@ const exact = {
   'Ya existe otra temática con ese slug': 'Another theme already uses that slug',
   'Ya existe otro producto con ese slug': 'Another product already uses that slug',
   'Ya existe un método de envío con ese código': 'A shipping method with that code already exists',
+
+  // ---------- Mi cuenta (cuentas de cliente) ----------
+  'Mi cuenta': 'My account',
+  'Mi cuenta · Entrelibros': 'My account · Entrelibros',
+  'Entrar': 'Sign in',
+  'Crear cuenta': 'Create account',
+  'Mostrar contraseña': 'Show password',
+  '¿Has olvidado la contraseña?': 'Forgot your password?',
+  'Con una cuenta ves todos tus pedidos y el checkout se rellena solo. Te enviaremos un correo para confirmar el email.':
+    'With an account you can see all your orders and checkout fills itself in. We will send you an email to confirm your address.',
+  'Si ya compraste como invitado con este email, verás también esos pedidos.': 'If you already ordered as a guest with this email, you will see those orders too.',
+  'Al menos 8 caracteres, con letras y números.': 'At least 8 characters, with letters and numbers.',
+  'Entiendo que es una tienda ficticia y uso un email de prueba o mío, sin datos reales de pago.':
+    'I understand this is a fictitious shop and I use a test email or my own, with no real payment details.',
+  'Marca la casilla para continuar.': 'Tick the box to continue.',
+  'Escribe la contraseña.': 'Enter the password.',
+  'Entrando…': 'Signing in…',
+  'Creando la cuenta…': 'Creating your account…',
+  'Revisa tu correo': 'Check your email',
+  'Te hemos enviado un correo a': 'We have sent an email to',
+  'con un enlace para confirmar la cuenta.': 'with a link to confirm your account.',
+  'Ábrelo desde este mismo dispositivo. Si no lo ves en unos minutos, mira en la carpeta de spam.':
+    'Open it on this same device. If you do not see it within a few minutes, check your spam folder.',
+  'Reenviar el correo': 'Resend the email',
+  'Volver': 'Back',
+  'Correo reenviado. Revisa tu bandeja de entrada.': 'Email resent. Check your inbox.',
+  'Recuperar la contraseña': 'Reset your password',
+  'Escribe el email de tu cuenta y te enviaremos un enlace para elegir una contraseña nueva.':
+    'Enter your account email and we will send you a link to choose a new password.',
+  'Enviar el enlace': 'Send the link',
+  '← Volver a entrar': '← Back to sign in',
+  'Si hay una cuenta con ese email, te llegará un correo con el enlace en unos minutos.':
+    'If there is an account with that email, you will receive the link within a few minutes.',
+  'Elige una contraseña nueva': 'Choose a new password',
+  'Contraseña nueva': 'New password',
+  'Repite la contraseña': 'Repeat the password',
+  'Guardar contraseña': 'Save password',
+  'Las contraseñas no coinciden.': 'The passwords do not match.',
+  'Contraseña cambiada.': 'Password changed.',
+  'Contraseña cambiada. Ya has iniciado sesión.': 'Password changed. You are now signed in.',
+  'Ir al back-office': 'Go to the back-office',
+  'Mis pedidos': 'My orders',
+  'Todavía no has hecho ningún pedido.': 'You have not placed any orders yet.',
+  'Pagar': 'Pay',
+  'Mis incidencias': 'My support requests',
+  'No has abierto ninguna incidencia.': 'You have not opened any support requests.',
+  'Abrir una incidencia': 'Open a support request',
+  'Mis datos': 'My details',
+  'Completa tus datos para terminar de crear tu ficha de cliente.': 'Complete your details to finish setting up your customer profile.',
+  'Es tu usuario y el email de tus pedidos.': 'It is your username and the email for your orders.',
+  'Guardar datos': 'Save details',
+  'Datos guardados.': 'Details saved.',
+  'Cambiar la contraseña': 'Change password',
+  'Cambiar contraseña': 'Change password',
+  'Has iniciado sesión.': 'You are signed in.',
+  'Has cerrado la sesión.': 'You have signed out.',
+  'Cuenta creada. ¡Bienvenido!': 'Account created. Welcome!',
+  '¡Email confirmado! Tu cuenta ya está activa.': 'Email confirmed! Your account is now active.',
+  'Email confirmado. Ya puedes entrar con tu email y tu contraseña.': 'Email confirmed. You can now sign in with your email and password.',
+  'Entra en tu cuenta y te devolvemos a donde estabas.': 'Sign in and we will take you back to where you were.',
+  'El enlace ha caducado o ya se ha usado. Pide otro: entra con tu email para reenviar la confirmación, o usa "¿Has olvidado la contraseña?".':
+    'The link has expired or has already been used. Request another one: sign in with your email to resend the confirmation, or use "Forgot your password?".',
+  'No se ha podido validar el enlace del correo. Pide otro e inténtalo de nuevo.': 'The email link could not be validated. Request another one and try again.',
+  // checkout con cuenta
+  '¿Tienes cuenta?': 'Have an account?',
+  'Entra': 'Sign in',
+  'y rellenamos tus datos; el pedido quedará guardado en "Mi cuenta".': 'and we will fill in your details; the order will be saved in "My account".',
+  'Es el email de tu cuenta: el pedido aparecerá en "Mi cuenta".': 'This is your account email: the order will appear in "My account".',
+  // back-office: clientes con cuenta
+  'Con cuenta registrada': 'With a registered account',
+  'Con cuenta': 'Registered',
+  'Invitado': 'Guest',
+  // errores de Supabase Auth (accountService.js)
+  'Email o contraseña incorrectos.': 'Incorrect email or password.',
+  'Todavía no has confirmado tu email. Abre el enlace del correo que te enviamos (o pide otro).':
+    'You have not confirmed your email yet. Open the link in the email we sent you (or request another one).',
+  'Ya existe una cuenta con ese email. Inicia sesión o recupera la contraseña.': 'An account with that email already exists. Sign in or reset your password.',
+  'La contraseña es demasiado débil: usa al menos 8 caracteres, con letras y números.': 'The password is too weak: use at least 8 characters, with letters and numbers.',
+  'La contraseña nueva tiene que ser distinta de la actual.': 'The new password must be different from the current one.',
+  'Se han enviado demasiados correos. Espera unos minutos y vuelve a intentarlo.': 'Too many emails have been sent. Wait a few minutes and try again.',
+  'Demasiados intentos seguidos. Espera un momento y vuelve a intentarlo.': 'Too many attempts in a row. Wait a moment and try again.',
+  'Ahora mismo la tienda no puede enviar correos a esa dirección (servidor de correo de pruebas de Supabase).':
+    'The shop cannot send emails to that address right now (Supabase test mail server).',
+  'Ese email no es válido.': 'That email is not valid.',
+  'El registro de cuentas está desactivado.': 'Account sign-up is disabled.',
+  'Revisa el email y la contraseña.': 'Check the email and password.',
+  'No se ha podido conectar. Revisa tu conexión e inténtalo de nuevo.': 'Could not connect. Check your connection and try again.',
+  'Algo ha fallado. Inténtalo de nuevo.': 'Something went wrong. Please try again.',
+  // servidor (09_cuentas_clientes.sql)
+  'Inicia sesión para editar tus datos': 'Sign in to edit your details',
+  'Confirma tu email antes de editar tus datos': 'Confirm your email before editing your details',
+  'Ese email está enlazado a otra cuenta': 'That email is linked to another account',
 };
 
 const plural = (n, one, many) => `${n} ${Number(n) === 1 ? one : many}`;
@@ -338,6 +430,10 @@ const patterns = [
   [/^Editar (.+)$/, (m, tr) => `Edit ${tr(m[1])}`],
   [/^(.+): (activado|desactivado)\.$/, m => `${m[1]}: ${m[2] === 'activado' ? 'activated' : 'deactivated'}.`],
   [/^(\d+-\d+) días laborables$/, '$1 working days'],
+
+  // mi cuenta
+  [/^Hola, (.+)$/, 'Hello, $1'],
+  [/^Cliente desde (.+)$/, 'Customer since $1'],
 
   // servidor
   [/^El SKU (.+) está repetido$/, 'SKU $1 is repeated'],

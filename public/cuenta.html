@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Mi cuenta · Entrelibros</title>
+  <!-- Los enlaces de los correos de Supabase traen datos en la URL (#access_token… o #error…):
+       se guardan antes de que la librería los procese y los borre. -->
+  <script>window.__authHash = location.hash; window.__authSearch = location.search;</script>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="img/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+  <meta name="theme-color" content="#1D2537">
+</head>
+<body data-page="cuenta">
+  <div class="academic-banner" role="note">
+    <strong>Prototipo académico</strong> · Grado en Ingeniería Informática (UCAM).
+    Tienda ficticia sin actividad comercial: no introduzcas datos personales reales ni medios de pago reales.
+  </div>
+  <header id="site-header" class="site-header"></header>
+
+  <main class="container" id="contenido">
+    <div id="account" aria-busy="true"><p>Cargando…</p></div>
+  </main>
+
+  <footer id="site-footer" class="site-footer"></footer>
+  <script type="module" src="js/core/i18n.js"></script>
+  <script type="module" src="js/pages/account.js"></script>
+</body>
+</html>
