@@ -1,14 +1,15 @@
 // Servicio de eventos de negocio.
 // Desde el navegador solo se envían eventos de navegación (product.viewed, cart.item_added,
-// checkout.started). order.created, payment.simulated y support.requested los genera el
-// servidor dentro de sus funciones (ver supabase/03_functions.sql).
+// checkout.started, wishlist.item_added). order.created, payment.simulated y support.requested
+// los genera el servidor dentro de sus funciones (ver supabase/03_functions.sql).
 import { supabase } from '../core/supabase.js';
 import { getSessionId } from '../core/session.js';
 
 export const EVENTS = Object.freeze({
-  PRODUCT_VIEWED:   'product.viewed',
-  CART_ITEM_ADDED:  'cart.item_added',
-  CHECKOUT_STARTED: 'checkout.started',
+  PRODUCT_VIEWED:      'product.viewed',
+  CART_ITEM_ADDED:     'cart.item_added',
+  CHECKOUT_STARTED:    'checkout.started',
+  WISHLIST_ITEM_ADDED: 'wishlist.item_added', // lo acepta log_event desde supabase/07_favoritos.sql
 });
 
 /**

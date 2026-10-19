@@ -72,6 +72,19 @@ export async function fetchProductBySlug(slug) {
 }
 
 /**
+ * Varios productos del catálogo por id (para la página de favoritos).
+ * Los que ya no están a la venta no vienen: la vista y RLS solo devuelven productos activos.
+ */
+export async function fetchCatalogByIds(ids) {
+  const { data, error } = await supabase
+    .from('catalog_products')
+    .select('*')
+    .in('id', ids);
+  if (error) throw error;
+  return data;
+}
+
+/**
  * Precio y stock actuales de varias variantes (para revisar el carrito).
  * RLS oculta lo que ya no está a la venta: la variante no viene, o viene con product = null.
  */

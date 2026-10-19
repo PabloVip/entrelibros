@@ -7,6 +7,7 @@ import {
 import { track, EVENTS } from '../services/eventService.js';
 import '../services/cartService.js'; // escucha 'entrelibros:add-to-cart' y guarda la línea
 import { productCard } from '../components/productCard.js';
+import { favoriteButton } from '../components/favoriteButton.js';
 import { escapeHtml, money, param } from '../core/utils.js';
 import { locale } from '../core/i18n.js';
 
@@ -75,6 +76,7 @@ function render(p) {
             <label for="qty" class="visually-hidden">Cantidad</label>
             <input id="qty" name="qty" type="number" min="1" value="1" inputmode="numeric">
             <button id="add" type="submit" class="btn">Añadir al carrito</button>
+            ${favoriteButton(p)}
           </div>
           <p id="buy-msg" class="form-msg" role="status"></p>
         </form>
@@ -143,6 +145,16 @@ function render(p) {
         variantName: v.name, unitPrice: Number(v.price), image: mainImg?.url ?? null,
       },
     }));
+  });
+
+  // El corazón lo gestiona favoriteButton.js; aquí solo se confirma con un mensaje.
+  document.addEventListener('entrelibros:favorites-changed', e => {
+    if (e.detail.productId !== p.id) return;
+    const msg = document.getElementById('buy-msg');
+    msg.innerHTML = e.detail.active
+      ? 'Guardado en tus favoritos. <a href="favoritos.html">Ver favoritos</a>'
+      : 'Quitado de tus favoritos.';
+    msg.className = 'form-msg ok';
   });
 
   update();

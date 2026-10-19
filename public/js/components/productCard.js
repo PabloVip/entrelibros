@@ -2,6 +2,7 @@
 import { escapeHtml, money } from '../core/utils.js';
 import { TYPE_LABELS, DIFFICULTY_LABELS, lightingLabel } from '../services/catalogService.js';
 import { locale } from '../core/i18n.js';
+import { favoriteButton } from './favoriteButton.js';
 
 export function productCard(item) {
   const href = `producto.html?slug=${encodeURIComponent(item.slug)}`;
@@ -29,7 +30,10 @@ export function productCard(item) {
         <h3 class="card-title"><a href="${href}">${escapeHtml(item.name)}</a></h3>
         <p class="card-desc">${escapeHtml(item.short_description)}</p>
         ${chips.length ? `<ul class="chips">${chips.map(c => `<li>${escapeHtml(c)}</li>`).join('')}</ul>` : ''}
-        <p class="card-price">${price}</p>
+        <div class="card-foot">
+          <p class="card-price">${price}</p>
+          ${favoriteButton(item)}
+        </div>
       </div>
     </article>`;
 }

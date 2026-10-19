@@ -3,18 +3,23 @@ import { APP_NAME } from '../config.js';
 import { escapeHtml } from './utils.js';
 import { langSwitchHtml } from './i18n.js';
 import { count as cartCount } from '../services/cartService.js';
+import { count as favoritesCount } from '../services/favoritesService.js';
+import { HEART } from '../components/icons.js';
 
 const NAV = [
-  { id: 'inicio',   href: 'index.html',    label: 'Inicio' },
-  { id: 'catalogo', href: 'catalogo.html', label: 'Catálogo' },
-  { id: 'soporte',  href: 'soporte.html',  label: 'Soporte' },
-  { id: 'carrito',  href: 'carrito.html',  label: 'Carrito' },
+  { id: 'inicio',    href: 'index.html',     label: 'Inicio' },
+  { id: 'catalogo',  href: 'catalogo.html',  label: 'Catálogo' },
+  { id: 'soporte',   href: 'soporte.html',   label: 'Soporte' },
+  { id: 'favoritos', href: 'favoritos.html', label: 'Favoritos' },
+  { id: 'carrito',   href: 'carrito.html',   label: 'Carrito' },
 ];
 
 function navLabel(item) {
-  if (item.id !== 'carrito') return item.label;
-  // número de artículos del carrito; si está vacío, el CSS lo oculta
-  return `${item.label} <span id="cart-count" class="cart-count">${cartCount() || ''}</span>`;
+  // número de favoritos y de artículos del carrito; si es 0, el CSS lo oculta.
+  // En el móvil "Favoritos" se ve como un corazón para que la cabecera quepa en una línea.
+  if (item.id === 'favoritos') return `${HEART}<span class="nav-label">${item.label}</span> <span id="fav-count" class="nav-count">${favoritesCount() || ''}</span>`;
+  if (item.id === 'carrito')   return `${item.label} <span id="cart-count" class="nav-count">${cartCount() || ''}</span>`;
+  return item.label;
 }
 
 export function renderLayout() {
@@ -32,9 +37,19 @@ export function renderLayout() {
           ${langSwitchHtml()}
         </nav>
       </div>`;
-    // cartService avisa cada vez que cambia el carrito
+    // cartService y favoritesService avisan cada vez que cambia su lista
     document.addEventListener('entrelibros:cart-changed', e => {
       document.getElementById('cart-count').textContent = e.detail.count || '';
+    });
+    document.addEventListener('entrelibros:favorites-changed', e => {
+      document.getElementById('fav-count').textContent = e.detail.count || '';
+    });
+    // Al volver con "Atrás", el navegador puede mostrar la página tal como la dejó (caché de páginas):
+    // los números se leen otra vez por si el carrito o los favoritos han cambiado en otra página.
+    window.addEventListener('pageshow', e => {
+      if (!e.persisted) return;
+      document.getElementById('cart-count').textContent = cartCount() || '';
+      document.getElementById('fav-count').textContent = favoritesCount() || '';
     });
   }
 
