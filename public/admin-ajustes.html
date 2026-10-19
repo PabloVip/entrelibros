@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Ajustes · Back-office · Entrelibros</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="img/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+  <meta name="theme-color" content="#1D2537">
+</head>
+<body data-page="ajustes" class="admin">
+  <div class="academic-banner" role="note">
+    <strong>Prototipo académico</strong> · Grado en Ingeniería Informática (UCAM).
+    Tienda ficticia sin actividad comercial: no introduzcas datos personales reales ni medios de pago reales.
+  </div>
+  <header id="site-header" class="site-header"></header>
+  <main class="container" id="contenido">
+    <div class="page-head">
+      <div>
+        <h1>Ajustes de la tienda</h1>
+        <p class="lead">Códigos de descuento, métodos de envío y temáticas del catálogo.</p>
+      </div>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Ajustes">
+      <button type="button" role="tab" id="tab-descuentos" aria-controls="panel-descuentos" aria-selected="true">Descuentos</button>
+      <button type="button" role="tab" id="tab-envios" aria-controls="panel-envios" aria-selected="false">Envíos</button>
+      <button type="button" role="tab" id="tab-tematicas" aria-controls="panel-tematicas" aria-selected="false">Temáticas</button>
+    </div>
+    <section id="panel-descuentos" role="tabpanel" aria-labelledby="tab-descuentos"></section>
+    <section id="panel-envios" role="tabpanel" aria-labelledby="tab-envios" hidden></section>
+    <section id="panel-tematicas" role="tabpanel" aria-labelledby="tab-tematicas" hidden></section>
+  </main>
+  <script type="module" src="js/core/i18n.js"></script>
+  <script type="module" src="js/pages/admin/settings.js"></script>
+</body>
+</html>

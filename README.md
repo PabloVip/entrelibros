@@ -23,7 +23,7 @@ Autores: Pablo ([@PabloVip](https://github.com/PabloVip)) y Nino Iraci ([@ninoir
 4. Paga con una **tarjeta de prueba** o con Bizum simulado.
 5. Verás la confirmación con el número de pedido (`EL-AAAAMMDD-XXXX`).
 6. Opcional: abre una incidencia en **Soporte** indicando ese número y el mismo email.
-7. Entra en el **back-office** para ver el pedido, cambiar su estado, gestionar la incidencia y consultar los eventos.
+7. Entra en el **back-office**: panel con ventas y alertas, pedidos (cambio de estado), productos (alta, edición, stock, imágenes), clientes, soporte, eventos y ajustes (descuentos, envíos y temáticas).
 
 ## 2. Datos y usuarios de prueba
 
@@ -75,7 +75,9 @@ Navegador ── GitHub Pages (HTML + JavaScript, módulos ES, sin framework)
 Supabase · PostgreSQL
    ├─ Tablas ............ supabase/01_schema.sql
    ├─ Seguridad (RLS) ... supabase/02_policies.sql
-   ├─ Lógica de negocio . supabase/03_functions.sql, 05_checkout.sql, 06_soporte_admin.sql, 07_favoritos.sql
+   ├─ Lógica de negocio . supabase/03_functions.sql, 05_checkout.sql, 06_soporte_admin.sql, 07_favoritos.sql,
+   │                      08_admin_catalogo.sql
+   ├─ Imágenes .......... Supabase Storage (bucket "productos", lo crea 08_admin_catalogo.sql)
    └─ Datos de prueba ... supabase/04_seed.sql
 ```
 
@@ -115,6 +117,10 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago. E
 | `support.requested` | `create_support_request` registra la incidencia | servidor |
 | `order.status_changed` | Un admin cambia el estado de un pedido | back-office |
 | `support.status_changed` | Un admin cambia el estado de una incidencia | back-office |
+| `product.created` / `product.updated` / `product.deleted` | Un admin crea, edita o elimina un producto | back-office |
+| `product.published` / `product.archived` | Un admin publica o archiva un producto | back-office |
+| `stock.adjusted` | Cambia el stock de una variante (desde la ficha o el listado) | back-office |
+| `discount.saved` / `shipping_method.saved` / `theme.saved` / `theme.deleted` | Cambios en los ajustes de la tienda | back-office |
 
 - **Dónde se guardan:** en la tabla `events`, un registro de solo inserción, sin claves foráneas a propósito. Cada evento lleva `event_id` (UUID), tipo, fecha, origen, sesión anónima, cliente, pedido, entidad y `payload` JSON.
 - **Seguridad:** desde el navegador solo se aceptan los cuatro eventos de navegación, mediante una lista blanca en `log_event`. Los de negocio los emite el propio servidor, así que no se pueden falsificar.
@@ -136,7 +142,20 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago. E
 | Pago simulado | `pago.html?pedido=…` |
 | Confirmación (pide número de pedido + email) | `pedido.html` |
 | Soporte postventa | `soporte.html` |
-| Back-office: acceso, pedidos, detalle, soporte, eventos | `admin.html`, `admin-pedidos.html`, `admin-pedido.html?id=…`, `admin-soporte.html`, `admin-eventos.html` |
+| Back-office: acceso | `admin.html` |
+| Back-office: panel (ventas, más vendidos, stock, embudo, últimos pedidos) | `admin-panel.html` |
+| Back-office: pedidos y detalle con cambio de estado | `admin-pedidos.html`, `admin-pedido.html?id=…` |
+| Back-office: productos (listado, ajuste rápido de stock, archivar/publicar) | `admin-productos.html` |
+| Back-office: editor de producto (alta, edición, versiones, imágenes, compatibilidades, textos en inglés, duplicar, eliminar) | `admin-producto.html`, `?id=…`, `?duplicar=…` |
+| Back-office: clientes (pedidos, gasto, ticket medio) | `admin-clientes.html` |
+| Back-office: soporte y eventos | `admin-soporte.html`, `admin-eventos.html` |
+| Back-office: ajustes (códigos de descuento, envíos, temáticas) | `admin-ajustes.html` |
+
+### Back-office de catálogo
+- **Todo lo que se guarda pasa por funciones del servidor** (`08_admin_catalogo.sql`): comprueban que quien llama es administrador (`is_admin()`), validan cada dato y registran un evento con el nombre del admin. El navegador valida lo mismo antes de enviar, para avisar sin esperar.
+- **Productos con pedidos no se borran:** se archivan (dejan de verse en la tienda, pero los pedidos antiguos siguen apuntando a ellos). Las versiones con pedidos que se quitan del formulario se desactivan en lugar de borrarse.
+- **Imágenes:** se pueden subir (se recortan en el navegador a 800×840 y se guardan en Supabase Storage; solo los admins pueden subir) o indicar una dirección `img/…` o `https://…`.
+- **Textos en inglés:** cada producto, versión y temática tiene campos opcionales en inglés (`name_en`, `description_en`…). La web en inglés los usa; si faltan, muestra el texto en español.
 
 ## 7. Instalación propia
 
@@ -150,8 +169,9 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago. E
    5. `06_soporte_admin.sql`
    6. `07_favoritos.sql`
    7. `04_seed.sql`
+   8. `08_admin_catalogo.sql`
 
-   Todos se pueden volver a ejecutar. `04_seed.sql` deja la tienda con los datos de prueba iniciales.
+   Todos se pueden volver a ejecutar. `04_seed.sql` deja la tienda con los datos de prueba iniciales; si se vuelve a cargar, hay que ejecutar después `08_admin_catalogo.sql` (rellena los textos en inglés de los productos de ejemplo).
 3. En **Project Settings → API**, copia la *Project URL* y la *publishable key* en `public/js/config.js`. Esa clave es pública por diseño; **nunca** pongas la *secret / service_role key* en el front.
 
 ### Administrador
@@ -185,6 +205,7 @@ En el repositorio, ve a **Settings → Pages → Source: GitHub Actions**. El wo
 - **Email en la URL.** El email va en la URL de la confirmación (`pedido.html?…&email=…`) y queda en el historial del navegador.
 - **Stock sin reservar.** El stock se comprueba al crear el pedido, pero solo se reserva al pagar: dos clientes pueden crear pedidos por las últimas unidades y solo el primero que pague las consigue.
 - **Carrito y favoritos locales.** El carrito y la lista de favoritos se guardan en el navegador (`localStorage`) y no se sincronizan entre dispositivos.
+- **Traducciones manuales.** Los textos en inglés de productos, versiones y temáticas los escribe el administrador; los códigos de descuento y métodos de envío nuevos se muestran en español también en la web en inglés.
 - **Sin notificaciones.** No se envían emails de confirmación ni de seguimiento.
 - **Imágenes ilustrativas.** Las de los kits están generadas con IA (Google Gemini) y las de accesorios y recambios son fotos de ambientación de Unsplash. Ninguna muestra un producto real, porque la tienda es ficticia.
 

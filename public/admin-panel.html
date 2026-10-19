@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Panel · Back-office · Entrelibros</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="img/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+  <meta name="theme-color" content="#1D2537">
+</head>
+<body data-page="panel" class="admin">
+  <div class="academic-banner" role="note">
+    <strong>Prototipo académico</strong> · Grado en Ingeniería Informática (UCAM).
+    Tienda ficticia sin actividad comercial: no introduzcas datos personales reales ni medios de pago reales.
+  </div>
+  <header id="site-header" class="site-header"></header>
+  <main class="container" id="contenido">
+    <div class="page-head">
+      <div>
+        <h1>Panel</h1>
+        <p class="lead">Cómo va la tienda: ventas, pedidos, stock y actividad.</p>
+      </div>
+      <label class="sort">Periodo
+        <select id="period">
+          <option value="7">Últimos 7 días</option>
+          <option value="30" selected>Últimos 30 días</option>
+          <option value="90">Últimos 90 días</option>
+        </select>
+      </label>
+    </div>
+    <section id="kpis" class="kpis" aria-label="Indicadores"><p>Cargando…</p></section>
+    <div class="panel-grid">
+      <section class="panel span-2">
+        <h2 class="h3">Ventas por día</h2>
+        <div id="sales-chart"></div>
+      </section>
+      <section class="panel">
+        <h2 class="h3">Productos más vendidos <a href="admin-productos.html">Ver productos</a></h2>
+        <div id="top-products"></div>
+      </section>
+      <section class="panel">
+        <h2 class="h3">Stock que vigilar <a href="admin-productos.html?stock=bajo">Ver todos</a></h2>
+        <div id="stock-alerts"></div>
+      </section>
+      <section class="panel">
+        <h2 class="h3">Del interés a la compra</h2>
+        <div id="funnel"></div>
+      </section>
+      <section class="panel">
+        <h2 class="h3">Últimos pedidos <a href="admin-pedidos.html">Ver pedidos</a></h2>
+        <div id="latest-orders"></div>
+      </section>
+    </div>
+  </main>
+  <script type="module" src="js/core/i18n.js"></script>
+  <script type="module" src="js/pages/admin/dashboard.js"></script>
+</body>
+</html>

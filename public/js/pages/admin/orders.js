@@ -18,6 +18,7 @@ form.status.insertAdjacentHTML('beforeend',
 
 const params = new URLSearchParams(location.search);
 if (params.get('estado') in STATUS_LABELS) form.status.value = params.get('estado');
+if (params.get('q')) form.q.value = params.get('q').slice(0, 60); // enlace desde Clientes
 
 function renderKpis(orders, pendingSupport) {
   const k = summarize(orders);
@@ -32,7 +33,10 @@ function renderKpis(orders, pendingSupport) {
 async function load() {
   const status = form.status.value || undefined;
   const q = form.q.value.replace(/[%_,()]/g, '').trim().slice(0, 60) || undefined;
-  history.replaceState(null, '', status ? `?estado=${status}` : location.pathname);
+  const url = new URLSearchParams();
+  if (status) url.set('estado', status);
+  if (q) url.set('q', q);
+  history.replaceState(null, '', url.toString() ? `?${url}` : location.pathname);
   try {
     const orders = await listOrders({ status, q });
     tbody.innerHTML = orders.length ? orders.map(o => `
@@ -52,7 +56,7 @@ async function load() {
 }
 
 let timer;
-form.addEventListener('change', load);
+form.addEventListener('change', e => { if (e.target.name !== 'q') load(); }); // el buscador ya filtra al escribir
 form.q.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 350); });
 form.addEventListener('submit', e => { e.preventDefault(); load(); });
 

@@ -1,6 +1,24 @@
 // Acceso a datos del catálogo. Solo consultas: nada de lógica de interfaz aquí.
 import { supabase } from '../core/supabase.js';
-import { originalsMatching } from '../core/i18n.js';
+import { originalsMatching, learn, lang } from '../core/i18n.js';
+
+// Textos en inglés guardados en la base de datos (columnas *_en, se editan en el back-office):
+// se le pasan al traductor para que la web en inglés los use.
+const PAIRS = [['name', 'name_en'], ['short_description', 'short_description_en'],
+  ['description', 'description_en'], ['theme_name', 'theme_name_en']];
+function learnRows(rows) {
+  if (lang === 'es' || !rows) return rows;
+  const pairs = [];
+  const visit = row => {
+    if (!row || typeof row !== 'object') return;
+    for (const [es, en] of PAIRS) if (row[es] && row[en]) pairs.push([row[es], row[en]]);
+    ['theme', 'product'].forEach(k => visit(row[k]));
+    (row.variants ?? []).forEach(visit);
+  };
+  (Array.isArray(rows) ? rows : [rows]).forEach(visit);
+  learn(pairs);
+  return rows;
+}
 
 const SORTS = {
   precio_asc:  ['min_price', true],
@@ -12,10 +30,10 @@ const SORTS = {
 export async function fetchThemes() {
   const { data, error } = await supabase
     .from('themes')
-    .select('id, slug, name, description')
+    .select('*')
     .order('sort_order');
   if (error) throw error;
-  return data;
+  return learnRows(data);
 }
 
 /**
@@ -38,7 +56,10 @@ export async function fetchCatalog(f = {}) {
     if (names.length) {
       const safe = f.q.replace(/[,()"*\\]/g, ' ');
       const list = names.map(n => `"${n.replace(/["\\]/g, '')}"`).join(',');
-      query = query.or(`name.ilike.*${safe}*,name.in.(${list})`);
+      query = query.or(`name.ilike.*${safe}*,name_en.ilike.*${safe}*,name.in.(${list})`);
+    } else if (lang !== 'es') {
+      const safe = f.q.replace(/[,()"*\\]/g, ' ');
+      query = query.or(`name.ilike.*${safe}*,name_en.ilike.*${safe}*`);
     } else {
       query = query.ilike('name', `%${f.q}%`);
     }
@@ -51,7 +72,7 @@ export async function fetchCatalog(f = {}) {
 
   const { data, error, count } = await query;
   if (error) throw error;
-  return { items: data, total: count };
+  return { items: learnRows(data), total: count };
 }
 
 /** Producto completo para la ficha: temática, variantes e imágenes. null si no existe o está inactivo. */
@@ -59,16 +80,17 @@ export async function fetchProductBySlug(slug) {
   const { data, error } = await supabase
     .from('products')
     .select(`
-      id, slug, name, product_type, difficulty, width_mm, height_mm, depth_mm,
-      pieces_count, build_time_hours, short_description, description,
-      theme:themes ( slug, name ),
-      variants:product_variants ( id, sku, name, has_lighting, finish, price, stock, weight_g, is_default ),
+      *,
+      theme:themes ( * ),
+      variants:product_variants ( * ),
       images:product_images ( id, url, alt_text, sort_order, variant_id )
     `)
     .eq('slug', slug)
+    .eq('is_active', true) // un admin con sesión abierta también ve archivados: aquí no deben salir
     .maybeSingle();
   if (error) throw error;
-  return data;
+  if (data) data.variants = data.variants.filter(v => v.is_active !== false);
+  return learnRows(data);
 }
 
 /**
@@ -81,7 +103,7 @@ export async function fetchCatalogByIds(ids) {
     .select('*')
     .in('id', ids);
   if (error) throw error;
-  return data;
+  return learnRows(data);
 }
 
 /**
@@ -91,10 +113,13 @@ export async function fetchCatalogByIds(ids) {
 export async function fetchVariantsByIds(ids) {
   const { data, error } = await supabase
     .from('product_variants')
-    .select('id, sku, name, price, stock, product:products ( id, slug, name )')
+    .select('*, product:products ( * )')
     .in('id', ids);
   if (error) throw error;
-  return data;
+  // lo mismo que hace RLS para un visitante, también si hay un admin con sesión abierta
+  const visible = data.filter(v => v.is_active !== false)
+    .map(v => (v.product?.is_active === false ? { ...v, product: null } : v));
+  return learnRows(visible);
 }
 
 /**
@@ -120,5 +145,5 @@ export async function fetchCompatible(product) {
     .order('product_type')
     .order('name');
   if (err2) throw err2;
-  return data;
+  return learnRows(data);
 }

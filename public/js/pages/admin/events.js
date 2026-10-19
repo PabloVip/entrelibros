@@ -15,7 +15,10 @@ const COLUMNS = ['event_id', 'event_type', 'occurred_at', 'source', 'session_id'
                  'customer_id', 'order_id', 'entity_type', 'entity_id', 'payload'];
 
 form.type.insertAdjacentHTML('beforeend',
-  [...FUNNEL, 'order.status_changed', 'support.status_changed', 'wishlist.item_added'].map(t => `<option value="${t}">${t}</option>`).join(''));
+  [...FUNNEL, 'order.status_changed', 'support.status_changed', 'wishlist.item_added',
+   // back-office (08_admin_catalogo.sql)
+   'product.created', 'product.updated', 'product.published', 'product.archived', 'product.deleted',
+   'stock.adjusted', 'discount.saved', 'shipping_method.saved', 'theme.saved', 'theme.deleted'].map(t => `<option value="${t}">${t}</option>`).join(''));
 
 const pedido = Number(new URLSearchParams(location.search).get('pedido'));
 if (Number.isInteger(pedido) && pedido > 0) form.orderId.value = pedido;

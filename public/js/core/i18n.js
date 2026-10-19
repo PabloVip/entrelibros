@@ -28,10 +28,44 @@ function readLang() {
 export const lang = readLang();
 export const locale = lang === 'en' ? 'en-GB' : 'es-ES';
 
-// El diccionario solo se descarga si hace falta.
-const DICT = lang === 'en' ? (await import('../i18n/en.js')).default : null;
+// El diccionario solo se descarga si hace falta. en.js: tienda; en-admin.js: back-office.
+const DICT = lang === 'en'
+  ? await Promise.all([import('../i18n/en.js'), import('../i18n/en-admin.js')])
+      .then(([shop, admin]) => ({
+        exact: { ...shop.default.exact, ...admin.default.exact },
+        patterns: [...admin.default.patterns, ...shop.default.patterns],
+      }))
+  : null;
 const EXACT = DICT ? new Map(Object.entries(DICT.exact)) : new Map();
 const PATTERNS = DICT ? DICT.patterns : [];
+
+// Traducciones que vienen de la base de datos (name_en, description_en... que se
+// escriben en el back-office). Mandan sobre el diccionario y se recuerdan en el
+// navegador para páginas que no consultan el catálogo (confirmación del pedido).
+const LEARNED_KEY = 'entrelibros_i18n_db';
+const LEARNED_MAX = 400;
+let learned = [];
+if (DICT) {
+  try { learned = JSON.parse(localStorage.getItem(LEARNED_KEY) ?? '[]').slice(0, LEARNED_MAX); } catch { learned = []; }
+  for (const [es, en] of learned) if (typeof es === 'string' && typeof en === 'string') EXACT.set(es, en);
+}
+
+/** Registra pares [español, inglés] leídos de la base de datos. */
+export function learn(pairs) {
+  if (!DICT) return;
+  let changed = false;
+  for (const [es, en] of pairs) {
+    if (!es || !en) continue;
+    const key = norm(String(es)), value = String(en).trim();
+    if (!key || !value || EXACT.get(key) === value) continue;
+    EXACT.set(key, value);
+    learned = [[key, value], ...learned.filter(([k]) => k !== key)].slice(0, LEARNED_MAX);
+    changed = true;
+  }
+  if (changed) {
+    try { localStorage.setItem(LEARNED_KEY, JSON.stringify(learned)); } catch { /* sin almacenamiento */ }
+  }
+}
 
 const norm = s => s.replace(/\s+/g, ' ').trim();
 const HAS_LETTERS = /\p{L}/u;

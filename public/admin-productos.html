@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Productos · Back-office · Entrelibros</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="img/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+  <meta name="theme-color" content="#1D2537">
+</head>
+<body data-page="productos" class="admin">
+  <div class="academic-banner" role="note">
+    <strong>Prototipo académico</strong> · Grado en Ingeniería Informática (UCAM).
+    Tienda ficticia sin actividad comercial: no introduzcas datos personales reales ni medios de pago reales.
+  </div>
+  <header id="site-header" class="site-header"></header>
+  <main class="container" id="contenido">
+    <div class="page-head">
+      <div>
+        <h1>Productos</h1>
+        <p class="lead">Catálogo completo, también lo archivado. Desde aquí se crean, editan y reponen productos.</p>
+      </div>
+      <div class="page-actions">
+        <button type="button" id="export-csv" class="btn btn-plain">Exportar CSV</button>
+        <a class="btn" href="admin-producto.html">+ Nuevo producto</a>
+      </div>
+    </div>
+    <section id="kpis" class="kpis" aria-label="Resumen"></section>
+
+    <form id="product-filters" class="toolbar" role="search">
+      <label>Buscar
+        <input name="q" type="search" maxlength="60" placeholder="Nombre o SKU">
+      </label>
+      <label>Tipo
+        <select name="type"><option value="">Todos</option></select>
+      </label>
+      <label>Temática
+        <select name="theme"><option value="">Todas</option></select>
+      </label>
+      <label>Estado
+        <select name="status">
+          <option value="">Todos</option>
+          <option value="activo">Visibles en la tienda</option>
+          <option value="archivado">Archivados</option>
+        </select>
+      </label>
+      <label>Stock
+        <select name="stock">
+          <option value="">Todo</option>
+          <option value="bajo">Stock bajo o agotado</option>
+          <option value="agotado">Agotado</option>
+        </select>
+      </label>
+    </form>
+
+    <p id="products-count" class="results-count"></p>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr><th><span class="visually-hidden">Imagen</span></th><th>Producto</th><th>Tipo</th><th class="num">Precio</th>
+              <th class="num">Stock</th><th class="num">Vendidas</th><th>Estado</th><th>Acciones</th></tr>
+        </thead>
+        <tbody id="products"><tr><td colspan="8">Cargando…</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="js/core/i18n.js"></script>
+  <script type="module" src="js/pages/admin/products.js"></script>
+</body>
+</html>

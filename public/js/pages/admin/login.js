@@ -4,7 +4,7 @@ const form = document.getElementById('login');
 const msg  = document.getElementById('login-msg');
 
 // Si ya hay sesión de administrador, directo a pedidos
-if ((await getUser()) && (await isAdmin())) location.replace('admin-pedidos.html');
+if ((await getUser()) && (await isAdmin())) location.replace('admin-panel.html');
 
 form.addEventListener('submit', async e => {
   e.preventDefault();
@@ -19,7 +19,7 @@ form.addEventListener('submit', async e => {
   btn.disabled = true;
   try {
     await signIn(email, password);
-    location.replace('admin-pedidos.html');
+    location.replace('admin-panel.html');
   } catch (err) {
     msg.textContent = err.message === 'Invalid login credentials'
       ? 'Email o contraseña incorrectos.'
