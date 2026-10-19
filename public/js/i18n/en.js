@@ -156,6 +156,7 @@ const exact = {
   'No se ha podido añadir al carrito. Recarga la página e inténtalo de nuevo.':
     'Could not add to the cart. Reload the page and try again.',
   'Ya no está a la venta.': 'No longer for sale.',
+  'Esta versión está agotada.': 'This version is sold out.',
 
   // ---------- Carrito ----------
   'Tu carrito': 'Your cart',
@@ -578,9 +579,13 @@ const patterns = [
   [/^≈ ([\d.,]+) h$/, '≈ $1 h'],
   [/^¡Últimas (\d+) unidades!$/, 'Only $1 left!'],
   [/^Indica una cantidad entre 1 y (\d+)\.$/, 'Enter a quantity between 1 and $1.'],
-  [/^Añadido al carrito: (\d+) × (.+) · (.+?)\.( Has llegado al máximo de (\d+) unidades\.)?$/,
-    (m, tr) => `Added to cart: ${m[1]} × ${tr(m[2])} · ${tr(m[3])}.` + (m[4] ? ` You have reached the maximum of ${m[5]} units.` : '')],
+  // el final opcional dice por qué se ha añadido menos de lo pedido: máximo por línea (m[4]) o stock (m[5])
+  [/^Añadido al carrito: (\d+) × (.+) · (.+?)\.(?: Has llegado al máximo de (\d+) unidades\.| Ya tienes en el carrito todas las unidades que quedan \((\d+)\)\.)?$/,
+    (m, tr) => `Added to cart: ${m[1]} × ${tr(m[2])} · ${tr(m[3])}.`
+      + (m[4] ? ` You have reached the maximum of ${m[4]} units.` : '')
+      + (m[5] ? ` You now have all the remaining units in your cart (${m[5]}).` : '')],
   [/^Ya tienes el máximo de (\d+) unidades de esta versión en el carrito\.$/, 'You already have the maximum of $1 units of this version in your cart.'],
+  [/^Ya tienes en el carrito todas las unidades que quedan \((\d+)\)\.$/, 'You already have all the remaining units in your cart ($1).'],
 
   // carrito
   [/^Cantidad de (.+)$/, (m, tr) => `Quantity of ${tr(m[1])}`],

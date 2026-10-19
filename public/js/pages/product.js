@@ -143,6 +143,7 @@ function render(p) {
         variantId: v.id, sku: v.sku, quantity: n,
         productId: p.id, productSlug: p.slug, productName: p.name,
         variantName: v.name, unitPrice: Number(v.price), image: mainImg?.url ?? null,
+        stock: v.stock, // el carrito no deja pasar de aquí (create_order lo vuelve a comprobar)
       },
     }));
   });

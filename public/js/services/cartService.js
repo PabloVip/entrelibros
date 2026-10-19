@@ -50,7 +50,15 @@ export function subtotal(lines = read()) {
   return Math.round(lines.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0) * 100) / 100;
 }
 
-/** Añade unidades de una variante; si ya está, suma sin pasar de MAX_QTY. Devuelve las unidades añadidas. */
+/**
+ * Unidades máximas de una línea: MAX_QTY, o menos si la ficha indica que queda menos stock.
+ * Sin dato de stock solo se aplica MAX_QTY (el carrito y create_order lo vuelven a comprobar).
+ */
+export function lineLimit(stock) {
+  return Number.isInteger(stock) && stock >= 0 ? Math.min(MAX_QTY, stock) : MAX_QTY;
+}
+
+/** Añade unidades de una variante; si ya está, suma sin pasar de lineLimit(). Devuelve las unidades añadidas. */
 export function addItem(item) {
   const qty = Number(item?.quantity);
   if (!Number.isInteger(qty) || qty < 1) return 0;
@@ -58,11 +66,12 @@ export function addItem(item) {
   const existing = lines.find(l => l.variantId === item.variantId);
   const before = existing?.quantity ?? 0;
   const line = {
-    variantId: item.variantId, sku: item.sku, quantity: Math.min(before + qty, MAX_QTY),
+    variantId: item.variantId, sku: item.sku, quantity: Math.min(before + qty, lineLimit(item.stock)),
     productId: item.productId, productSlug: item.productSlug, productName: item.productName,
     variantName: item.variantName, unitPrice: Number(item.unitPrice), image: item.image ?? null,
   };
-  if (!isLine(line) || line.quantity === before) return 0;
+  // "<=": si el stock ha bajado por debajo de lo que ya hay en el carrito, añadir no quita unidades
+  if (!isLine(line) || line.quantity <= before) return 0;
   write(existing ? lines.map(l => (l === existing ? line : l)) : [...lines, line]);
   return line.quantity - before;
 }
@@ -118,17 +127,26 @@ document.addEventListener('entrelibros:add-to-cart', e => {
   const item = e.detail;
   const added = addItem(item);
   const msg = document.getElementById('buy-msg');
+  // tope de la línea: el stock que queda (la ficha lo manda en item.stock) o MAX_QTY
+  const limit = lineLimit(item.stock);
+  const limitText = limit < MAX_QTY
+    ? `Ya tienes en el carrito todas las unidades que quedan (${limit}).`
+    : `Ya tienes el máximo de ${MAX_QTY} unidades de esta versión en el carrito.`;
 
   if (added === 0) {
-    const full = read().some(l => l.variantId === item.variantId && l.quantity === MAX_QTY);
-    msg.textContent = full
-      ? `Ya tienes el máximo de ${MAX_QTY} unidades de esta versión en el carrito.`
-      : 'No se ha podido añadir al carrito. Recarga la página e inténtalo de nuevo.';
+    const inCart = read().find(l => l.variantId === item.variantId)?.quantity ?? 0;
+    if (limit === 0) msg.textContent = 'Esta versión está agotada.';
+    else if (inCart >= limit) msg.textContent = limitText;
+    else msg.textContent = 'No se ha podido añadir al carrito. Recarga la página e inténtalo de nuevo.';
     msg.className = 'form-msg error';
     return;
   }
+  // si se ha añadido menos de lo pedido es porque la línea ha llegado a su tope
+  const reachedLimit = added < item.quantity
+    ? (limit < MAX_QTY ? ` ${limitText}` : ` Has llegado al máximo de ${MAX_QTY} unidades.`)
+    : '';
   msg.innerHTML = `Añadido al carrito: ${added} × ${escapeHtml(item.productName)} · ${escapeHtml(item.variantName)}.`
-    + (added < item.quantity ? ` Has llegado al máximo de ${MAX_QTY} unidades.` : '')
+    + reachedLimit
     + ' <a href="carrito.html">Ver carrito</a>';
   msg.className = 'form-msg ok';
 
