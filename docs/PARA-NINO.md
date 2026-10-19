@@ -1,329 +1,207 @@
 # Entrelibros — Guía para Nino
 
-Hola Nino 👋 Aquí tienes todo el contexto de la Tarea 1 y lo que te toca hacer. Léelo entero antes de empezar.
+Hola Nino 👋 Esta guía está actualizada a **lunes 19 de octubre por la noche**. Tu parte inicial (carrito, checkout, pago simulado, confirmación, soporte y favoritos) ya está terminada y fusionada en `main`. Aquí tienes lo que ha cambiado desde entonces y lo que te queda: **el pago con Stripe**, tu parte de la memoria y el vídeo.
+
+> **Antes de nada:** `git checkout main && git pull`. Hay muchos cambios nuevos en `main` y tienes que partir de ahí.
 
 ---
 
 ## 1. Contexto de la tarea
 
 - **Asignatura:** Soluciones Informáticas para la Empresa (UCAM). Tarea 1: prototipo funcional de canal digital de venta.
-- **Negocio (fijado por Antonio):** eCommerce de escenas en miniatura para colocar entre libros (*book nooks*). Catálogo por temática, dificultad de montaje, dimensiones e iluminación; productos con variantes; kits completos, accesorios y recambios.
-- **Entrega:** **domingo 25 de octubre a las 23:59** en el Campus Virtual: código (zip), memoria PDF (5-6 páginas + anexo de IA) y enlace al vídeo.
-- **Vídeo:** máximo 10 minutos, en YouTube, mínimo 1280×720, sin acelerar. **Los dos tenemos que hablar un tiempo parecido**: si uno no interviene, suspende.
-- **Repositorio:** el enunciado exige commits de los dos durante todo el desarrollo. Si el historial muestra poca contribución, se suspende. **Haz commits pequeños y frecuentes con tu cuenta.**
+- **Negocio:** eCommerce de *book nooks* (escenas en miniatura para colocar entre libros): kits, accesorios y recambios con variantes; filtros por temática, dificultad, dimensiones e iluminación.
+- **Entrega:** **domingo 25 de octubre a las 23:59** en el Campus Virtual: código (zip), memoria PDF con anexo de IA, URL pública, repositorio y vídeo.
+- **Vídeo:** máximo 10 minutos, en YouTube, mínimo 1280×720. **Los dos hablamos un tiempo parecido.**
+- **Commits:** tienen que verse los de los dos durante toda la semana. Haz commits pequeños con tu cuenta.
 
-**Web publicada:** https://pablovip.github.io/entrelibros/
-**Repositorio:** https://github.com/PabloVip/entrelibros (ya eres colaborador)
-
----
-
-## 2. Arquitectura
-
-```
-Navegador (GitHub Pages, HTML + JS sin framework)
-   │  supabase-js con la clave PÚBLICA
-   ▼
-Supabase (PostgreSQL)
-   ├─ Tablas            → supabase/01_schema.sql
-   ├─ Seguridad (RLS)   → supabase/02_policies.sql
-   ├─ Lógica de negocio → supabase/03_functions.sql  (funciones SQL que se llaman con rpc)
-   └─ Datos de prueba   → supabase/04_seed.sql
-```
-
-Hay tres ideas clave:
-
-1. **El navegador solo puede LEER el catálogo.** No puede insertar pedidos, pagos ni eventos directamente: RLS lo impide.
-2. **Todo lo que escribe va por una función del servidor** (`SECURITY DEFINER`) que valida los datos y recalcula los importes. **Nunca te fíes de precios ni totales que vengan del navegador.**
-3. **Capas en el front:**
-   - `js/repositories/`: solo acceso a datos (consultas y `rpc`).
-   - `js/services/`: reglas y lógica de la interfaz.
-   - `js/pages/`: una por página, pinta la pantalla.
-   - `js/components/`: piezas reutilizables.
+**Web:** https://pablovip.github.io/entrelibros/ · **Repositorio:** https://github.com/PabloVip/entrelibros
 
 ---
 
-## 3. ⚠️ Supabase está en la cuenta de Pablo
+## 2. Cómo está la web ahora
 
-**No tienes acceso al panel de Supabase.** Cuando necesites algo en la base de datos (una función nueva, un cambio en una tabla, un permiso):
-
-1. Escríbelo en un fichero SQL **nuevo** dentro del repo, por ejemplo `supabase/05_checkout.sql`. Que se pueda ejecutar varias veces sin romper nada: usa `create or replace function`.
-2. Haz commit y push.
-3. **Avisa a Pablo** (WhatsApp o lo que uséis) con el nombre del fichero. Él lo ejecuta en el SQL Editor y te confirma.
-4. Hasta que Pablo lo ejecute, las llamadas `rpc` a esa función devolverán un error de tipo *function not found*. Es normal.
-
-Más cosas sobre Supabase:
-- No modifiques `01`-`04` sin hablarlo con Pablo, porque ya están ejecutados en producción.
-- La clave de `public/js/config.js` es la **pública** y no es un secreto. **Nunca** pidas ni uses la *secret key* o la *service_role*.
-- La contraseña del admin del back-office te la pasa Pablo **por privado**. No la escribas en el repo, ni en el README, ni en commits.
-
----
-
-## 4. Puesta en marcha
-
-```bash
-git clone https://github.com/PabloVip/entrelibros.git
-cd entrelibros
-python3 -m http.server 8000 -d public
-# abrir http://localhost:8000
-```
-
-En local usas la misma base de datos que la web publicada (el catálogo ya tiene datos).
-
-**Forma de trabajar con git:**
-- Haz una rama por funcionalidad (`git checkout -b carrito`) y abre un Pull Request para que Pablo lo revise y lo mezcle. Así queda clara la colaboración.
-- Antes de empezar cada día: `git pull origin main`.
-- Cada push a `main` despliega solo en GitHub Pages en 1-2 minutos.
-
----
-
-## 5. Lo que ya está hecho (Pablo)
+### 2.1 Lo tuyo (hecho ✅)
 
 | Qué | Dónde |
 |---|---|
-| Portada, catálogo con filtros, ficha de producto | `index.html`, `catalogo.html`, `producto.html` |
-| Evento `product.viewed` | `js/pages/product.js` |
-| Servicio de eventos `track()` | `js/services/eventService.js` |
-| Back-office: login, pedidos, detalle, cambio de estado, eventos y exportación | `admin*.html`, `js/pages/admin/` |
-| Utilidades: `escapeHtml`, `money`, `param`, `formatDate` | `js/core/utils.js` |
-| Cabecera y pie comunes (`renderLayout()`) | `js/core/layout.js` |
-| Id de sesión anónimo (`getSessionId()`) | `js/core/session.js` |
+| Carrito | `carrito.html`, `js/pages/cart.js`, `js/services/cartService.js` |
+| Checkout con descuentos y envío | `checkout.html`, `js/pages/checkout.js`, `js/services/checkoutService.js` |
+| Pago simulado (tarjetas de prueba y Bizum) | `pago.html`, `js/pages/payment.js` |
+| Confirmación y consulta de pedido | `pedido.html`, `js/pages/order-confirmation.js` |
+| Soporte postventa | `soporte.html`, `js/pages/support.js` |
+| Favoritos | `favoritos.html`, `js/services/favoritesService.js`, `js/components/favoriteButton.js` |
+| SQL | `supabase/05_checkout.sql`, `supabase/07_favoritos.sql` |
 
-El menú ya enlaza a `carrito.html` y `soporte.html`, que **ahora mismo dan 404** hasta que los crees.
+### 2.2 Lo nuevo de Pablo (desde tu última rama)
 
----
+| Qué | Dónde | Te afecta porque… |
+|---|---|---|
+| **Web en inglés** (selector ES / EN) | `js/core/i18n.js`, `js/i18n/en.js`, `js/i18n/en-admin.js` | Todo texto nuevo que escribas en español necesita su traducción (ver 4.3) |
+| **Back-office profesional**: panel, productos (alta, edición, stock, imágenes), clientes, ajustes (descuentos, envíos, temáticas) | `admin-*.html`, `js/pages/admin/*`, `supabase/08_admin_catalogo.sql` | Los métodos de envío y los códigos de descuento ahora se editan desde el back-office |
+| **Cuentas de cliente**: registro con correo de confirmación, login, recuperar contraseña, "Mi cuenta" y **entrar con Google** | `cuenta.html`, `js/pages/account.js`, `js/services/accountService.js`, `supabase/09_cuentas_clientes.sql` | Hay **una línea nueva en tu `checkout.js`** (ver abajo) |
+| Política de privacidad | `privacidad.html` | — |
 
-## 6. Lo que te toca
-
-### 6.1 Carrito — `js/services/cartService.js` + `carrito.html` + `js/pages/cart.js`
-
-La ficha de producto, al pulsar "Añadir al carrito", lanza este evento del navegador:
+**La línea que se añadió en tu `checkout.js`** (no la borres al hacer Stripe):
 
 ```js
-document.addEventListener('entrelibros:add-to-cart', e => {
-  // e.detail = {
-  //   variantId, sku, quantity, productId, productSlug, productName,
-  //   variantName, unitPrice, image
-  // }
-});
+import { prefillCheckout } from '../components/checkoutAccount.js';
+// …
+prefillCheckout(document.getElementById('checkout-form')); // datos de "Mi cuenta" (Pablo)
 ```
 
-Lo que tiene que hacer `cartService.js`:
-- Guardar las líneas en `localStorage`, envuelto en `try/catch` con respaldo en memoria por si el navegador lo bloquea.
-- Si la variante ya está en el carrito, sumar la cantidad (máximo 10 por línea).
-- Registrar el evento:
-  ```js
-  track(EVENTS.CART_ITEM_ADDED, { entityType: 'cart', entityId: variantId, payload: { sku, quantity, unit_price } })
+Si el cliente ha iniciado sesión, rellena nombre, email (bloqueado) y teléfono, y el pedido aparece en su "Mi cuenta". Si no, muestra el aviso "¿Tienes cuenta? Entra…".
+
+### 2.3 Base de datos (orden de los SQL)
+
+```
+01_schema  02_policies  03_functions  05_checkout  06_soporte_admin  07_favoritos  04_seed  08_admin_catalogo  09_cuentas_clientes
+```
+
+Todo esto ya está ejecutado en Supabase. Tu SQL nuevo será `10_stripe.sql` (ver 3.4).
+
+---
+
+## 3. Lo que te toca: pago con Stripe (modo prueba)
+
+Antonio pidió que el pago simulado sea **con Stripe en modo prueba**. Es lo único funcional que queda.
+
+### 3.1 El problema: la web es estática
+
+GitHub Pages no ejecuta código de servidor y Stripe necesita una **clave secreta** (`sk_test_…`) para crear pagos. Esa clave **nunca** puede estar en el navegador ni en el repositorio. La solución es usar **Supabase Edge Functions**: pequeñas funciones de servidor (Deno/TypeScript) que guardan la clave secreta como *secret* de Supabase.
+
+### 3.2 Flujo recomendado: Stripe Checkout (página de pago de Stripe)
+
+```
+pago.html ──(1) "Pagar con Stripe"──▶ Edge Function create-checkout-session
+                                         · lee el pedido de la BD (importe del servidor, nunca del navegador)
+                                         · crea la Checkout Session en Stripe (modo test, EUR)
+              ◀──(2) url de Stripe──────
+navegador ──(3)──▶ checkout.stripe.com (tarjeta 4242 4242 4242 4242)
+          ◀──(4) vuelve a pedido.html?pedido=…&email=…&session_id=cs_test_…
+pedido.html ──(5)──▶ Edge Function confirm-checkout-session
+                        · pregunta a Stripe si esa sesión está pagada (payment_status = 'paid')
+                        · si sí: llama a la función SQL confirm_stripe_payment(...)
+```
+
+Así el pago solo se marca como hecho cuando **el servidor lo confirma con Stripe**, no porque el navegador lo diga. Si te da tiempo, añade además un *webhook* (`checkout.session.completed`) que llame a la misma función: así se confirma aunque el cliente cierre la pestaña antes de volver.
+
+### 3.3 Edge Functions (`supabase/functions/`)
+
+- `create-checkout-session/index.ts`
+  - Recibe `{ order_number }`.
+  - Lee el pedido con el cliente de servidor (dentro de la función existe `SUPABASE_SERVICE_ROLE_KEY`; **solo ahí**, nunca en el front).
+  - Solo si está en estado `creado`.
+  - Crea la sesión: `mode: 'payment'`, `currency: 'eur'`, una línea con el **total del pedido en céntimos** (`Math.round(total * 100)`), `metadata: { order_number }`, `customer_email`, `success_url` y `cancel_url` (vuelta a `pago.html?pedido=…&cancelado=1`).
+  - Devuelve `{ url }`.
+- `confirm-checkout-session/index.ts`
+  - Recibe `{ session_id }`.
+  - Recupera la sesión en Stripe y comprueba `payment_status === 'paid'` y que `amount_total` coincide con el total del pedido.
+  - Llama a `confirm_stripe_payment`.
+- Las dos con CORS (`Access-Control-Allow-Origin` para `https://pablovip.github.io` y `http://localhost:8000`) y respuesta a `OPTIONS`.
+
+**Claves y despliegue (lo hace Pablo, porque Supabase está en su cuenta):**
+1. Tú creas la cuenta de Stripe, activas el **modo de prueba** y le pasas a Pablo **por privado** la `sk_test_…`. Nunca la subas al repositorio ni la pegues en el código.
+2. Pablo la guarda en **Supabase → Edge Functions → Secrets** como `STRIPE_SECRET_KEY` y despliega las funciones (desde el editor de Edge Functions del panel o con la CLI).
+3. La clave **publicable** (`pk_test_…`) sí puede ir en el front si la necesitas, pero con Stripe Checkout no hace falta.
+
+### 3.4 SQL: `supabase/10_stripe.sql` (pásaselo a Pablo)
+
+- Permitir el método nuevo en `payments`: la restricción `check (method in ('tarjeta_simulada','bizum_simulado'))` tiene que aceptar también `'stripe_test'`.
+  ```sql
+  alter table public.payments drop constraint if exists payments_method_check;
+  alter table public.payments add constraint payments_method_check
+    check (method in ('tarjeta_simulada', 'bizum_simulado', 'stripe_test'));
   ```
-- Mostrar un aviso de "Añadido al carrito" en la ficha (escribe en `#buy-msg`).
-- Exportar funciones como `getCart()`, `updateQuantity()`, `removeItem()`, `clearCart()` y `count()`.
-- **Importante:** la ficha tiene que importar tu servicio para que el listener exista. Añade en `public/js/pages/product.js`:
+- `confirm_stripe_payment(p_order_number text, p_session_id text, p_amount numeric)`:
+  - Mismo comportamiento que la rama "aprobado" de tu `simulate_payment`: inserta el pago, descuenta stock, pasa el pedido a `pago_simulado`, deja el historial y emite `payment.simulated` con `method: 'stripe_test'`.
+  - Guarda en `transaction_ref` el id de la sesión de Stripe. Como es `unique`, si se llama dos veces (vuelta + webhook) no duplica el pago: comprueba primero si ya existe.
+  - **Revoca la ejecución a `anon` y `authenticated`**: solo la llaman las Edge Functions con la service role. Si el navegador pudiera llamarla, cualquiera marcaría pedidos como pagados.
+
+### 3.5 Front
+
+- `pago.html`: añade "Pagar con tarjeta (Stripe, modo prueba)". Llama a la Edge Function con `supabase.functions.invoke('create-checkout-session', { body: { order_number } })` y haz `location.href = url`. Decide con Pablo si dejáis también Bizum simulado.
+- Muestra las **tarjetas de prueba de Stripe**:
+  - `4242 4242 4242 4242`: pago aprobado.
+  - `4000 0000 0000 0002`: tarjeta rechazada.
+  - `4000 0025 0000 3155`: pide autenticación 3D Secure.
+  - Cualquier fecha futura y cualquier CVC.
+- `pedido.html`: si llega `session_id`, llama a `confirm-checkout-session`, muestra "Confirmando el pago…" y después el pedido como siempre.
+- `cancelado=1` en `pago.html`: mensaje de "Has cancelado el pago, puedes intentarlo de nuevo".
+- `METHOD_LABELS` en `js/services/orderService.js`: añade `stripe_test: 'Tarjeta (Stripe, prueba)'` para que el back-office lo muestre bien.
+
+### 3.6 Probarlo
+
+- En local con `python3 -m http.server 8000 -d public` (las Edge Functions están en Supabase, no en local).
+- Compra completa: pago aprobado, rechazado, cancelado y 3D Secure.
+- Comprueba en el back-office (Pedidos y Eventos) que aparece el pago y que se descontó el stock.
+- Comprueba en el **panel de Stripe (modo test)** que el pago aparece con el número de pedido en *metadata*.
+
+---
+
+## 4. Normas (siguen igual, más dos nuevas)
+
+### 4.1 Supabase está en la cuenta de Pablo
+- Cada cambio de BD va en un fichero **nuevo** (`10_stripe.sql`), ejecutable varias veces. Commit + aviso a Pablo, que lo ejecuta.
+- No modifiques `01`-`09` sin hablarlo.
+- **Nunca** uses la *service_role* ni la clave secreta de Stripe en el front ni en el repo. Solo en las Edge Functions, como *secrets*.
+
+### 4.2 Git
+- `git pull` antes de empezar; rama `stripe`; Pull Request para que Pablo lo revise y lo fusione.
+- Ficheros que también toca Pablo: `js/core/layout.js`, `css/style.css`, `README.md`. Si los cambias, haz cambios pequeños para no pisaros.
+
+### 4.3 Traducciones (nuevo)
+- La web se traduce sola con un diccionario. Cada texto nuevo en español que escribas en la interfaz necesita su línea en **`public/js/i18n/en.js`** (es tu fichero; Pablo usa `en-admin.js` para no chocar):
   ```js
-  import '../services/cartService.js';
+  'Pagar con tarjeta (Stripe, modo prueba)': 'Pay by card (Stripe, test mode)',
   ```
-- Opcional: el número de artículos junto a "Carrito" en el menú (`js/core/layout.js`).
+- Los textos con partes variables (números, importes) van en `patterns` (mira los ejemplos del final de `en.js`).
+- Para comprobarlo: abre la página con `?lang=en`. Si ves algo en español que no es un dato del cliente, falta en el diccionario.
 
-`carrito.html` tiene que:
-- Listar las líneas con su imagen.
-- Permitir cambiar la cantidad y eliminar líneas.
-- Mostrar el subtotal.
-- Tener un botón "Tramitar pedido" que lleve a `checkout.html`.
-- Recargar precio y stock actuales desde `product_variants` por `id`, porque el precio guardado puede haber cambiado. Avisa si algo está agotado.
-
-### 6.2 Checkout — `checkout.html` + `js/pages/checkout.js`
-
-- Al cargar: `track(EVENTS.CHECKOUT_STARTED, { payload: { subtotal, items } })`.
-- **Formulario con validación:**
-  - Nombre.
-  - Email.
-  - Teléfono (opcional).
-  - Dirección.
-  - Ciudad.
-  - Código postal (5 dígitos).
-  - Provincia.
-  - Nota (opcional, máximo 500 caracteres).
-- **Método de envío:** se lee de `shipping_methods`, que es público.
-- **Código de descuento:** con un botón "Aplicar" que llame a `rpc('validate_discount')`.
-- **Resumen:** subtotal, descuento, envío, total e "IVA incluido: X €". Lo que se muestra es orientativo; **el importe que vale es el que devuelve el servidor**.
-- **Al enviar:**
-  1. Llamar a `rpc('create_order')`.
-  2. Vaciar el carrito.
-  3. Redirigir a `pago.html?pedido=EL-…`.
-- Mostrar el aviso de prototipo: datos ficticios, no reales.
-
-### 6.3 Pago simulado — `pago.html` + `js/pages/payment.js`
-
-- Dos métodos: **tarjeta simulada** y **Bizum simulado**.
-- Tarjetas de prueba (muéstralas en la página):
-  - `4242 4242 4242 4242` → **aprobado**
-  - `4000 0000 0000 0002` → **rechazado**
-  - Cualquier otro número → error "Usa una tarjeta de prueba". **Nunca se aceptan tarjetas reales.**
-- Al enviar se llama a `rpc('simulate_payment')`.
-  - Si se aprueba → `pedido.html?pedido=EL-…&email=…`.
-  - Si se rechaza → mensaje y opción de reintentar.
-
-### 6.4 Confirmación — `pedido.html` + `js/pages/order-confirmation.js`
-
-- El navegador **no puede leer** la tabla `orders` (RLS). Usa `rpc('get_order_summary', { p_order_number, p_email })`, que solo devuelve datos si el email coincide.
-- Hay que mostrar:
-  - Número de pedido.
-  - Estado.
-  - Líneas e importes.
-  - Dirección.
-  - Plazo de entrega.
-  - Enlace a soporte.
-
-### 6.5 Soporte postventa — `soporte.html` + `js/pages/support.js`
-
-- **Campos del formulario:**
-  - Email.
-  - Número de pedido (opcional).
-  - Motivo: `pieza_faltante`, `pieza_danada`, `retraso_envio`, `duda_montaje` u `otro`.
-  - Mensaje (entre 10 y 2000 caracteres).
-- Se llama a `rpc('create_support_request')` y se muestra el número de incidencia.
-- Opcional, para lucirse: una página `admin-soporte.html` en el back-office para listar incidencias. Primero pídele a Pablo la política RLS de lectura para admins: ya existe, es `admin lee soporte`.
+### 4.4 Código (igual que antes)
+- Datos siempre con `escapeHtml()`. Textos y comentarios en español. Sin `alert()` ni `confirm()`. Páginas que funcionen en el móvil con las clases de `css/style.css`.
+- Datos de prueba: emails `@example.com` o `@entrelibros.test`, nunca tarjetas reales.
 
 ---
 
-## 7. Funciones SQL que tienes que escribir (`supabase/05_checkout.sql`)
-
-Sigue **el mismo patrón** que `admin_update_order_status` en `03_functions.sql`:
-- `language plpgsql security definer set search_path = public`.
-- Valida **todos** los parámetros y lanza `raise exception '…' using errcode = '22023'` con mensajes en español.
-- Registra los eventos con la función interna `public._emit_event(...)`, usando `source = 'servidor'`.
-- Al final de cada función: `grant execute on function … to anon, authenticated;`.
-
-### Reglas de cálculo (son las mismas que usan los pedidos de ejemplo del seed)
-
-```
-línea          = precio actual de product_variants × cantidad   (cantidad 1..10 y ≤ stock)
-subtotal       = Σ líneas                                       (los precios YA llevan IVA)
-descuento      = porcentaje   → round(subtotal × valor / 100, 2)
-                 importe_fijo → least(valor, subtotal)
-                 (código activo, dentro de fechas y subtotal ≥ min_subtotal)
-envío          = shipping_methods.price, pero 0 si free_from no es null y (subtotal − descuento) ≥ free_from
-total          = subtotal − descuento + envío
-IVA desglosado = total − round(total / 1.21, 2)                 (tax_rate = 21)
-```
-
-Ejemplo del seed: subtotal 87,80, OTONO15 −13,17, envío gratis (74,63 ≥ 60), total 74,63 e IVA 12,95.
-
-### Firmas propuestas
-
-```sql
--- Devuelve {valid, code, description, discount_amount} o {valid:false, reason}
-validate_discount(p_code text, p_subtotal numeric) returns jsonb
-
--- p_customer: {email, full_name, phone}
--- p_shipping: {name, address, city, postcode, province, notes}
--- p_items:    [{variant_id, quantity}, ...]
--- Devuelve {order_number, total, ...}
-create_order(p_customer jsonb, p_shipping jsonb, p_items jsonb,
-             p_shipping_code text, p_discount_code text, p_session_id text) returns jsonb
-
--- p_method: 'tarjeta_simulada' | 'bizum_simulado'
--- Devuelve {status, transaction_ref, failure_reason}
-simulate_payment(p_order_number text, p_method text, p_card_number text) returns jsonb
-
-get_order_summary(p_order_number text, p_email text) returns jsonb   -- null si no coincide
-
--- Devuelve {ticket_number}
-create_support_request(p_email text, p_order_number text, p_reason text, p_message text) returns jsonb
-```
-
-### Qué debe hacer cada una
-
-**`create_order`**
-1. Valida email, código postal y longitudes, y que haya entre 1 y 20 líneas.
-2. Busca el cliente por email o lo crea en `customers` (con `is_test = true`).
-3. Lee **precio y stock de la BD**: ignora cualquier precio que mande el navegador.
-4. Calcula los importes con las reglas de arriba.
-5. Genera el número de pedido con el formato `EL-AAAAMMDD-XXXX`, siendo XXXX 4 caracteres alfanuméricos en mayúscula.
-6. Inserta en `orders` (estado `creado`) y en `order_items`. Las líneas guardan una copia del nombre, el SKU y el precio.
-7. Inserta en `order_status_history` (null → `creado`, `changed_by = 'sistema'`).
-8. Emite `order.created` con el payload `{order_number, total, items}`, `order_id` y `customer_id`.
-
-**`simulate_payment`**
-- Solo acepta pedidos en estado `creado`.
-- Guarda en `payments` el importe del pedido, una `transaction_ref` única tipo `SIM-…` y **solo los 4 últimos dígitos** de la tarjeta.
-- **Si se aprueba:**
-  - El pedido pasa a `pago_simulado` y se guarda en el historial.
-  - **Se descuenta el stock** de cada variante; si no llega, se rechaza con el motivo correspondiente.
-- **Si se rechaza:** el pedido sigue en `creado` y se puede reintentar.
-- En los dos casos emite `payment.simulated` con `{order_number, method, status, amount}`.
-
-**`get_order_summary`**
-- Devuelve el pedido con sus líneas y su último pago **solo si** el email coincide con el del cliente.
-
-**`create_support_request`**
-- Valida los campos.
-- Si se indica número de pedido, lo enlaza **solo si** el email coincide.
-- Genera un número de incidencia `SOP-AAAAMMDD-XXXX`.
-- Emite `support.requested`.
-
-Para probar tus funciones en local antes de pasárselas a Pablo, pregúntale. Él puede montarte un Postgres de prueba o ejecutarlas y probarlas contigo.
-
----
-
-## 8. Normas del código
-
-- Pinta **siempre** los datos con `escapeHtml()` (evita XSS).
-- Pon los textos de la interfaz y los comentarios en español.
-- Los fallos de eventos no deben romper la compra: `track()` ya no lanza excepciones.
-- Nada de datos personales reales. En las pruebas usa emails `@entrelibros.test` o `@example.com`.
-- Para confirmar acciones, no uses `alert()` ni `confirm()`: muestra mensajes en la página. Mira cómo lo hace `confirmInline()` en `js/pages/admin/order-detail.js`.
-- Haz páginas que funcionen en el móvil. Reutiliza las clases de `css/style.css`: `btn`, `card-form`, `field`, `data-table`, `form-msg`…
-
----
-
-## 9. Calendario
+## 5. Calendario hasta la entrega
 
 | Día | Nino | Pablo |
 |---|---|---|
-| Lun 19 | Carrito + listener en la ficha | Revisa PR; fotos de producto |
-| Mar 20 | Checkout (página) + `05_checkout.sql` (`validate_discount`, `create_order`) → **pasar a Pablo** | Ejecuta SQL; revisa |
-| Mié 21 | Pago simulado + confirmación (`simulate_payment`, `get_order_summary`) → **pasar a Pablo** | Ejecuta SQL; README |
-| Jue 22 | Soporte (`create_support_request`) → **pasar a Pablo**; pruebas | Pruebas de compra completa en la web publicada |
-| Vie 23 | Corregir fallos | Corregir fallos |
-| Sáb 24 | Memoria (tus secciones) + tu parte del anexo de IA | Memoria (sus secciones) + README final |
-| Dom 25 | Diapositivas, **grabación del vídeo juntos**, entrega con margen | Igual |
+| Mar 20 | Cuenta de Stripe (test); `10_stripe.sql`; `create-checkout-session` | Ejecuta SQL; guarda el secret; despliega la función |
+| Mié 21 | `confirm-checkout-session`, `pago.html`, `pedido.html`; traducciones | Despliega; revisa el PR |
+| Jue 22 | Pruebas en la web publicada (aprobado, rechazado, cancelado, 3DS); webhook si da tiempo | Pruebas completas; README |
+| Vie 23 | Tus secciones de la memoria + tu anexo de IA | Sus secciones; diagrama |
+| Sáb 24 | Guion del vídeo y diapositivas (si las hay) | Igual |
+| Dom 25 | **Grabación juntos**, revisión y entrega con margen | Igual |
 
 ---
 
-## 10. Memoria y vídeo: tu parte
+## 6. Memoria y vídeo: tu parte
 
-**Tus secciones de la memoria:**
+**En la memoria** (Pablo te pasó el `.docx`: tus huecos están en **amarillo**, con un máximo de líneas):
 - Flujo de compra: carrito → checkout → pago → confirmación.
-- Cálculo de importes (IVA, envío, descuentos).
-- Pago simulado y estados del pedido.
-- Soporte postventa.
-- Limitaciones y mejoras futuras.
+- Cálculo de importes (IVA, envío, descuentos) y por qué se recalcula en el servidor.
+- **Pago con Stripe en modo prueba**: Edge Functions, por qué la clave secreta no va en el front y cómo se confirma el pago.
+- Soporte postventa y favoritos.
+- Tu parte del **anexo de IA**: en qué la usaste, qué errores detectaste y qué cambiaste tú.
 
-**Pablo escribe:**
-- Arquitectura.
-- Modelo de datos.
-- Seguridad (RLS).
-- Catálogo.
-- Eventos.
-- Back-office.
+**Pablo escribe:** arquitectura, modelo de datos, seguridad (RLS), catálogo, eventos, back-office, cuentas de cliente, idioma y despliegue.
 
-**Anexo de IA:** si usas IA, apunta en qué tareas la usaste, qué errores detectaste y qué cambiaste tú. Es obligatorio y lo revisan.
-
-**Vídeo (unos 5 minutos cada uno):** tú haces la demo de una compra completa en la web publicada, con el carrito, un código de descuento, un pago rechazado y otro aprobado, la confirmación y una incidencia de soporte. Explica en el código cómo `create_order` recalcula los precios en el servidor. Tienes que demostrar que entiendes el código.
+**En el vídeo (unos 5 minutos cada uno):** tú haces la compra completa en la web publicada (carrito, código de descuento, pago con Stripe rechazado y aprobado, confirmación e incidencia de soporte) y explicas en el código cómo se recalculan los importes en el servidor y cómo se confirma el pago con Stripe.
 
 ---
 
-## 11. Checklist
+## 7. Checklist
 
-- [ ] `cartService.js` + import en `product.js` + evento `cart.item_added`
-- [ ] `carrito.html`
-- [ ] `checkout.html` + evento `checkout.started`
-- [ ] `supabase/05_checkout.sql` → enviado a Pablo y ejecutado
-- [ ] `pago.html` con tarjetas de prueba (aprobada y rechazada)
-- [ ] `pedido.html` (confirmación)
-- [ ] `soporte.html` + evento `support.requested`
-- [ ] Compra completa probada en https://pablovip.github.io/entrelibros/ y visible en el back-office
-- [ ] Commits propios repartidos durante la semana
-- [ ] Secciones de la memoria y anexo de IA
+- [ ] `git pull` de `main` y rama `stripe`
+- [ ] Cuenta de Stripe en modo prueba; `sk_test_…` pasada a Pablo por privado
+- [ ] `supabase/10_stripe.sql` (método `stripe_test` + `confirm_stripe_payment` solo para el servidor) → ejecutado por Pablo
+- [ ] Edge Functions `create-checkout-session` y `confirm-checkout-session` → desplegadas por Pablo
+- [ ] `pago.html` con Stripe + tarjetas de prueba; `pedido.html` confirma con `session_id`; mensaje de cancelado
+- [ ] `METHOD_LABELS` con `stripe_test`; textos nuevos en `en.js`
+- [ ] Pruebas en la web publicada: aprobado, rechazado, cancelado y 3D Secure; visible en el back-office y en Stripe
+- [ ] Pull Request revisado y fusionado
+- [ ] Tus secciones de la memoria y tu anexo de IA
 - [ ] Tu parte del vídeo
 
-Cualquier duda, pregunta a Pablo antes de tocar algo que ya esté hecho. ¡Ánimo!
+Cualquier duda, pregunta a Pablo antes de tocar algo que ya esté hecho. ¡Ánimo, que queda poco! 💪
