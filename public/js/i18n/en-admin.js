@@ -378,6 +378,8 @@ const exact = {
   'Ahora mismo la tienda no puede enviar correos a esa dirección (servidor de correo de pruebas de Supabase).':
     'The shop cannot send emails to that address right now (Supabase test mail server).',
   'Ese email no es válido.': 'That email is not valid.',
+  'No se ha podido enviar el correo. Inténtalo de nuevo en unos minutos; si sigue fallando, avisa a la tienda.':
+    'The email could not be sent. Try again in a few minutes; if it keeps failing, let the shop know.',
   'El registro de cuentas está desactivado.': 'Account sign-up is disabled.',
   'Revisa el email y la contraseña.': 'Check the email and password.',
   'No se ha podido conectar. Revisa tu conexión e inténtalo de nuevo.': 'Could not connect. Check your connection and try again.',

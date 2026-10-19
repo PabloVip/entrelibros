@@ -141,6 +141,7 @@ export function authErrorText(err) {
   if (/already registered/i.test(msg)) return byCode.user_already_exists;
   if (/rate limit|only request this after/i.test(msg)) return byCode.over_email_send_rate_limit;
   if (/not authorized/i.test(msg)) return byCode.email_address_not_authorized;
+  if (/Error sending .*email/i.test(msg)) return 'No se ha podido enviar el correo. Inténtalo de nuevo en unos minutos; si sigue fallando, avisa a la tienda.';
   if (/Password should be/i.test(msg)) return byCode.weak_password;
   if (/different from the old/i.test(msg)) return byCode.same_password;
   if (/fetch|network/i.test(msg)) return 'No se ha podido conectar. Revisa tu conexión e inténtalo de nuevo.';
