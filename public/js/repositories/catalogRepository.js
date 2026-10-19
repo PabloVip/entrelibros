@@ -1,5 +1,6 @@
 // Acceso a datos del catálogo. Solo consultas: nada de lógica de interfaz aquí.
 import { supabase } from '../core/supabase.js';
+import { originalsMatching } from '../core/i18n.js';
 
 const SORTS = {
   precio_asc:  ['min_price', true],
@@ -31,7 +32,17 @@ export async function fetchCatalog(f = {}) {
   if (f.lighting === 'sin')  query = query.eq('has_unlit_option', true);
   if (f.maxWidth)            query = query.lte('width_mm', f.maxWidth);
   if (f.maxPrice)            query = query.lte('min_price', f.maxPrice);
-  if (f.q)                   query = query.ilike('name', `%${f.q}%`);
+  if (f.q) {
+    // En inglés también se busca por el nombre traducido (diccionario js/i18n/en.js)
+    const names = originalsMatching(f.q);
+    if (names.length) {
+      const safe = f.q.replace(/[,()"*\\]/g, ' ');
+      const list = names.map(n => `"${n.replace(/["\\]/g, '')}"`).join(',');
+      query = query.or(`name.ilike.*${safe}*,name.in.(${list})`);
+    } else {
+      query = query.ilike('name', `%${f.q}%`);
+    }
+  }
 
   const sort = SORTS[f.sort];
   if (sort) query = query.order(sort[0], { ascending: sort[1] });

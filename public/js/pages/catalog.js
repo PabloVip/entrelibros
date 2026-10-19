@@ -6,6 +6,7 @@ import {
 } from '../services/catalogService.js';
 import { productCard } from '../components/productCard.js';
 import { escapeHtml } from '../core/utils.js';
+import { lang, t } from '../core/i18n.js';
 
 renderLayout();
 
@@ -49,7 +50,9 @@ async function load(filters) {
   try {
     const { items, total } = await fetchCatalog(filters);
     if (id !== requestId) return;
-    const list = filters.sort ? items : sortFeatured(items);
+    let list = filters.sort ? items : sortFeatured(items);
+    // la BD ordena por el nombre en español; en inglés se reordena por el nombre traducido
+    if (filters.sort === 'nombre' && lang !== 'es') list = [...list].sort((a, b) => t(a.name).localeCompare(t(b.name), lang));
     count.textContent = `${total} ${total === 1 ? 'producto' : 'productos'}`;
     results.innerHTML = list.length
       ? list.map(productCard).join('')

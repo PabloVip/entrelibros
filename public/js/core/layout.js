@@ -1,6 +1,7 @@
 // Cabecera y pie comunes. Cada página llama a renderLayout() al cargar.
 import { APP_NAME } from '../config.js';
 import { escapeHtml } from './utils.js';
+import { langSwitchHtml } from './i18n.js';
 import { count as cartCount } from '../services/cartService.js';
 
 const NAV = [
@@ -28,6 +29,7 @@ export function renderLayout() {
           ${NAV.map(item => `
             <a href="${item.href}" ${item.id === current ? 'aria-current="page"' : ''}>${navLabel(item)}</a>
           `).join('')}
+          ${langSwitchHtml()}
         </nav>
       </div>`;
     // cartService avisa cada vez que cambia el carrito

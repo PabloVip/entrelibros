@@ -1,6 +1,7 @@
 // Cabecera del back-office.
 import { escapeHtml } from './utils.js';
 import { signOut } from './auth.js';
+import { langSwitchHtml } from './i18n.js';
 
 const NAV = [
   { id: 'pedidos', href: 'admin-pedidos.html', label: 'Pedidos' },
@@ -18,6 +19,7 @@ export function renderAdminLayout(user) {
         <a href="index.html">Ver tienda</a>
         <span class="admin-user">${escapeHtml(user?.email ?? '')}</span>
         <button type="button" id="logout" class="link-btn">Cerrar sesión</button>
+        ${langSwitchHtml()}
       </nav>
     </div>`;
   document.getElementById('logout').addEventListener('click', async () => {

@@ -1,4 +1,5 @@
 // Utilidades de interfaz.
+import { locale } from './i18n.js';
 
 /** Escapa texto antes de insertarlo como HTML (evita XSS). Usar SIEMPRE con datos. */
 export function escapeHtml(value) {
@@ -10,7 +11,7 @@ export function escapeHtml(value) {
     .replaceAll("'", '&#39;');
 }
 
-const euro = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' });
+const euro = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR' });
 export function money(amount) {
   return euro.format(Number(amount ?? 0));
 }
@@ -24,7 +25,7 @@ export function param(name) {
   return new URLSearchParams(location.search).get(name);
 }
 
-const dateFmt = new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' });
+const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' });
 export function formatDate(value) {
   return value ? dateFmt.format(new Date(value)) : '';
 }

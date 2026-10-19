@@ -1,6 +1,7 @@
 // Tarjeta de producto reutilizable (catálogo, portada, productos compatibles).
 import { escapeHtml, money } from '../core/utils.js';
 import { TYPE_LABELS, DIFFICULTY_LABELS, lightingLabel } from '../services/catalogService.js';
+import { locale } from '../core/i18n.js';
 
 export function productCard(item) {
   const href = `producto.html?slug=${encodeURIComponent(item.slug)}`;
@@ -11,7 +12,7 @@ export function productCard(item) {
 
   const chips = [
     item.difficulty ? DIFFICULTY_LABELS[item.difficulty] : null,
-    item.width_mm ? `${(item.width_mm / 10).toLocaleString('es-ES')} cm de ancho` : null,
+    item.width_mm ? `${(item.width_mm / 10).toLocaleString(locale)} cm de ancho` : null,
     item.product_type === 'kit' ? lightingLabel(item) : null,
   ].filter(Boolean);
 

@@ -6,11 +6,12 @@ import { ORDER_NUMBER_RE } from '../services/checkoutService.js';
 import { METHOD_LABELS, PAYMENT_LABELS } from '../services/orderService.js';
 import { statusBadge } from '../components/statusBadge.js';
 import { escapeHtml, money, param, formatDate } from '../core/utils.js';
+import { locale } from '../core/i18n.js';
 
 renderLayout();
 
 const root = document.getElementById('order');
-const dayFmt = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+const dayFmt = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long' });
 
 /** Suma días laborables (sin sábados ni domingos; los festivos no se tienen en cuenta). */
 function addBusinessDays(date, days) {

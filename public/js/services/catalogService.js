@@ -1,4 +1,5 @@
 // Reglas del catálogo: filtros válidos, etiquetas y formato. Lo usan las páginas, no toca la BD.
+import { locale, lang, t } from '../core/i18n.js';
 
 export const TYPE_LABELS = { kit: 'Kit completo', accesorio: 'Accesorio', recambio: 'Recambio' };
 export const DIFFICULTY_LABELS = { principiante: 'Principiante', intermedio: 'Intermedio', avanzado: 'Avanzado' };
@@ -62,7 +63,7 @@ export function sortFeatured(items) {
   return [...items].sort((a, b) =>
     (rank[a.product_type] - rank[b.product_type]) ||
     ((b.total_stock > 0) - (a.total_stock > 0)) ||
-    a.name.localeCompare(b.name, 'es'));
+    t(a.name).localeCompare(t(b.name), lang));
 }
 
 export function lightingLabel(item) {
@@ -73,7 +74,7 @@ export function lightingLabel(item) {
 
 export function dimensionsLabel(p) {
   if (!p.width_mm) return null;
-  const cm = mm => (mm / 10).toLocaleString('es-ES', { maximumFractionDigits: 1 });
+  const cm = mm => (mm / 10).toLocaleString(locale, { maximumFractionDigits: 1 });
   return `${cm(p.width_mm)} × ${cm(p.height_mm)} × ${cm(p.depth_mm)} cm`;
 }
 

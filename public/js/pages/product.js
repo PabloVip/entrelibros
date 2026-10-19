@@ -8,6 +8,7 @@ import { track, EVENTS } from '../services/eventService.js';
 import '../services/cartService.js'; // escucha 'entrelibros:add-to-cart' y guarda la línea
 import { productCard } from '../components/productCard.js';
 import { escapeHtml, money, param } from '../core/utils.js';
+import { locale } from '../core/i18n.js';
 
 renderLayout();
 
@@ -27,7 +28,7 @@ function specsRows(p) {
     ['Dificultad', p.difficulty ? DIFFICULTY_LABELS[p.difficulty] : null],
     ['Dimensiones (an × al × fo)', dimensionsLabel(p)],
     ['Número de piezas', p.pieces_count],
-    ['Tiempo de montaje', p.build_time_hours ? `≈ ${Number(p.build_time_hours).toLocaleString('es-ES')} h` : null],
+    ['Tiempo de montaje', p.build_time_hours ? `≈ ${Number(p.build_time_hours).toLocaleString(locale)} h` : null],
   ];
   return rows.filter(([, v]) => v != null && v !== '')
     .map(([k, v]) => `<tr><th scope="row">${escapeHtml(k)}</th><td>${escapeHtml(v)}</td></tr>`).join('');

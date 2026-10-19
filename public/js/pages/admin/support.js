@@ -27,7 +27,7 @@ function row(t) {
     <tr>
       <td class="nowrap"><strong>${escapeHtml(t.ticket_number)}</strong></td>
       <td>${formatDate(t.created_at)}</td>
-      <td><a href="mailto:${escapeHtml(t.customer_email)}">${escapeHtml(t.customer_email)}</a></td>
+      <td class="email-cell"><a href="mailto:${escapeHtml(t.customer_email)}">${escapeHtml(t.customer_email)}</a></td>
       <td>${escapeHtml(REASONS[t.reason] ?? t.reason)}</td>
       <td class="nowrap">${t.order ? `<a href="admin-pedido.html?id=${t.order.id}">${escapeHtml(t.order.order_number)}</a>` : '<span class="muted">—</span>'}</td>
       <td class="msg-cell">${t.message.length > 90
