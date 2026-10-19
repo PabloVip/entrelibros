@@ -191,6 +191,7 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago. E
 
 ### Cuentas de cliente y correos
 - **Registro e inicio de sesión** con Supabase Auth (email y contraseña). En **Authentication → Sign In / Providers → Email** deja activado *Confirm email*: la cuenta no se puede usar hasta abrir el enlace del correo.
+- **Entrar con Google** (botón en `cuenta.html`): en Google Cloud Console crea un *ID de cliente de OAuth* de tipo *Aplicación web* con el URI de redirección `https://<tu-proyecto>.supabase.co/auth/v1/callback`, y pega el ID y el secreto en **Authentication → Sign In / Providers → Google**. El email de Google ya viene verificado, así que no se envía correo de confirmación; si ese email ya tenía cuenta o pedidos de invitado, se enlazan.
 - **Correos en español:** copia las plantillas de `supabase/correos/` en **Authentication → Emails → Templates** (confirmar cuenta y cambiar contraseña).
 - **Servidor de correo:** el de Supabase por defecto solo entrega a los emails del equipo del proyecto (Organization → Team) y unos pocos correos por hora. Para la demo basta con invitar al equipo las cuentas que se vayan a usar; para que cualquiera pueda registrarse hay que configurar un SMTP propio (por ejemplo Brevo o Resend, con plan gratuito) en **Authentication → Emails → SMTP Settings**.
 - **Qué hace el servidor** (`09_cuentas_clientes.sql`): al registrarse se crea la ficha de cliente o se enlaza con la que ya existía si había comprado como invitado con ese email. Con el email confirmado, RLS deja a cada cliente leer **solo** sus datos, pedidos, líneas, pagos, historial e incidencias. El perfil se cambia con `update_my_profile`.
@@ -211,7 +212,7 @@ En el repositorio, ve a **Settings → Pages → Source: GitHub Actions**. El wo
 
 - **Back-office público en cuanto a páginas.** GitHub Pages es estático, así que cualquiera puede abrir `admin*.html`, pero sin una sesión de administrador las políticas RLS no devuelven ningún dato.
 - **Sin límite de peticiones.** La API no limita cuántos pedidos o incidencias se pueden crear por minuto. En producción haría falta *rate limiting* o un captcha.
-- **Cuenta opcional.** Se puede comprar sin cuenta (solo con el email). Si un email ya existe y se compra como invitado, no se actualizan su nombre ni su teléfono. No hay inicio de sesión con Google ni borrado de cuenta desde la web.
+- **Cuenta opcional.** Se puede comprar sin cuenta (solo con el email). Si un email ya existe y se compra como invitado, no se actualizan su nombre ni su teléfono. No hay borrado de cuenta desde la web.
 - **Correos de Supabase.** Sin SMTP propio, Supabase solo envía a los emails del equipo del proyecto y con un límite de correos por hora.
 - **Pago de pedidos ajenos.** Quien conozca el número de un pedido sin pagar puede simular su pago.
 - **Email en la URL.** El email va en la URL de la confirmación (`pedido.html?…&email=…`) y queda en el historial del navegador.

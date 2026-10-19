@@ -564,3 +564,6 @@ input[type=email], input[type=password], input[type=date], input:not([type]) { f
 .account-notice { margin: 0 0 18px; }
 .account-hint { margin: 0 0 12px; }
 .card-form .form-msg:empty { display: none; }
+.btn-google { width: 100%; text-align: center; }
+.or-line { display: flex; align-items: center; gap: 10px; margin: 0; font-size: .82rem; color: var(--muted); }
+.or-line::before, .or-line::after { content: ""; flex: 1; height: 1px; background: var(--border); }

@@ -9,7 +9,7 @@ import { renderLayout } from '../core/layout.js';
 import {
   PASSWORD_MIN, EMAIL_RE, PHONE_RE, safeReturn, getUser, getMyCustomer, isAdmin, signUp, signIn, signOut,
   resendConfirmation, sendPasswordReset, updatePassword, updateProfile, listMyOrders, listMySupportRequests,
-  onAuthChange, authErrorText,
+  onAuthChange, authErrorText, signInWithGoogle, usesOnlyGoogle,
 } from '../services/accountService.js';
 import { REASONS } from '../services/supportService.js';
 import { statusBadge } from '../components/statusBadge.js';
@@ -54,6 +54,11 @@ const passwordProblem = pw =>
 const showPasswords = `
   <label class="show-pw"><input type="checkbox" data-show-pw> Mostrar contraseña</label>`;
 
+
+const googleButton = label => `
+  <button type="button" class="btn btn-plain btn-google" data-google>${label}</button>
+  <p class="or-line"><span>o con tu email</span></p>`;
+
 // ---------- Sin sesión ----------
 function renderGuest(notice) {
   root.removeAttribute('aria-busy');
@@ -64,6 +69,7 @@ function renderGuest(notice) {
     <div class="auth-grid">
       <form id="login" class="card-form" novalidate>
         <h2 class="h3">Entrar</h2>
+        ${googleButton('Continuar con Google')}
         ${field('login', 'email', 'Email', 'type="email" autocomplete="email" required maxlength="254"')}
         ${field('login', 'password', 'Contraseña', 'type="password" autocomplete="current-password" required')}
         ${showPasswords}
@@ -76,6 +82,7 @@ function renderGuest(notice) {
         <h2 class="h3">Crear cuenta</h2>
         <p class="muted small">Con una cuenta ves todos tus pedidos y el checkout se rellena solo.
           Te enviaremos un correo para confirmar el email.</p>
+        ${googleButton('Registrarse con Google')}
         ${field('register', 'full_name', 'Nombre y apellidos', 'type="text" autocomplete="name" required maxlength="100"')}
         ${field('register', 'email', 'Email', 'type="email" autocomplete="email" required maxlength="254"',
           'Si ya compraste como invitado con este email, verás también esos pedidos.')}
@@ -302,6 +309,12 @@ async function renderAccount() {
           ${customer ? `<p class="muted small">Cliente desde ${formatDate(customer.created_at)}</p>` : ''}
         </form>
 
+        ${usesOnlyGoogle(user) ? `
+        <div class="card-form">
+          <h2 class="h3">Acceso con Google</h2>
+          <p class="muted">Entras con tu cuenta de Google, así que no tienes contraseña en la tienda.
+            Si quieres una, usa "¿Has olvidado la contraseña?" al entrar con tu email.</p>
+        </div>` : `
         <form id="password" class="card-form" novalidate>
           <h2 class="h3">Cambiar la contraseña</h2>
           ${field('password', 'password', 'Contraseña nueva', `type="password" autocomplete="new-password" required minlength="${PASSWORD_MIN}"`)}
@@ -309,7 +322,7 @@ async function renderAccount() {
           ${showPasswords}
           <button type="submit" class="btn btn-secondary">Cambiar contraseña</button>
           <p class="form-msg" role="alert"></p>
-        </form>
+        </form>`}
       </div>
     </div>`;
 
@@ -340,7 +353,7 @@ async function renderAccount() {
   });
 
   const pwForm = document.getElementById('password');
-  pwForm.addEventListener('submit', async e => {
+  pwForm?.addEventListener('submit', async e => {
     e.preventDefault();
     const pw = pwForm.password.value;
     const ok = fieldError(pwForm, 'password', passwordProblem(pw))
@@ -365,6 +378,18 @@ async function renderAccount() {
 root.addEventListener('click', async e => {
   const b = e.target.closest('button');
   if (!b) return;
+  if (b.dataset.google !== undefined) {
+    b.disabled = true;
+    try {
+      await signInWithGoogle(returnTo); // el navegador se va a Google
+    } catch (err) {
+      console.error(err);
+      const msg = b.closest('form')?.querySelector('.form-msg');
+      if (msg) { msg.textContent = authErrorText(err); msg.className = 'form-msg error'; }
+      b.disabled = false;
+    }
+    return;
+  }
   if (b.dataset.go === 'forgot') renderForgot();
   if (b.dataset.go === 'guest') renderGuest();
   if (b.dataset.resend) {
@@ -393,19 +418,26 @@ onAuthChange(event => {
   if (event === 'PASSWORD_RECOVERY') { recovering = true; renderNewPassword(); }
 });
 
-const linkError = hash.get('error_description') || hash.get('error');
+// los errores del enlace del correo o de Google pueden venir en el # o en la ?query
+const errSource = hash.get('error') ? hash : params;
+const linkError = errSource.get('error_description') || errSource.get('error');
 const user = await getUser(); // espera a que Supabase lea la sesión que trae el enlace del correo
 // después se limpia la URL (sin tokens ni avisos) para que recargar no repita nada
 history.replaceState(null, '', returnTo ? `?volver=${encodeURIComponent(returnTo)}` : location.pathname);
 if (linkError) {
-  renderGuest(hash.get('error_code') === 'otp_expired'
+  renderGuest(params.has('google')
+    ? 'No se ha podido entrar con Google (¿cancelaste el acceso?). Inténtalo de nuevo o entra con tu email.'
+    : errSource.get('error_code') === 'otp_expired'
     ? 'El enlace ha caducado o ya se ha usado. Pide otro: entra con tu email para reenviar la confirmación, o usa "¿Has olvidado la contraseña?".'
     : 'No se ha podido validar el enlace del correo. Pide otro e inténtalo de nuevo.');
 } else if (recovering && user) {
   renderNewPassword();
+} else if (user && params.has('google') && returnTo) {
+  location.replace(returnTo); // venía del checkout
 } else if (user) {
   await renderAccount();
   if (params.has('confirmado')) toast('¡Email confirmado! Tu cuenta ya está activa.');
+  if (params.has('google')) toast('Has entrado con Google.');
 } else {
   renderGuest(params.has('confirmado')
     ? 'Email confirmado. Ya puedes entrar con tu email y tu contraseña.'

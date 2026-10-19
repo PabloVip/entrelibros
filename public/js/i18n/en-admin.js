@@ -357,6 +357,16 @@ const exact = {
   'El enlace ha caducado o ya se ha usado. Pide otro: entra con tu email para reenviar la confirmación, o usa "¿Has olvidado la contraseña?".':
     'The link has expired or has already been used. Request another one: sign in with your email to resend the confirmation, or use "Forgot your password?".',
   'No se ha podido validar el enlace del correo. Pide otro e inténtalo de nuevo.': 'The email link could not be validated. Request another one and try again.',
+  'Continuar con Google': 'Continue with Google',
+  'Registrarse con Google': 'Sign up with Google',
+  'o con tu email': 'or with your email',
+  'Acceso con Google': 'Google sign-in',
+  'Entras con tu cuenta de Google, así que no tienes contraseña en la tienda. Si quieres una, usa "¿Has olvidado la contraseña?" al entrar con tu email.':
+    'You sign in with your Google account, so you have no password in the shop. If you want one, use "Forgot your password?" when signing in with your email.',
+  'Has entrado con Google.': 'Signed in with Google.',
+  'No se ha podido entrar con Google (¿cancelaste el acceso?). Inténtalo de nuevo o entra con tu email.':
+    'Could not sign in with Google (did you cancel?). Try again or sign in with your email.',
+  'El acceso con Google no está activado en la tienda.': 'Google sign-in is not enabled in the shop.',
   // checkout con cuenta
   '¿Tienes cuenta?': 'Have an account?',
   'Entra': 'Sign in',

@@ -61,6 +61,25 @@ export async function signIn(email, password) {
   return data.user;
 }
 
+/**
+ * Entrar (o registrarse) con Google. El navegador va a Google y vuelve a cuenta.html con la sesión.
+ * El email de Google ya viene verificado: no hace falta correo de confirmación.
+ */
+export async function signInWithGoogle(returnTo) {
+  const back = `cuenta.html?google=1${returnTo ? `&volver=${encodeURIComponent(returnTo)}` : ''}`;
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: pageUrl(back), queryParams: { prompt: 'select_account' } },
+  });
+  if (error) throw error;
+}
+
+/** ¿Entra solo con Google (sin contraseña propia)? */
+export function usesOnlyGoogle(user) {
+  const providers = user?.app_metadata?.providers ?? [user?.app_metadata?.provider];
+  return providers.includes('google') && !providers.includes('email');
+}
+
 export async function signOut() {
   await supabase.auth.signOut();
 }
@@ -134,6 +153,7 @@ export function authErrorText(err) {
     email_address_invalid: 'Ese email no es válido.',
     signup_disabled: 'El registro de cuentas está desactivado.',
     validation_failed: 'Revisa el email y la contraseña.',
+    provider_disabled: 'El acceso con Google no está activado en la tienda.',
   };
   if (byCode[code]) return byCode[code];
   if (/Invalid login credentials/i.test(msg)) return byCode.invalid_credentials;
