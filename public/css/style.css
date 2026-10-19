@@ -245,6 +245,15 @@ input.cart-qty:disabled { background: var(--bg); color: var(--muted); }
 .cart-summary p { margin: 0; }
 .cart-summary .btn { text-align: center; }
 .cart-subtotal { display: flex; justify-content: space-between; font-size: 1.15rem; }
+/* Barra de envío gratis: nombre del método y lo que falta en una fila, la barra debajo */
+.free-ship { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border); }
+.free-ship-title { font-weight: 600; }
+.free-ship li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 8px; font-size: .88rem; }
+.free-ship-state { white-space: nowrap; }
+.free-ship .is-free .free-ship-state { color: var(--ok); font-weight: 600; }
+.free-ship-bar { grid-column: 1 / -1; height: 6px; background: var(--border); border-radius: 999px; overflow: hidden; }
+.free-ship-bar span { display: block; height: 100%; background: var(--luz); border-radius: 999px; }
+.free-ship .is-free .free-ship-bar span { background: var(--ok); }
 .note ul { margin: 6px 0 0; padding-left: 20px; }
 .note + .cart-layout { margin-top: 16px; }
 

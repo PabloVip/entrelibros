@@ -170,6 +170,8 @@ const exact = {
   'Tramitar pedido': 'Checkout',
   'Seguir comprando': 'Continue shopping',
   'Tu carrito está vacío.': 'Your cart is empty.',
+  'Envío gratis': 'Free shipping',
+  'Se cuenta el importe después de aplicar los descuentos.': 'Counted on the amount after discounts.',
   'No se ha podido comprobar el precio y el stock del carrito. Inténtalo de nuevo en unos segundos.':
     'Could not check the prices and stock of your cart. Please try again in a few seconds.',
 
@@ -591,6 +593,7 @@ const patterns = [
   [/^Cantidad de (.+)$/, (m, tr) => `Quantity of ${tr(m[1])}`],
   [/^Has eliminado (.+) \((.+)\) del carrito\.$/, (m, tr) => `You removed ${tr(m[1])} (${tr(m[2])}) from the cart.`],
   [/^Solo quedan (\d+) unidades\.$/, 'Only $1 left.'],
+  [/^Te faltan (.+)$/, '$1 to go'],
   [/^(.+) · (EL-[A-Z0-9-]+)$/, (m, tr) => `${tr(m[1])} · ${m[2]}`],
 
   // favoritos

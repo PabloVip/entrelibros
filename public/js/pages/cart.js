@@ -1,9 +1,11 @@
 // Carrito: líneas guardadas en el navegador, revisadas con el precio y el stock actuales de la BD.
 import { renderLayout } from '../core/layout.js';
 import { fetchVariantsByIds } from '../repositories/catalogRepository.js';
+import { fetchShippingMethods } from '../repositories/checkoutRepository.js';
 import {
   getCart, updateQuantity, removeItem, refreshFromCatalog, lineProblem, subtotal, MAX_QTY,
 } from '../services/cartService.js';
+import { freeShippingGoals } from '../services/checkoutService.js';
 import { escapeHtml, money } from '../core/utils.js';
 
 renderLayout();
@@ -12,6 +14,7 @@ const root = document.getElementById('cart');
 const msg  = document.getElementById('cart-msg');
 let variants = new Map(); // variantId → variante con el precio y el stock actuales
 let priceChanges = [];
+let shippingMethods = []; // para la barra de envío gratis (si no cargan, el carrito funciona igual)
 
 function say(text, type = '') {
   msg.textContent = text;
@@ -53,6 +56,27 @@ function lineRow(line) {
     </tr>`;
 }
 
+/**
+ * Cuánto falta para el envío gratis de cada método (una barra por método).
+ * Anima a completar el pedido sin esperar al checkout; los umbrales salen de shipping_methods.
+ */
+function freeShippingHtml(sub) {
+  const goals = freeShippingGoals(shippingMethods, sub);
+  if (!goals.length) return '';
+  return `
+    <div class="free-ship">
+      <p class="free-ship-title">Envío gratis</p>
+      <ul class="plain">${goals.map(g => `
+        <li class="${g.missing === 0 ? 'is-free' : ''}">
+          <span>${escapeHtml(g.name)}</span>
+          <span class="free-ship-state">${g.missing === 0 ? 'Gratis' : `Te faltan ${money(g.missing)}`}</span>
+          <span class="free-ship-bar" aria-hidden="true"><span style="width: ${Math.round(g.progress * 100)}%"></span></span>
+        </li>`).join('')}
+      </ul>
+      <p class="muted small">Se cuenta el importe después de aplicar los descuentos.</p>
+    </div>`;
+}
+
 function render() {
   const lines = getCart();
   if (!lines.length) {
@@ -64,6 +88,7 @@ function render() {
 
   // lo agotado o retirado no suma en el subtotal, y con cualquier problema no se deja tramitar el pedido
   const blocked = lines.some(l => lineProblem(l, variants.get(l.variantId)));
+  const sub = subtotal(lines.filter(l => maxQty(l) > 0));
 
   root.innerHTML = `
     ${priceChanges.length ? `
@@ -88,8 +113,9 @@ function render() {
 
       <aside class="panel cart-summary" aria-label="Resumen del carrito">
         <h2 class="h3">Resumen</h2>
-        <p class="cart-subtotal"><span>Subtotal</span> <strong>${money(subtotal(lines.filter(l => maxQty(l) > 0)))}</strong></p>
+        <p class="cart-subtotal"><span>Subtotal</span> <strong>${money(sub)}</strong></p>
         <p class="muted">IVA incluido. Los gastos de envío y los descuentos se calculan en el checkout.</p>
+        ${freeShippingHtml(sub)}
         ${blocked
           ? `<p class="form-msg error">Revisa los productos marcados para poder tramitar el pedido.</p>
              <button type="button" class="btn" disabled>Tramitar pedido</button>`
@@ -130,7 +156,12 @@ root.addEventListener('click', e => {
   try {
     const lines = getCart();
     if (lines.length) {
-      const found = await fetchVariantsByIds(lines.map(l => l.variantId));
+      // los métodos de envío se piden a la vez que las variantes; si fallan, el carrito sale sin la barra
+      const [found, methods] = await Promise.all([
+        fetchVariantsByIds(lines.map(l => l.variantId)),
+        fetchShippingMethods().catch(err => { console.warn('[envío gratis]', err); return []; }),
+      ]);
+      shippingMethods = methods;
       variants = new Map(found.map(v => [v.id, v]));
       priceChanges = refreshFromCatalog(found);
     }

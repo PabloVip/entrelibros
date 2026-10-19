@@ -13,6 +13,23 @@ export function shippingCost(method, subtotal, discount = 0) {
   return freeFrom != null && round2(subtotal - discount) >= freeFrom ? 0 : Number(method.price);
 }
 
+/**
+ * Para la barra del carrito: cuánto falta para el envío gratis de cada método que lo ofrece
+ * (los que tienen free_from), del umbral más bajo al más alto.
+ * Es orientativo: en el checkout el umbral se compara con el subtotal ya descontado (shippingCost).
+ */
+export function freeShippingGoals(methods, subtotal) {
+  return methods
+    .filter(m => m.free_from != null)
+    .map(m => {
+      const goal = Number(m.free_from);
+      const missing = Math.max(round2(goal - subtotal), 0);
+      // progress (0..1) es el ancho de la barra
+      return { name: m.name, goal, missing, progress: goal > 0 ? Math.min(subtotal / goal, 1) : 1 };
+    })
+    .sort((a, b) => a.goal - b.goal);
+}
+
 /** Resumen de importes: los precios ya llevan IVA, así que el IVA se desglosa del total. */
 export function estimate({ subtotal, discount = 0, method }) {
   const shipping = shippingCost(method, subtotal, discount);
