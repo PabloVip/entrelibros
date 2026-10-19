@@ -20,6 +20,7 @@ const exact = {
   'Carrito': 'Cart',
   'Soporte postventa': 'After-sales support',
   'Migas de pan': 'Breadcrumb',
+  'Saltar al contenido': 'Skip to content',
   'Cargando…': 'Loading…',
   'Volver a la tienda': 'Back to the shop',
   '← Volver a la tienda': '← Back to the shop',

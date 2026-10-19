@@ -28,6 +28,13 @@ function navLabel(item) {
 export function renderLayout() {
   const current = document.body.dataset.page;
 
+  // "Saltar al contenido": primer elemento al que se llega con el tabulador. Quien navega con teclado
+  // o lector de pantalla va directo al <main id="contenido"> sin recorrer todo el menú (WCAG 2.4.1).
+  // Está fuera de la pantalla y solo aparece cuando recibe el foco (css: .skip-link).
+  if (document.getElementById('contenido') && !document.querySelector('.skip-link')) {
+    document.body.insertAdjacentHTML('afterbegin', '<a class="skip-link" href="#contenido">Saltar al contenido</a>');
+  }
+
   const header = document.getElementById('site-header');
   if (header) {
     header.innerHTML = `

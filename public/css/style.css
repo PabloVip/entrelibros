@@ -38,6 +38,10 @@ h1 { font-size: clamp(1.8rem, 1.3rem + 2vw, 2.6rem); }
 
 .academic-banner { background: var(--banner); color: #5A4300; font-size: .85rem; text-align: center; padding: 7px 16px; }
 
+/* Enlace "Saltar al contenido" (lo pone layout.js): escondido por encima de la página hasta que recibe el foco */
+.skip-link { position: absolute; top: 8px; left: 16px; z-index: 100; transform: translateY(-200%); background: var(--luz); color: var(--noche); padding: 8px 14px; border-radius: var(--radius); font-weight: 600; text-decoration: none; }
+.skip-link:focus { transform: none; }
+
 /* ---------- Cabecera ---------- */
 .site-header { background: var(--noche); color: #E7EAF1; }
 .header-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 16px; padding-bottom: 16px; flex-wrap: wrap; }
