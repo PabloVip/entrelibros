@@ -174,7 +174,7 @@ input[type=search], input[type=number], select { font: inherit; padding: 8px 10p
 .card-title a { color: var(--text); text-decoration: none; }
 .card-title a:hover { color: var(--accent); }
 .card-desc { margin: 0; color: var(--muted); font-size: .9rem; }
-.card-price { margin: auto 0 0; font-weight: 700; font-size: 1.1rem; }
+.card-price { margin: 0; font-weight: 700; font-size: 1.1rem; }
 .chips { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .chips li { font-size: .75rem; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; }
 .badge { position: absolute; top: 10px; left: 10px; font-size: .75rem; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: #fff; color: var(--text); }
@@ -220,8 +220,16 @@ input[type=search], input[type=number], select { font: inherit; padding: 8px 10p
 
 /* ---------- Carrito ---------- */
 .form-msg.ok { color: var(--ok); }
-.cart-count { display: inline-block; min-width: 1.5em; padding: 0 6px; border-radius: 999px; background: var(--luz); color: var(--noche); font-size: .75rem; font-weight: 700; line-height: 1.6; text-align: center; }
-.cart-count:empty { display: none; }
+/* número junto a Favoritos y Carrito en la cabecera */
+.nav-count { display: inline-block; min-width: 1.5em; padding: 0 6px; border-radius: 999px; background: var(--luz); color: var(--noche); font-size: .75rem; font-weight: 700; line-height: 1.6; text-align: center; }
+.nav-count:empty { display: none; }
+/* corazón de "Favoritos": solo en el móvil, donde sustituye al texto (que sigue ahí para los lectores de pantalla) */
+.site-header nav svg { display: none; }
+@media (max-width: 560px) {
+  .site-header nav { gap: 12px; font-size: .95rem; }
+  .site-header nav svg { display: inline-block; width: 20px; height: 20px; vertical-align: -4px; fill: currentColor; }
+  .nav-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
 /* minmax(0, …): la tabla hace scroll dentro de su caja en vez de ensanchar la página */
 .cart-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; align-items: start; }
 .cart-item { display: flex; gap: 12px; align-items: center; }
@@ -250,6 +258,18 @@ input.cart-qty:disabled { background: var(--bg); color: var(--muted); }
   .cart-table td:first-child { grid-column: 1 / -1; }
   .cart-item img { width: 48px; }
 }
+
+/* ---------- Favoritos ---------- */
+/* margin-top: auto lleva precio y corazón al fondo de la tarjeta aunque la descripción sea corta */
+.card-foot { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.fav-btn { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--muted); cursor: pointer; }
+.fav-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.fav-btn:hover { color: var(--accent); border-color: var(--accent); }
+/* guardado (aria-pressed="true"): corazón relleno */
+.fav-btn[aria-pressed=true] { color: var(--accent); border-color: var(--accent); }
+.fav-btn[aria-pressed=true] svg { fill: currentColor; }
+/* en la ficha, a la altura del botón "Añadir al carrito" */
+.buy-row .fav-btn { width: 48px; height: auto; border-radius: var(--radius); }
 
 /* ---------- Checkout ---------- */
 input[type=text], input[type=tel], textarea { font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--text); width: 100%; }

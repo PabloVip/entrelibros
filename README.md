@@ -17,7 +17,7 @@ Autores: Pablo ([@PabloVip](https://github.com/PabloVip)) y Nino Iraci ([@ninoir
 
 ## 1. Cómo probarlo (sin instalar nada)
 
-1. Abre la [tienda](https://pablovip.github.io/entrelibros/), filtra el catálogo y entra en una ficha.
+1. Abre la [tienda](https://pablovip.github.io/entrelibros/), filtra el catálogo y entra en una ficha. Si quieres, guarda productos en **Favoritos** con el corazón.
 2. Elige una variante (con o sin iluminación) y añádela al carrito.
 3. Tramita el pedido con **datos inventados** y, si quieres, un código de descuento.
 4. Paga con una **tarjeta de prueba** o con Bizum simulado.
@@ -75,14 +75,14 @@ Navegador ── GitHub Pages (HTML + JavaScript, módulos ES, sin framework)
 Supabase · PostgreSQL
    ├─ Tablas ............ supabase/01_schema.sql
    ├─ Seguridad (RLS) ... supabase/02_policies.sql
-   ├─ Lógica de negocio . supabase/03_functions.sql, 05_checkout.sql, 06_soporte_admin.sql
+   ├─ Lógica de negocio . supabase/03_functions.sql, 05_checkout.sql, 06_soporte_admin.sql, 07_favoritos.sql
    └─ Datos de prueba ... supabase/04_seed.sql
 ```
 
 | Capa | Dónde | Responsabilidad |
 |---|---|---|
 | Presentación | `public/*.html`, `public/js/pages/`, `public/js/components/` | Pintar pantallas y recoger acciones del usuario |
-| Servicios (cliente) | `public/js/services/` | Reglas de interfaz: filtros, carrito, validación de formularios, resumen orientativo |
+| Servicios (cliente) | `public/js/services/` | Reglas de interfaz: filtros, carrito, favoritos, validación de formularios, resumen orientativo |
 | Acceso a datos | `public/js/repositories/`, `public/js/core/supabase.js` | Consultas y llamadas `rpc` a Supabase |
 | Lógica de negocio | Funciones PostgreSQL `SECURITY DEFINER` | Calcular importes, crear pedidos, simular pagos, cambiar estados, registrar eventos |
 | Persistencia | PostgreSQL (Supabase) | Datos maestros (catálogo, clientes, envíos, descuentos) y transaccionales (pedidos, líneas, pagos, historial, incidencias, eventos) |
@@ -109,6 +109,7 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago. E
 | `product.viewed` | Se abre la ficha de un producto | web (`log_event`) |
 | `cart.item_added` | Se añade una variante al carrito | web (`log_event`) |
 | `checkout.started` | Se abre el checkout con productos | web (`log_event`) |
+| `wishlist.item_added` | Se guarda un producto en favoritos | web (`log_event`) |
 | `order.created` | `create_order` crea el pedido | servidor |
 | `payment.simulated` | `simulate_payment` aprueba o rechaza | servidor |
 | `support.requested` | `create_support_request` registra la incidencia | servidor |
@@ -116,7 +117,7 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago. E
 | `support.status_changed` | Un admin cambia el estado de una incidencia | back-office |
 
 - **Dónde se guardan:** en la tabla `events`, un registro de solo inserción, sin claves foráneas a propósito. Cada evento lleva `event_id` (UUID), tipo, fecha, origen, sesión anónima, cliente, pedido, entidad y `payload` JSON.
-- **Seguridad:** desde el navegador solo se aceptan los tres eventos de navegación, mediante una lista blanca en `log_event`. Los de negocio los emite el propio servidor, así que no se pueden falsificar.
+- **Seguridad:** desde el navegador solo se aceptan los cuatro eventos de navegación, mediante una lista blanca en `log_event`. Los de negocio los emite el propio servidor, así que no se pueden falsificar.
 - **Consumo (Tarea 2):**
   - Exportación CSV/JSON desde `admin-eventos.html`.
   - Lectura por API REST de Supabase con un usuario administrador.
@@ -129,6 +130,7 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago. E
 | Portada | `index.html` |
 | Catálogo con filtros (en la URL, compartibles) | `catalogo.html` |
 | Ficha de producto | `producto.html?slug=…` |
+| Favoritos (guardados en el navegador) | `favoritos.html` |
 | Carrito | `carrito.html` |
 | Checkout | `checkout.html` |
 | Pago simulado | `pago.html?pedido=…` |
@@ -146,7 +148,8 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago. E
    3. `03_functions.sql`
    4. `05_checkout.sql`
    5. `06_soporte_admin.sql`
-   6. `04_seed.sql`
+   6. `07_favoritos.sql`
+   7. `04_seed.sql`
 
    Todos se pueden volver a ejecutar. `04_seed.sql` deja la tienda con los datos de prueba iniciales.
 3. En **Project Settings → API**, copia la *Project URL* y la *publishable key* en `public/js/config.js`. Esa clave es pública por diseño; **nunca** pongas la *secret / service_role key* en el front.
@@ -181,7 +184,7 @@ En el repositorio, ve a **Settings → Pages → Source: GitHub Actions**. El wo
 - **Pago de pedidos ajenos.** Quien conozca el número de un pedido sin pagar puede simular su pago.
 - **Email en la URL.** El email va en la URL de la confirmación (`pedido.html?…&email=…`) y queda en el historial del navegador.
 - **Stock sin reservar.** El stock se comprueba al crear el pedido, pero solo se reserva al pagar: dos clientes pueden crear pedidos por las últimas unidades y solo el primero que pague las consigue.
-- **Carrito local.** El carrito se guarda en el navegador (`localStorage`) y no se sincroniza entre dispositivos.
+- **Carrito y favoritos locales.** El carrito y la lista de favoritos se guardan en el navegador (`localStorage`) y no se sincronizan entre dispositivos.
 - **Sin notificaciones.** No se envían emails de confirmación ni de seguimiento.
 - **Imágenes ilustrativas.** Las de los kits están generadas con IA (Google Gemini) y las de accesorios y recambios son fotos de ambientación de Unsplash. Ninguna muestra un producto real, porque la tienda es ficticia.
 

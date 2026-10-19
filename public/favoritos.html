@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Favoritos · Entrelibros</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="img/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+  <meta name="theme-color" content="#1D2537">
+</head>
+<body data-page="favoritos">
+  <div class="academic-banner" role="note">
+    <strong>Prototipo académico</strong> · Grado en Ingeniería Informática (UCAM).
+    Tienda ficticia sin actividad comercial: no introduzcas datos personales reales ni medios de pago reales.
+  </div>
+  <header id="site-header" class="site-header"></header>
+
+  <main class="container" id="contenido">
+    <h1>Tus favoritos</h1>
+    <p class="lead">Los productos que has guardado con el corazón. Se guardan en este navegador, sin necesidad de cuenta.</p>
+    <p id="fav-msg" class="form-msg" role="status"></p>
+    <div id="favorites" aria-busy="true"><p>Cargando favoritos…</p></div>
+  </main>
+
+  <footer id="site-footer" class="site-footer"></footer>
+  <script type="module" src="js/core/i18n.js"></script>
+  <script type="module" src="js/pages/favorites.js"></script>
+</body>
+</html>
