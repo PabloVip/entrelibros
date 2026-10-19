@@ -172,6 +172,22 @@ const exact = {
   'No se ha podido comprobar el precio y el stock del carrito. Inténtalo de nuevo en unos segundos.':
     'Could not check the prices and stock of your cart. Please try again in a few seconds.',
 
+  // ---------- Favoritos ----------
+  'Favoritos': 'Favourites',
+  'Tus favoritos': 'Your favourites',
+  'Los productos que has guardado con el corazón. Se guardan en este navegador, sin necesidad de cuenta.':
+    'The products you have saved with the heart. They are stored in this browser, no account needed.',
+  'Cargando favoritos…': 'Loading favourites…',
+  'Todavía no has guardado ningún producto. Pulsa el corazón de cualquier producto para guardarlo aquí.':
+    'You have not saved any products yet. Press the heart on any product to save it here.',
+  'Hemos quitado de tu lista 1 producto que ya no está a la venta.':
+    'We removed 1 product from your list because it is no longer for sale.',
+  'No se han podido cargar tus favoritos. Inténtalo de nuevo en unos segundos.':
+    'Could not load your favourites. Please try again in a few seconds.',
+  'Guardado en tus favoritos.': 'Saved to your favourites.',
+  'Ver favoritos': 'View favourites',
+  'Quitado de tus favoritos.': 'Removed from your favourites.',
+
   // ---------- Checkout ----------
   '← Volver al carrito': '← Back to the cart',
   'Datos ficticios:': 'Fictitious data:',
@@ -571,6 +587,12 @@ const patterns = [
   [/^Has eliminado (.+) \((.+)\) del carrito\.$/, (m, tr) => `You removed ${tr(m[1])} (${tr(m[2])}) from the cart.`],
   [/^Solo quedan (\d+) unidades\.$/, 'Only $1 left.'],
   [/^(.+) · (EL-[A-Z0-9-]+)$/, (m, tr) => `${tr(m[1])} · ${m[2]}`],
+
+  // favoritos
+  [/^Guardar en favoritos: (.+)$/, (m, tr) => `Save to favourites: ${tr(m[1])}`],
+  [/^Has quitado (.+) de tus favoritos\.$/, (m, tr) => `You removed ${tr(m[1])} from your favourites.`],
+  [/^Hemos quitado de tu lista (\d+) productos que ya no están a la venta\.$/,
+    'We removed $1 products from your list because they are no longer for sale.'],
 
   // checkout
   [/^(\d+-\d+) días laborables · gratis desde (.+)$/, '$1 working days · free from $2'],
