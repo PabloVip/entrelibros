@@ -292,6 +292,9 @@ const exact = {
   '¿Te falta una pieza, ha llegado algo dañado o tienes dudas con el montaje? Cuéntanoslo.':
     'Missing a piece, something arrived damaged or have questions about assembly? Tell us.',
   'Solo se asocia a la incidencia si coincide con el email del pedido.': 'It is only linked to the request if it matches the order email.',
+  'y podrás elegir el pedido de tu lista.': 'and you can pick the order from your list.',
+  'Es el email de tu cuenta.': 'This is your account email.',
+  'Tus pedidos aparecen al pulsar en el campo.': 'Your orders appear when you select the field.',
   'Elige un motivo…': 'Choose a reason…',
   'Falta una pieza': 'A piece is missing',
   'Pieza dañada o rota': 'Damaged or broken piece',
