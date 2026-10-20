@@ -6,6 +6,7 @@ import {
   getCart, updateQuantity, removeItem, refreshFromCatalog, lineProblem, subtotal, MAX_QTY,
 } from '../services/cartService.js';
 import { freeShippingGoals } from '../services/checkoutService.js';
+import { qtyStepper } from '../components/qtyStepper.js';
 import { escapeHtml, money } from '../core/utils.js';
 
 renderLayout();
@@ -46,8 +47,10 @@ function lineRow(line) {
       <td class="num hide-sm">${money(line.unitPrice)}</td>
       <td class="num">
         <label for="qty-${line.variantId}" class="visually-hidden">Cantidad de ${escapeHtml(line.productName)}</label>
-        <input id="qty-${line.variantId}" class="cart-qty" type="number" min="1" max="${max}" value="${line.quantity}"
-               inputmode="numeric" data-variant="${line.variantId}" ${max === 0 ? 'disabled' : ''}>
+        ${qtyStepper({
+          id: `qty-${line.variantId}`, value: line.quantity, max,
+          attrs: `class="cart-qty" data-variant="${line.variantId}"`, disabled: max === 0,
+        })}
       </td>
       <td class="num">${max === 0 ? '—' : money(line.unitPrice * line.quantity)}</td>
       <td class="num">

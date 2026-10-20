@@ -3,6 +3,7 @@ import { renderLayout } from '../core/layout.js';
 import { createSupportRequest } from '../repositories/supportRepository.js';
 import { REASONS, MESSAGE_MAX, validateSupport } from '../services/supportService.js';
 import { escapeHtml, param } from '../core/utils.js';
+import { prefillSupport } from '../components/supportAccount.js';
 
 renderLayout();
 
@@ -120,6 +121,16 @@ async function submit(form) {
 
 renderForm();
 const form = document.getElementById('support-form');
+prefillSupport(form); // con sesión: email de la cuenta y lista de sus pedidos
+
+// Preguntas frecuentes (soporte.html): "Avisar de…" elige ese motivo en el formulario y lleva al mensaje.
+document.querySelector('.faq')?.addEventListener('click', e => {
+  const btn = e.target.closest('button[data-reason]');
+  if (!btn || !form.isConnected) return; // tras enviar la incidencia el formulario ya no está
+  form.elements.reason.value = btn.dataset.reason;
+  form.elements.reason.dispatchEvent(new Event('input', { bubbles: true })); // borra el error del motivo si lo había
+  form.elements.message.focus(); // el navegador desplaza la página hasta el mensaje
+});
 form.addEventListener('submit', e => {
   e.preventDefault();
   submit(form);
