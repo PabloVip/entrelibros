@@ -14,3 +14,7 @@ verify_jwt = true
 
 [functions.confirm-checkout-session]
 verify_jwt = true
+
+# Stripe no manda ningún JWT: la función comprueba la firma del aviso con STRIPE_WEBHOOK_SECRET
+[functions.stripe-webhook]
+verify_jwt = false
