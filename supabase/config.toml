@@ -1,0 +1,20 @@
+# Configuración de las Edge Functions para la CLI de Supabase (supabase functions deploy).
+# Está en el repositorio para que verify_jwt no se pierda al volver a desplegar.
+#
+# verify_jwt = true: Supabase solo deja pasar las peticiones que llevan un JWT válido en
+# "Authorization", antes de ejecutar el código de la función.
+#   Se prueba primero así. Hay que probar SIN sesión iniciada (compra como invitado): entonces
+#   supabase-js manda la clave publishable (sb_publishable_…), que no es un JWT. Si da 401, poner
+#   false en estas dos funciones. No dependen de quién llama: validan el pedido, el importe sale
+#   de la BD y el pago solo se confirma si Stripe dice que la sesión está pagada.
+project_id = "entrelibros"
+
+[functions.create-checkout-session]
+verify_jwt = true
+
+[functions.confirm-checkout-session]
+verify_jwt = true
+
+# Stripe no manda ningún JWT: la función comprueba la firma del aviso con STRIPE_WEBHOOK_SECRET
+[functions.stripe-webhook]
+verify_jwt = false
