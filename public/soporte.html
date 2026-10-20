@@ -21,6 +21,47 @@
   <main class="container narrow-md" id="contenido">
     <h1>Soporte postventa</h1>
     <p class="lead">¿Te falta una pieza, ha llegado algo dañado o tienes dudas con el montaje? Cuéntanoslo.</p>
+
+    <!-- Preguntas frecuentes: resuelven lo más habitual sin abrir una incidencia.
+         Los botones con data-reason eligen ese motivo en el formulario de abajo (js/pages/support.js). -->
+    <section class="faq" aria-labelledby="faq-title">
+      <h2 id="faq-title" class="h3">Preguntas frecuentes</h2>
+      <details>
+        <summary>Me falta una pieza o ha llegado rota</summary>
+        <p>Revisa primero todas las láminas y bolsas de la caja: las piezas pequeñas suelen ir aparte.</p>
+        <p>Si sigue faltando o está dañada, abre una incidencia con tu número de pedido y el nombre de la pieza en la hoja de montaje: te la enviamos sin coste.</p>
+        <p>Si se ha perdido o roto durante el montaje, tienes piezas de repuesto en los recambios.</p>
+        <p class="faq-actions">
+          <button type="button" class="link-btn" data-reason="pieza_faltante">Avisar de una pieza que falta</button>
+          <button type="button" class="link-btn" data-reason="pieza_danada">Avisar de una pieza dañada</button>
+          <a href="catalogo.html?tipo=recambio">Ver recambios</a>
+        </p>
+      </details>
+      <details>
+        <summary>¿Cuándo llega mi pedido?</summary>
+        <p>Depende del método de envío que elegiste. La fecha estimada aparece en la confirmación del pedido.</p>
+        <p>Si ya ha pasado esa fecha y no ha llegado, avísanos.</p>
+        <p class="faq-actions">
+          <a href="pedido.html">Consultar mi pedido</a>
+          <button type="button" class="link-btn" data-reason="retraso_envio">Avisar de un retraso</button>
+        </p>
+      </details>
+      <details>
+        <summary>Tengo dudas con el montaje</summary>
+        <p>En la ficha de cada kit verás la dificultad, el número de piezas y el tiempo de montaje aproximado.</p>
+        <p>Si te atascas, cuéntanos en qué paso de las instrucciones estás y qué pieza no encaja.</p>
+        <p class="faq-actions">
+          <button type="button" class="link-btn" data-reason="duda_montaje">Preguntar una duda de montaje</button>
+        </p>
+      </details>
+      <details>
+        <summary>¿Puedo añadir luz a un kit sin iluminación?</summary>
+        <p>Sí: el kit LED USB universal es compatible con cualquier kit sin iluminación y se oculta en el techo de la escena.</p>
+        <p class="faq-actions"><a href="producto.html?slug=kit-led-usb-universal">Ver el kit LED</a></p>
+      </details>
+    </section>
+
+    <h2 class="h3">Abrir una incidencia</h2>
     <div id="support"></div>
   </main>
 

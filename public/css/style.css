@@ -611,3 +611,13 @@ input[type=email], input[type=password], input[type=date], input:not([type]) { f
 .legal h2 { font-size: 1.25rem; margin-top: 28px; }
 .legal ul { padding-left: 20px; }
 .legal li { margin-bottom: 6px; }
+
+/* ---------- Soporte: preguntas frecuentes ---------- */
+.faq { margin: 8px 0 32px; }
+.faq details { border-bottom: 1px solid var(--border); }
+.faq summary { cursor: pointer; padding: 12px 0; font-weight: 600; }
+.faq summary:hover { color: var(--accent); }
+.faq details p { margin: 0 0 10px; }
+.faq details[open] { padding-bottom: 6px; }
+.faq-actions { display: flex; flex-wrap: wrap; gap: 6px 20px; }
+.faq-actions .link-btn { text-decoration: underline; }

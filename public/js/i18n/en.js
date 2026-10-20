@@ -295,6 +295,34 @@ const exact = {
   'y podrás elegir el pedido de tu lista.': 'and you can pick the order from your list.',
   'Es el email de tu cuenta.': 'This is your account email.',
   'Tus pedidos aparecen al pulsar en el campo.': 'Your orders appear when you select the field.',
+  // preguntas frecuentes
+  'Preguntas frecuentes': 'Frequently asked questions',
+  'Me falta una pieza o ha llegado rota': 'A piece is missing or arrived broken',
+  'Revisa primero todas las láminas y bolsas de la caja: las piezas pequeñas suelen ir aparte.':
+    'First check every sheet and bag in the box: small pieces usually come separately.',
+  'Si sigue faltando o está dañada, abre una incidencia con tu número de pedido y el nombre de la pieza en la hoja de montaje: te la enviamos sin coste.':
+    'If it is still missing or is damaged, open a request with your order number and the name of the piece on the assembly sheet: we will send it to you free of charge.',
+  'Si se ha perdido o roto durante el montaje, tienes piezas de repuesto en los recambios.':
+    'If it was lost or broken during assembly, you will find replacements among the spare parts.',
+  'Avisar de una pieza que falta': 'Report a missing piece',
+  'Avisar de una pieza dañada': 'Report a damaged piece',
+  'Ver recambios': 'See spare parts',
+  '¿Cuándo llega mi pedido?': 'When will my order arrive?',
+  'Depende del método de envío que elegiste. La fecha estimada aparece en la confirmación del pedido.':
+    'It depends on the shipping method you chose. The estimated date is shown on the order confirmation.',
+  'Si ya ha pasado esa fecha y no ha llegado, avísanos.': 'If that date has passed and it has not arrived, let us know.',
+  'Consultar mi pedido': 'Check my order',
+  'Avisar de un retraso': 'Report a delay',
+  'Tengo dudas con el montaje': 'I have questions about assembly',
+  'En la ficha de cada kit verás la dificultad, el número de piezas y el tiempo de montaje aproximado.':
+    "Each kit's page shows the difficulty, the number of pieces and the approximate assembly time.",
+  'Si te atascas, cuéntanos en qué paso de las instrucciones estás y qué pieza no encaja.':
+    'If you get stuck, tell us which step of the instructions you are on and which piece does not fit.',
+  'Preguntar una duda de montaje': 'Ask an assembly question',
+  '¿Puedo añadir luz a un kit sin iluminación?': 'Can I add lights to a kit without lighting?',
+  'Sí: el kit LED USB universal es compatible con cualquier kit sin iluminación y se oculta en el techo de la escena.':
+    'Yes: the universal USB LED kit works with any kit without lighting and hides in the ceiling of the scene.',
+  'Ver el kit LED': 'See the LED kit',
   'Elige un motivo…': 'Choose a reason…',
   'Falta una pieza': 'A piece is missing',
   'Pieza dañada o rota': 'Damaged or broken piece',
