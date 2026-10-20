@@ -8,6 +8,7 @@ import { track, EVENTS } from '../services/eventService.js';
 import '../services/cartService.js'; // escucha 'entrelibros:add-to-cart' y guarda la línea
 import { productCard } from '../components/productCard.js';
 import { favoriteButton } from '../components/favoriteButton.js';
+import { qtyStepper, syncStepper } from '../components/qtyStepper.js';
 import { escapeHtml, money, param } from '../core/utils.js';
 import { locale } from '../core/i18n.js';
 
@@ -74,7 +75,7 @@ function render(p) {
 
           <div class="buy-row">
             <label for="qty" class="visually-hidden">Cantidad</label>
-            <input id="qty" name="qty" type="number" min="1" value="1" inputmode="numeric">
+            ${qtyStepper({ id: 'qty', value: 1, attrs: 'name="qty"' })}
             <button id="add" type="submit" class="btn">Añadir al carrito</button>
             ${favoriteButton(p)}
           </div>
@@ -114,6 +115,7 @@ function render(p) {
     stock.className = `stock stock-${s.cls}`;
     qty.max = Math.min(v.stock, MAX_QTY);
     if (Number(qty.value) > Number(qty.max)) qty.value = qty.max || 1;
+    syncStepper(qty); // el máximo cambia con la versión elegida: activa o desactiva − y +
     document.getElementById('add').disabled = v.stock === 0;
     // si la variante tiene foto propia, se muestra
     const img = images.find(i => i.variant_id === v.id) ?? mainImg;

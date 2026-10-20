@@ -252,6 +252,22 @@ input[type=search], input[type=number], select { font: inherit; padding: 8px 10p
 .cart-item img { width: 64px; height: auto; flex: none; border-radius: 8px; border: 1px solid var(--border); background: #f3ece2; }
 input.cart-qty { width: 72px; }
 input.cart-qty:disabled { background: var(--bg); color: var(--muted); }
+/* Selector de cantidad − [n] + (components/qtyStepper.js): el borde lo lleva el conjunto, no el input */
+.qty-stepper { display: inline-flex; align-items: stretch; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.qty-stepper input { width: 44px; padding: 8px 0; border: 0; border-radius: 0; background: transparent; text-align: center; -moz-appearance: textfield; appearance: textfield; }
+/* sin las flechitas del navegador: ya están − y + */
+.qty-stepper input::-webkit-inner-spin-button, .qty-stepper input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.qty-btn { width: 40px; min-height: 40px; padding: 0; border: 0; background: transparent; color: var(--accent); font: inherit; font-size: 1.25rem; line-height: 1; cursor: pointer; }
+.qty-btn:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+.qty-btn:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
+.qty-btn:hover:not(:disabled) { background: rgba(126, 43, 55, .06); }
+.qty-btn:disabled { color: var(--border); cursor: not-allowed; }
+.qty-stepper:has(input:disabled) { background: var(--bg); }
+/* móvil estrecho: selector más compacto para que "Añadir al carrito" quepa en una línea junto al corazón */
+@media (max-width: 420px) {
+  .qty-btn, .qty-stepper input { width: 34px; }
+  .buy-row .btn { flex: 1; padding-left: 12px; padding-right: 12px; }
+}
 .line-problem { margin: 4px 0 0; font-size: .85rem; font-weight: 600; color: var(--error); }
 .cart-summary { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 12px; }
 .cart-summary p { margin: 0; }

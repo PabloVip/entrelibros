@@ -159,6 +159,8 @@ const exact = {
     'Could not add to the cart. Reload the page and try again.',
   'Ya no está a la venta.': 'No longer for sale.',
   'Esta versión está agotada.': 'This version is sold out.',
+  'Quitar una unidad': 'Remove one',
+  'Añadir una unidad': 'Add one',
 
   // ---------- Carrito ----------
   'Tu carrito': 'Your cart',
