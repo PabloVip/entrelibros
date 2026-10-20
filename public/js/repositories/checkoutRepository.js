@@ -65,6 +65,11 @@ export function createStripeCheckout(orderNumber, lang) {
   return invoke('create-checkout-session', { order_number: orderNumber, lang });
 }
 
+/** Al volver de Stripe: confirma el pago en el servidor. Devuelve el resultado o { status: 'pendiente' }. */
+export function confirmStripeCheckout(sessionId) {
+  return invoke('confirm-checkout-session', { session_id: sessionId });
+}
+
 /** Pedido para la confirmación; null si el número y el email no coinciden. */
 export async function getOrderSummary(orderNumber, email) {
   const { data, error } = await supabase.rpc('get_order_summary', { p_order_number: orderNumber, p_email: email });

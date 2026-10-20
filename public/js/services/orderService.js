@@ -27,7 +27,11 @@ export function nextStatuses(status) {
 }
 
 export const PAYMENT_LABELS = { aprobado: 'Aprobado', rechazado: 'Rechazado', pendiente: 'Pendiente' };
-export const METHOD_LABELS  = { tarjeta_simulada: 'Tarjeta (simulada)', bizum_simulado: 'Bizum (simulado)' };
+export const METHOD_LABELS  = {
+  tarjeta_simulada: 'Tarjeta (simulada)',
+  bizum_simulado:   'Bizum (simulado)',
+  stripe_test:      'Tarjeta (Stripe, prueba)', // supabase/10_stripe.sql
+};
 
 /** Indicadores para la cabecera del back-office */
 export function summarize(orders) {

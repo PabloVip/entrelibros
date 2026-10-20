@@ -282,6 +282,14 @@ const exact = {
 
   // ---------- Confirmación / consulta de pedido ----------
   'Cargando pedido…': 'Loading order…',
+  'Confirmando el pago con Stripe…': 'Confirming the payment with Stripe…',
+  'Stripe todavía no ha confirmado el pago. Si acabas de pagar, recarga la página en unos segundos.':
+    'Stripe has not confirmed the payment yet. If you have just paid, reload the page in a few seconds.',
+  'No hemos podido confirmar el pago con Stripe. Recarga la página en unos segundos para volver a intentarlo.':
+    'We could not confirm the payment with Stripe. Reload the page in a few seconds to try again.',
+  'Hay una incidencia con este pedido: lo estamos revisando y te escribiremos.':
+    'There is an issue with this order: we are looking into it and will write to you.',
+  'Tarjeta (Stripe, prueba)': 'Card (Stripe, test)',
   'Tu pedido': 'Your order',
   '¡Gracias! Tu pedido está confirmado': 'Thank you! Your order is confirmed',
   'Pedido pendiente de pago': 'Order awaiting payment',
@@ -681,7 +689,7 @@ const patterns = [
   [/^No queda stock suficiente de "(.+)"$/, (m, tr) => `Not enough stock left of "${tr(m[1])}"`],
   [/^(.+): (\d+-\d+) días laborables\.$/, (m, tr) => `${tr(m[1])}: ${m[2]} working days.`],
   [/^entre el (.+) y el (.+)\.$/, 'between $1 and $2.'],
-  [/^(Tarjeta \(simulada\)|Bizum \(simulado\))( · .*)$/, (m, tr) => tr(m[1]) + m[2]],
+  [/^(Tarjeta \(simulada\)|Bizum \(simulado\)|Tarjeta \(Stripe, prueba\))( · .*)$/, (m, tr) => tr(m[1]) + m[2]],
   [/^(.+ · )(Tarjeta de prueba rechazada por el simulador|No queda stock suficiente de ".+")$/, (m, tr) => m[1] + tr(m[2])],
   [/^Nota: (.+)$/, (m, tr) => `Note: ${tr(m[1])}`],
 

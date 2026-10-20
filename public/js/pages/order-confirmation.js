@@ -1,8 +1,10 @@
 // Confirmación del pedido. El navegador no puede leer "orders" (RLS): los datos llegan de
 // get_order_summary, que solo responde si coinciden el número de pedido y el email.
+// Al volver de Stripe la URL trae además ?session_id=cs_test_…: antes de enseñar el pedido se
+// pide al servidor que confirme el pago con Stripe (Edge Function confirm-checkout-session).
 import { renderLayout } from '../core/layout.js';
-import { getOrderSummary } from '../repositories/checkoutRepository.js';
-import { ORDER_NUMBER_RE } from '../services/checkoutService.js';
+import { getOrderSummary, confirmStripeCheckout } from '../repositories/checkoutRepository.js';
+import { ORDER_NUMBER_RE, STRIPE_SESSION_RE } from '../services/checkoutService.js';
 import { METHOD_LABELS, PAYMENT_LABELS } from '../services/orderService.js';
 import { statusBadge } from '../components/statusBadge.js';
 import { escapeHtml, money, param, formatDate } from '../core/utils.js';
@@ -12,6 +14,7 @@ renderLayout();
 
 const root = document.getElementById('order');
 const dayFmt = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long' });
+let stripeNotice = ''; // aviso si el pago de Stripe no se ha podido confirmar todavía
 
 /** Suma días laborables (sin sábados ni domingos; los festivos no se tienen en cuenta). */
 function addBusinessDays(date, days) {
@@ -73,9 +76,12 @@ function render(o, email) {
       <span class="muted">${escapeHtml(formatDate(o.created_at))}</span>
     </div>
 
+    ${o.status === 'creado' && stripeNotice ? `<p class="note" role="status">${escapeHtml(stripeNotice)}</p>` : ''}
     ${o.status === 'creado' ? `
       <p class="note">Este pedido todavía no está pagado.
         <a href="pago.html?pedido=${encodeURIComponent(o.order_number)}">Ir al pago</a></p>` : ''}
+    ${o.status === 'incidencia' ? `
+      <p class="note">Hay una incidencia con este pedido: lo estamos revisando y te escribiremos.</p>` : ''}
 
     <div class="order-grid">
       <div class="table-wrap">
@@ -112,7 +118,7 @@ function render(o, email) {
         ${p ? `
           <p>${escapeHtml(METHOD_LABELS[p.method] ?? p.method)}${p.card_last4 ? ` · •••• ${escapeHtml(p.card_last4)}` : ''}<br>
             <span class="status-pill pay-${escapeHtml(p.status)}">${escapeHtml(PAYMENT_LABELS[p.status] ?? p.status)}</span>
-            <small class="muted">${escapeHtml(p.transaction_ref)}</small></p>
+            <small class="muted pay-ref">${escapeHtml(p.transaction_ref)}</small></p>
           ${p.failure_reason ? `<p class="muted small">${escapeHtml(p.failure_reason)}</p>` : ''}` : '<p class="muted">Sin pagos todavía.</p>'}
 
         <h2 class="h3">¿Algún problema?</h2>
@@ -140,10 +146,36 @@ async function load(orderNumber, email) {
   }
 }
 
+/**
+ * Vuelta desde Stripe: el servidor pregunta a Stripe si la sesión está pagada y, si lo está,
+ * registra el pago. Aquí no se decide nada: solo se enseña lo que diga el servidor.
+ */
+async function confirmStripe(sessionId, orderNumber, email) {
+  root.innerHTML = '<p class="empty" role="status">Confirmando el pago con Stripe…</p>';
+  try {
+    const r = await confirmStripeCheckout(sessionId);
+    if (r?.status === 'pendiente') {
+      stripeNotice = 'Stripe todavía no ha confirmado el pago. Si acabas de pagar, recarga la página en unos segundos.';
+      return;
+    }
+    // confirmado: se quita session_id de la dirección (si se recarga, no hace falta volver a confirmar)
+    history.replaceState(null, '', `?${new URLSearchParams({ pedido: orderNumber, email })}`);
+  } catch (err) {
+    console.error(err);
+    // session_id se queda en la dirección: al recargar se vuelve a intentar (el servidor no cobra dos veces)
+    stripeNotice = err.fromServer
+      ? err.message
+      : 'No hemos podido confirmar el pago con Stripe. Recarga la página en unos segundos para volver a intentarlo.';
+  }
+}
+
 const orderNumber = (param('pedido') ?? '').trim().toUpperCase();
 const email = (param('email') ?? '').trim();
-if (ORDER_NUMBER_RE.test(orderNumber) && email) load(orderNumber, email);
-else {
+const sessionId = param('session_id') ?? '';
+if (ORDER_NUMBER_RE.test(orderNumber) && email) {
+  if (STRIPE_SESSION_RE.test(sessionId)) confirmStripe(sessionId, orderNumber, email).then(() => load(orderNumber, email));
+  else load(orderNumber, email);
+} else {
   lookupForm(orderNumber, email);
   root.removeAttribute('aria-busy');
 }

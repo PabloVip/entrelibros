@@ -348,6 +348,7 @@ input[aria-invalid=true], textarea[aria-invalid=true] { border-color: var(--erro
 .pay-amount { font-size: 1.4rem; }
 .pay-order + .note { margin-bottom: 16px; }
 .pay-note { margin-bottom: 16px; }
+.pay-ref { overflow-wrap: anywhere; } /* el id de la sesión de Stripe (cs_test_…) es largo y sin espacios */
 .note code { white-space: nowrap; }
 /* en el móvil la columna de precio unitario sobra: así los importes caben sin scroll */
 @media (max-width: 560px) {
