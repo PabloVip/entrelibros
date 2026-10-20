@@ -263,6 +263,22 @@ const exact = {
     'Payment is not available yet: the function still has to be enabled on the server.',
   'No se ha podido procesar el pago. Revisa tu conexión e inténtalo de nuevo.':
     'Could not process the payment. Check your connection and try again.',
+  // pago con Stripe
+  'Has cancelado el pago en Stripe: no se ha cobrado nada. Puedes intentarlo de nuevo.':
+    'You cancelled the payment on Stripe: nothing has been charged. You can try again.',
+  'Pago con Stripe en modo prueba:': 'Stripe payment in test mode:',
+  'no se cobra nada. En la página de Stripe usa una de estas tarjetas, con cualquier fecha futura y cualquier CVC:':
+    'nothing is charged. On the Stripe page use one of these cards, with any future expiry date and any CVC:',
+  '→ pide autenticación 3D Secure': '→ asks for 3D Secure authentication',
+  'Tarjeta con Stripe (modo prueba)': 'Card with Stripe (test mode)',
+  'Te llevamos a la página de pago de Stripe.': 'We will take you to the Stripe payment page.',
+  'Pagar con Stripe': 'Pay with Stripe',
+  'Te llevamos a la página de pago de Stripe…': 'Taking you to the Stripe payment page…',
+  'El pago con Stripe todavía no está disponible: falta activarlo en el servidor. Mientras tanto puedes pagar con la tarjeta simulada o con Bizum.':
+    'Payment with Stripe is not available yet: it still has to be enabled on the server. Meanwhile you can pay with the simulated card or with Bizum.',
+  'No se ha podido conectar con Stripe. Revisa tu conexión e inténtalo de nuevo.':
+    'Could not connect to Stripe. Check your connection and try again.',
+  'Este pedido ya está pagado o no admite pagos.': 'This order is already paid or does not accept payments.',
 
   // ---------- Confirmación / consulta de pedido ----------
   'Cargando pedido…': 'Loading order…',
@@ -573,6 +589,17 @@ const exact = {
   'Método de pago no válido': 'Invalid payment method',
   'Pedido no encontrado': 'Order not found',
   'Este pedido ya está pagado o no admite pagos': 'This order is already paid or does not accept payments',
+  // pago con Stripe (supabase/10_stripe.sql y Edge Functions)
+  'Sesión de Stripe no válida': 'Invalid Stripe session',
+  'La sesión de Stripe no es de un pedido de la tienda': 'The Stripe session does not belong to an order from this shop',
+  'La sesión de Stripe es de otro pedido': 'The Stripe session belongs to another order',
+  'La moneda o el importe del pago no son válidos': 'The payment currency or amount is not valid',
+  'El importe cobrado no coincide con el del pedido': 'The amount charged does not match the order total',
+  'Stripe no ha podido procesar el pago': 'Stripe could not process the payment',
+  'Falta la clave de prueba de Stripe en el servidor': 'The Stripe test key is missing on the server',
+  'Error interno del pago': 'Internal payment error',
+  'Importe no válido': 'Invalid amount',
+  'Tarjeta no válida': 'Invalid card',
   'Usa una tarjeta de prueba': 'Use a test card',
   'Tarjeta de prueba rechazada por el simulador': 'Test card declined by the simulator',
   'Indica el número de pedido y el email': 'Enter the order number and the email',

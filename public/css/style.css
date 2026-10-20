@@ -347,6 +347,7 @@ input[aria-invalid=true], textarea[aria-invalid=true] { border-color: var(--erro
 .pay-order p { margin: 0; }
 .pay-amount { font-size: 1.4rem; }
 .pay-order + .note { margin-bottom: 16px; }
+.pay-note { margin-bottom: 16px; }
 .note code { white-space: nowrap; }
 /* en el móvil la columna de precio unitario sobra: así los importes caben sin scroll */
 @media (max-width: 560px) {

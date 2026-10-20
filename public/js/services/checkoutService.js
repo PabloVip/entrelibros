@@ -69,6 +69,14 @@ export const TEST_CARDS = [
   { number: '4000 0000 0000 0002', result: 'rechazada' },
 ];
 
+// Tarjetas de prueba de Stripe (modo test). Se escriben en la página de Stripe, no en la nuestra:
+// la tienda nunca ve el número de la tarjeta.
+export const STRIPE_TEST_CARDS = [
+  { number: '4242 4242 4242 4242', result: 'aprobada' },
+  { number: '4000 0000 0000 0002', result: 'rechazada' },
+  { number: '4000 0025 0000 3155', result: 'pide autenticación 3D Secure' },
+];
+
 /**
  * Devuelve los 16 dígitos si es una tarjeta de prueba, o null.
  * Así un número real nunca sale del navegador: ni siquiera llega al servidor.

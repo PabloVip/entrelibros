@@ -43,6 +43,28 @@ export async function simulatePayment(orderNumber, method, cardNumber) {
   return data;
 }
 
+// ---------- Pago con Stripe (Edge Functions en supabase/functions/) ----------
+
+/**
+ * Llama a una Edge Function. Si falla, lanza un Error con:
+ *  - message: el texto {error} que manda la función (ya en español), si lo hay
+ *  - status: código HTTP (401 o 404 = la función aún no está desplegada o configurada)
+ *  - fromServer: true si el mensaje viene de la función y se puede enseñar al cliente
+ */
+async function invoke(name, body) {
+  const { data, error } = await supabase.functions.invoke(name, { body });
+  if (!error) return data;
+  const response = error.context instanceof Response ? error.context : null;
+  let message = '';
+  try { message = (await response?.json())?.error ?? ''; } catch { /* respuesta sin JSON */ }
+  throw Object.assign(new Error(message || error.message), { status: response?.status ?? 0, fromServer: Boolean(message) });
+}
+
+/** Crea la página de pago de Stripe del pedido. Devuelve { url } (checkout.stripe.com). */
+export function createStripeCheckout(orderNumber, lang) {
+  return invoke('create-checkout-session', { order_number: orderNumber, lang });
+}
+
 /** Pedido para la confirmación; null si el número y el email no coinciden. */
 export async function getOrderSummary(orderNumber, email) {
   const { data, error } = await supabase.rpc('get_order_summary', { p_order_number: orderNumber, p_email: email });
