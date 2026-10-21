@@ -16,6 +16,7 @@ import { statusBadge } from '../components/statusBadge.js';
 import { supportBadge } from '../components/supportBadge.js';
 import { toast } from '../components/toast.js';
 import { escapeHtml, money, formatDate } from '../core/utils.js';
+import { INVOICE_STATUSES } from '../services/invoiceService.js';
 
 renderLayout();
 
@@ -281,7 +282,8 @@ async function renderAccount() {
                 <td class="num">${money(o.total)}</td>
                 <td>${statusBadge(o.status)}</td>
                 <td><a class="btn btn-small btn-plain" href="pedido.html?pedido=${encodeURIComponent(o.order_number)}&email=${encodeURIComponent(email)}">Ver</a>
-                  ${o.status === 'creado' ? `<a class="btn btn-small" href="pago.html?pedido=${encodeURIComponent(o.order_number)}">Pagar</a>` : ''}</td>
+                  ${o.status === 'creado' ? `<a class="btn btn-small" href="pago.html?pedido=${encodeURIComponent(o.order_number)}">Pagar</a>` : ''}
+                  ${INVOICE_STATUSES.includes(o.status) ? `<a class="btn btn-small btn-plain" href="pedido.html?pedido=${encodeURIComponent(o.order_number)}&email=${encodeURIComponent(email)}&factura=1">Factura</a>` : ''}</td>
               </tr>`).join('')}
             </tbody>
           </table></div>`

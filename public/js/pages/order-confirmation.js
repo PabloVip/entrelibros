@@ -11,12 +11,14 @@ import { escapeHtml, money, param, formatDate } from '../core/utils.js';
 import { locale } from '../core/i18n.js';
 import { showCheckoutSteps } from '../components/checkoutSteps.js';
 import { nookLights } from '../components/nookLights.js';
+import { downloadInvoice, hasInvoice } from '../services/invoiceService.js';
 
 renderLayout();
 
 const root = document.getElementById('order');
 const dayFmt = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long' });
 let stripeNotice = ''; // aviso si el pago de Stripe no se ha podido confirmar todavía
+let current = null;    // pedido que se está enseñando (para la factura)
 
 /** Suma días laborables (sin sábados ni domingos; los festivos no se tienen en cuenta). */
 function addBusinessDays(date, days) {
@@ -83,7 +85,9 @@ function render(o, email) {
       <strong class="h3">${escapeHtml(o.order_number)}</strong>
       ${statusBadge(o.status)}
       <span class="muted">${escapeHtml(formatDate(o.created_at))}</span>
+      ${hasInvoice(o) ? '<button type="button" class="btn btn-small no-print order-invoice" data-invoice>Descargar factura (PDF)</button>' : ''}
     </div>
+    <p id="invoice-msg" class="form-msg no-print" role="status"></p>
 
     ${o.status === 'creado' && stripeNotice ? `<p class="note" role="status">${escapeHtml(stripeNotice)}</p>` : ''}
     ${o.status === 'creado' ? `
@@ -145,7 +149,28 @@ function render(o, email) {
 // "Imprimir justificante": abre el diálogo de impresión del navegador (también sirve para guardarlo en PDF)
 root.addEventListener('click', e => {
   if (e.target.closest('[data-print]')) window.print();
+  if (e.target.closest('[data-invoice]')) invoice();
 });
+
+// "Descargar factura (PDF)": se genera en el navegador con los datos del pedido (services/invoiceService.js)
+async function invoice() {
+  const btn = root.querySelector('[data-invoice]');
+  const msg = document.getElementById('invoice-msg');
+  if (!btn || !current) return;
+  btn.disabled = true;
+  msg.className = 'form-msg no-print';
+  msg.textContent = 'Generando la factura…';
+  try {
+    await downloadInvoice(current.order, current.email);
+    msg.textContent = 'Factura descargada.';
+  } catch (err) {
+    console.error(err);
+    msg.className = 'form-msg error no-print';
+    msg.textContent = 'No se ha podido generar la factura. Revisa tu conexión e inténtalo de nuevo.';
+  } finally {
+    btn.disabled = false;
+  }
+}
 
 async function load(orderNumber, email) {
   root.setAttribute('aria-busy', 'true');
@@ -155,7 +180,10 @@ async function load(orderNumber, email) {
       lookupForm(orderNumber, email, 'No encontramos ningún pedido con ese número y ese email.');
       return;
     }
+    current = { order, email };
     render(order, email);
+    // Desde "Mi cuenta" (botón Factura) se llega con ?factura=1: se descarga sin pulsar nada más
+    if (param('factura') === '1' && hasInvoice(order)) invoice();
   } catch (err) {
     console.error(err);
     root.innerHTML = err?.code === 'PGRST202'

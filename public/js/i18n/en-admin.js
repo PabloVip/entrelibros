@@ -295,6 +295,13 @@ const exact = {
   'Ya existe otro producto con ese slug': 'Another product already uses that slug',
   'Ya existe un método de envío con ese código': 'A shipping method with that code already exists',
 
+  // ---------- Factura (pedido.html y Mi cuenta) ----------
+  'Descargar factura (PDF)': 'Download invoice (PDF)',
+  'Generando la factura…': 'Creating the invoice…',
+  'Factura descargada.': 'Invoice downloaded.',
+  'No se ha podido generar la factura. Revisa tu conexión e inténtalo de nuevo.': 'The invoice could not be created. Check your connection and try again.',
+  'Factura': 'Invoice',
+
   // ---------- Mi cuenta (cuentas de cliente) ----------
   'Mi cuenta': 'My account',
   'Mi cuenta · Entrelibros': 'My account · Entrelibros',
