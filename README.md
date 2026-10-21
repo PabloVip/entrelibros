@@ -5,7 +5,7 @@ Prototipo académico de canal digital de venta: eCommerce de **escenas en miniat
 **Tarea 1 · Soluciones Informáticas para la Empresa · Grado en Ingeniería Informática (UCAM)**
 Autores: Pablo ([@PabloVip](https://github.com/PabloVip)) y Nino Iraci ([@ninoiraci](https://github.com/ninoiraci))
 
-> ⚠️ **Tienda ficticia, sin actividad comercial.** Todos los datos son de prueba. No introduzcas datos personales reales ni tarjetas reales: el pago es simulado y solo acepta tarjetas de prueba.
+> ⚠️ **Tienda ficticia, sin actividad comercial.** Todos los datos son de prueba. No introduzcas datos personales reales ni tarjetas reales: el pago es con Stripe en modo prueba o simulado, y solo acepta tarjetas de prueba.
 
 | | |
 |---|---|
@@ -20,7 +20,7 @@ Autores: Pablo ([@PabloVip](https://github.com/PabloVip)) y Nino Iraci ([@ninoir
 1. Abre la [tienda](https://pablovip.github.io/entrelibros/), filtra el catálogo y entra en una ficha. Si quieres, guarda productos en **Favoritos** con el corazón.
 2. Elige una variante (con o sin iluminación) y añádela al carrito.
 3. Tramita el pedido con **datos inventados** y, si quieres, un código de descuento.
-4. Paga con una **tarjeta de prueba** o con Bizum simulado.
+4. Paga con **Stripe en modo prueba** (te lleva a la página de pago de Stripe) con una tarjeta de prueba, o con la tarjeta simulada o Bizum simulado.
 5. Verás la confirmación con el número de pedido (`EL-AAAAMMDD-XXXX`).
 6. Opcional: abre una incidencia en **Soporte** indicando ese número y el mismo email.
 7. Opcional: crea una cuenta en **Mi cuenta** (recibirás un correo para confirmarla). Con sesión, el checkout se rellena solo y ves tus pedidos e incidencias.
@@ -28,7 +28,19 @@ Autores: Pablo ([@PabloVip](https://github.com/PabloVip)) y Nino Iraci ([@ninoir
 
 ## 2. Datos y usuarios de prueba
 
-### Tarjetas de prueba
+### Tarjetas de prueba de Stripe (modo prueba)
+Se escriben en la página de pago de Stripe, con cualquier fecha futura y cualquier CVC. No se cobra nada.
+
+| Número | Resultado |
+|---|---|
+| `4242 4242 4242 4242` | Pago aprobado |
+| `4000 0025 0000 3155` | Pide autenticación 3D Secure (aprobado si se completa) |
+| `4000 0000 0000 0002` | Tarjeta rechazada |
+| `4000 0000 0000 9995` | Rechazada por fondos insuficientes |
+
+El rechazo lo muestra Stripe en su página: el pedido sigue en `creado` y no se registra ningún pago. Si se cancela, se vuelve a `pago.html` con un aviso.
+
+### Tarjetas del simulador (tarjeta simulada y Bizum)
 | Número | Resultado |
 |---|---|
 | `4242 4242 4242 4242` | Pago aprobado |
@@ -77,7 +89,8 @@ Supabase · PostgreSQL
    ├─ Tablas ............ supabase/01_schema.sql
    ├─ Seguridad (RLS) ... supabase/02_policies.sql
    ├─ Lógica de negocio . supabase/03_functions.sql, 05_checkout.sql, 06_soporte_admin.sql, 07_favoritos.sql,
-   │                      08_admin_catalogo.sql
+   │                      08_admin_catalogo.sql, 10_stripe.sql
+   ├─ Edge Functions .... supabase/functions/ (pago con Stripe: crear la sesión, confirmarla y webhook)
    ├─ Imágenes .......... Supabase Storage (bucket "productos", lo crea 08_admin_catalogo.sql)
    └─ Datos de prueba ... supabase/04_seed.sql
 ```
@@ -88,12 +101,14 @@ Supabase · PostgreSQL
 | Servicios (cliente) | `public/js/services/` | Reglas de interfaz: filtros, carrito, favoritos, validación de formularios, resumen orientativo |
 | Acceso a datos | `public/js/repositories/`, `public/js/core/supabase.js` | Consultas y llamadas `rpc` a Supabase |
 | Lógica de negocio | Funciones PostgreSQL `SECURITY DEFINER` | Calcular importes, crear pedidos, simular pagos, cambiar estados, registrar eventos |
+| Pago con Stripe | Edge Functions (`supabase/functions/`, Deno) | Crear la página de pago de Stripe, confirmar el pago con Stripe y recibir su webhook; son las únicas que tienen las claves secretas |
 | Persistencia | PostgreSQL (Supabase) | Datos maestros (catálogo, clientes, envíos, descuentos) y transaccionales (pedidos, líneas, pagos, historial, incidencias, eventos) |
 
 **Decisiones clave**
 - **El navegador no decide precios ni totales.** Solo envía `{variant_id, quantity}`. `create_order` vuelve a leer precio y stock de la base de datos y calcula descuento, envío, total e IVA.
 - **Row Level Security.** Con la clave pública solo se puede leer el catálogo. Pedidos, clientes, pagos, incidencias y eventos solo los leen los administradores, y nadie puede escribir directamente en las tablas: todas las escrituras pasan por funciones que validan los datos.
 - **Las líneas de pedido guardan una "foto"** (nombre, SKU, precio) del momento de la compra: si el catálogo cambia, el pedido no.
+- **El pago con Stripe solo se confirma en el servidor.** El navegador nunca marca un pedido como pagado: una Edge Function pregunta a Stripe si la sesión está pagada y llama a `confirm_stripe_payment`, que solo puede ejecutar el servidor. Si llegan la vuelta del cliente y el webhook, el pago se registra una sola vez.
 - **El stock se descuenta al aprobar el pago**, con una condición atómica (`stock >= cantidad`). Si alguna línea no llega, el pago se rechaza y no se resta nada.
 
 ## 4. Estados del pedido
@@ -103,7 +118,7 @@ creado ──pago aprobado──▶ pago_simulado ──▶ pendiente_preparacio
    │                           │                     │                   │            │
    └──▶ cancelado ◀────────────┴─────────────────────┘                   └──▶ incidencia ◀┘
 ```
-El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago. El resto de cambios los hace un administrador desde el back-office. La función `admin_update_order_status` valida cada transición y deja constancia en `order_status_history`. `cancelado` es un estado final.
+El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago (simulado o con Stripe). Si Stripe cobra pero ya no queda stock, el pedido pasa a `incidencia` para revisarlo. El resto de cambios los hace un administrador desde el back-office. La función `admin_update_order_status` valida cada transición y deja constancia en `order_status_history`. `cancelado` es un estado final.
 
 ## 5. Eventos de negocio
 
@@ -114,7 +129,7 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago. E
 | `checkout.started` | Se abre el checkout con productos | web (`log_event`) |
 | `wishlist.item_added` | Se guarda un producto en favoritos | web (`log_event`) |
 | `order.created` | `create_order` crea el pedido | servidor |
-| `payment.simulated` | `simulate_payment` aprueba o rechaza | servidor |
+| `payment.simulated` | `simulate_payment` aprueba o rechaza, o `confirm_stripe_payment` registra un pago de Stripe (`method: stripe_test`) | servidor |
 | `support.requested` | `create_support_request` registra la incidencia | servidor |
 | `order.status_changed` | Un admin cambia el estado de un pedido | back-office |
 | `support.status_changed` | Un admin cambia el estado de una incidencia | back-office |
@@ -144,8 +159,8 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago. E
 | Política de privacidad (la pide Google para el acceso con Google) | `privacidad.html` |
 | Carrito | `carrito.html` |
 | Checkout | `checkout.html` |
-| Pago simulado | `pago.html?pedido=…` |
-| Confirmación (pide número de pedido + email) | `pedido.html` |
+| Pago: Stripe en modo prueba, tarjeta simulada o Bizum simulado | `pago.html?pedido=…` |
+| Confirmación (pide número de pedido + email; al volver de Stripe confirma el pago) | `pedido.html` |
 | Soporte postventa | `soporte.html` |
 | Back-office: acceso | `admin.html` |
 | Back-office: panel (ventas, más vendidos, stock, embudo, últimos pedidos) | `admin-panel.html` |
@@ -176,6 +191,7 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago. E
    7. `04_seed.sql`
    8. `08_admin_catalogo.sql`
    9. `09_cuentas_clientes.sql`
+   10. `10_stripe.sql`
 
    Todos se pueden volver a ejecutar. `04_seed.sql` deja la tienda con los datos de prueba iniciales; si se vuelve a cargar, hay que ejecutar después `08_admin_catalogo.sql` (rellena los textos en inglés de los productos de ejemplo).
 3. En **Project Settings → API**, copia la *Project URL* y la *publishable key* en `public/js/config.js`. Esa clave es pública por diseño; **nunca** pongas la *secret / service_role key* en el front.
@@ -197,6 +213,13 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago. E
 - **Servidor de correo:** el de Supabase por defecto solo entrega a los emails del equipo del proyecto (Organization → Team) y unos pocos correos por hora. Para la demo basta con invitar al equipo las cuentas que se vayan a usar; para que cualquiera pueda registrarse hay que configurar un SMTP propio (por ejemplo Brevo o Resend, con plan gratuito) en **Authentication → Emails → SMTP Settings**.
 - **Qué hace el servidor** (`09_cuentas_clientes.sql`): al registrarse se crea la ficha de cliente o se enlaza con la que ya existía si había comprado como invitado con ese email. Con el email confirmado, RLS deja a cada cliente leer **solo** sus datos, pedidos, líneas, pagos, historial e incidencias. El perfil se cambia con `update_my_profile`.
 
+### Pago con Stripe (modo prueba)
+1. Crea una cuenta de Stripe y quédate en **modo prueba** (no hacen falta datos bancarios).
+2. En Supabase, **Edge Functions → Secrets**: `STRIPE_SECRET_KEY` (la `sk_test_…`) y `STRIPE_WEBHOOK_SECRET` (paso 4). Las funciones rechazan las claves reales (`sk_live_…`).
+3. Despliega las funciones con la CLI: `supabase functions deploy --project-ref <tu-proyecto>`. `supabase/config.toml` indica qué funciones piden JWT (`stripe-webhook` no: Stripe no tiene uno y la función comprueba su firma).
+4. En Stripe, **Developers → Webhooks**: endpoint `https://<tu-proyecto>.supabase.co/functions/v1/stripe-webhook` con los eventos `checkout.session.completed` y `checkout.session.async_payment_succeeded`. Copia su *signing secret* (`whsec_…`) en `STRIPE_WEBHOOK_SECRET`.
+5. Las direcciones a las que vuelve el cliente están en una lista cerrada en `supabase/functions/_shared/stripe.ts` (la web publicada y `localhost:8000`).
+
 ### Ejecutar en local
 Los módulos ES necesitan servirse por HTTP; no basta con abrir el fichero:
 ```bash
@@ -215,9 +238,10 @@ En el repositorio, ve a **Settings → Pages → Source: GitHub Actions**. El wo
 - **Sin límite de peticiones.** La API no limita cuántos pedidos o incidencias se pueden crear por minuto. En producción haría falta *rate limiting* o un captcha.
 - **Cuenta opcional.** Se puede comprar sin cuenta (solo con el email). Si un email ya existe y se compra como invitado, no se actualizan su nombre ni su teléfono. No hay borrado de cuenta desde la web.
 - **Correos de Supabase.** Sin SMTP propio, Supabase solo envía a los emails del equipo del proyecto y con un límite de correos por hora.
-- **Pago de pedidos ajenos.** Quien conozca el número de un pedido sin pagar puede simular su pago.
+- **Pago de pedidos ajenos.** Quien conozca el número de un pedido sin pagar puede pagarlo (simulado o con Stripe).
+- **Stripe solo en modo prueba y sin reembolsos.** No se aceptan claves ni sesiones reales. Si Stripe cobra un pedido que ya no tiene stock, o el mismo pedido se paga en dos sesiones, el reembolso habría que hacerlo a mano desde Stripe.
 - **Email en la URL.** El email va en la URL de la confirmación (`pedido.html?…&email=…`) y queda en el historial del navegador.
-- **Stock sin reservar.** El stock se comprueba al crear el pedido, pero solo se reserva al pagar: dos clientes pueden crear pedidos por las últimas unidades y solo el primero que pague las consigue.
+- **Stock sin reservar.** El stock se comprueba al crear el pedido (y antes de abrir la página de Stripe), pero solo se reserva al pagar: dos clientes pueden crear pedidos por las últimas unidades y solo el primero que pague las consigue.
 - **Carrito y favoritos locales.** El carrito y la lista de favoritos se guardan en el navegador (`localStorage`) y no se sincronizan entre dispositivos.
 - **Traducciones manuales.** Los textos en inglés de productos, versiones y temáticas los escribe el administrador; los códigos de descuento y métodos de envío nuevos se muestran en español también en la web en inglés.
 - **Sin notificaciones.** No se envían emails de confirmación ni de seguimiento.
