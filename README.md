@@ -219,6 +219,7 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago (s
 3. Despliega las funciones con la CLI: `supabase functions deploy --project-ref <tu-proyecto>`. `supabase/config.toml` indica qué funciones piden JWT (`stripe-webhook` no: Stripe no tiene uno y la función comprueba su firma).
 4. En Stripe, **Developers → Webhooks**: endpoint `https://<tu-proyecto>.supabase.co/functions/v1/stripe-webhook` con los eventos `checkout.session.completed` y `checkout.session.async_payment_succeeded`. Copia su *signing secret* (`whsec_…`) en `STRIPE_WEBHOOK_SECRET`.
 5. Las direcciones a las que vuelve el cliente están en una lista cerrada en `supabase/functions/_shared/stripe.ts` (la web publicada y `localhost:8000`).
+6. **Correo de confirmación del pedido** (`supabase/functions/_shared/orderEmail.ts`): al registrarse el pago, el servidor envía al cliente un correo con las líneas, los totales, la dirección, la entrega estimada y un enlace a su pedido, en el idioma en que pagó. Se envía con la API de Brevo (la misma cuenta que el SMTP de Supabase Auth) y solo una vez por pedido, aunque lleguen a la vez la vuelta del cliente y el webhook. Secrets: `BREVO_API_KEY` (Brevo → *SMTP & API* → *API keys*, empieza por `xkeysib-`; no es la clave SMTP), `MAIL_FROM` (un remitente verificado en Brevo) y, opcional, `MAIL_FROM_NAME`. Sin ellos el pago funciona igual y no se envía el correo (queda un aviso en los logs de la función).
 
 ### Ejecutar en local
 Los módulos ES necesitan servirse por HTTP; no basta con abrir el fichero:
@@ -244,7 +245,7 @@ En el repositorio, ve a **Settings → Pages → Source: GitHub Actions**. El wo
 - **Stock sin reservar.** El stock se comprueba al crear el pedido (y antes de abrir la página de Stripe), pero solo se reserva al pagar: dos clientes pueden crear pedidos por las últimas unidades y solo el primero que pague las consigue.
 - **Carrito y favoritos locales.** El carrito y la lista de favoritos se guardan en el navegador (`localStorage`) y no se sincronizan entre dispositivos.
 - **Traducciones manuales.** Los textos en inglés de productos, versiones y temáticas los escribe el administrador; los códigos de descuento y métodos de envío nuevos se muestran en español también en la web en inglés.
-- **Sin notificaciones.** No se envían emails de confirmación ni de seguimiento.
+- **Notificaciones limitadas.** Solo se envía el correo de confirmación de los pagos con Stripe; los pagos simulados (tarjeta simulada y Bizum) no envían correo y no hay correos de seguimiento (enviado, entregado).
 - **Imágenes ilustrativas.** Las de los kits están generadas con IA (Google Gemini) y las de accesorios y recambios son fotos de ambientación de Unsplash. Ninguna muestra un producto real, porque la tienda es ficticia.
 
 ## 9. Uso de IA

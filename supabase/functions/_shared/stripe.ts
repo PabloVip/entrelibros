@@ -5,6 +5,7 @@
 // Supabase (Edge Functions → Secrets). Nunca están en el navegador ni en el repositorio.
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
+import { sendOrderConfirmation } from './orderEmail.ts';
 
 export const ORDER_RE = /^EL-[0-9]{8}-[A-Z0-9]{4}$/;
 export const SESSION_RE = /^cs_test_[A-Za-z0-9]{10,200}$/; // solo sesiones de prueba
@@ -109,12 +110,30 @@ export async function confirmPaidSession(stripe: Stripe, sessionId: string) {
 
   const intent = typeof session.payment_intent === 'object' ? session.payment_intent : null;
   const method = typeof intent?.payment_method === 'object' ? intent.payment_method : null;
-  const { data, error } = await db().rpc('confirm_stripe_payment', {
+  const client = db();
+  const { data, error } = await client.rpc('confirm_stripe_payment', {
     p_order_number: orderNumber,
     p_session_id:   session.id,
     p_amount:       session.amount_total / 100, // Stripe trabaja en céntimos
     p_card_last4:   method?.card?.last4 ?? null,
   });
   if (error) throw error;
+
+  // Correo de confirmación: solo la llamada que acaba de registrar el pago (no la segunda, que llega
+  // con already_confirmed = true). Va en el idioma de la página de pago de Stripe y enlaza con la
+  // misma tienda a la que volvió el cliente (la de success_url). Si falla, el pago sigue registrado.
+  if (data && data.already_confirmed === false) {
+    const lang = session.locale === 'en' ? 'en' : 'es';
+    await sendOrderConfirmation(client, orderNumber, lang, siteFromSuccessUrl(session.success_url));
+  }
   return data;
+}
+
+/** Tienda de success_url (p. ej. https://pablovip.github.io/entrelibros/), solo si está en la lista. */
+function siteFromSuccessUrl(url: string | null) {
+  try {
+    const base = new URL('.', url ?? '').href;
+    if (Object.values(SITES).includes(base)) return base;
+  } catch { /* sin success_url */ }
+  return SITES[DEFAULT_ORIGIN];
 }
