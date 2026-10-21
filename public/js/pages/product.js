@@ -9,6 +9,8 @@ import '../services/cartService.js'; // escucha 'entrelibros:add-to-cart' y guar
 import { productCard } from '../components/productCard.js';
 import { favoriteButton } from '../components/favoriteButton.js';
 import { qtyStepper, syncStepper } from '../components/qtyStepper.js';
+import '../components/miniCart.js'; // al añadir: la foto vuela al carrito y se abre el mini-carrito
+import { BULB } from '../components/icons.js';
 import { escapeHtml, money, param } from '../core/utils.js';
 import { locale } from '../core/i18n.js';
 
@@ -41,6 +43,9 @@ function render(p) {
   const images = [...p.images].sort((a, b) => a.sort_order - b.sort_order);
   const selected = defaultVariant(variants);
   const mainImg = images[0];
+  // Kits con versión iluminada: la foto se "apaga" con la versión sin luz y se enciende con la de LED
+  // (css: .product-media[data-luz]). Es una simulación sobre la misma foto.
+  const showsLight = p.product_type === 'kit' && variants.some(v => v.has_lighting);
 
   document.title = `${p.name} · Entrelibros`;
   document.getElementById('crumb').textContent = `› ${p.name}`;
@@ -48,6 +53,7 @@ function render(p) {
   root.innerHTML = `
     <article class="product">
       <div class="product-media">
+        ${showsLight ? `<span class="luz-tag" aria-hidden="true">${BULB}<span id="luz-text"></span></span>` : ''}
         <img id="main-image" src="${escapeHtml(mainImg?.url ?? '')}" alt="${escapeHtml(mainImg?.alt_text ?? p.name)}" width="400" height="420">
       </div>
 
@@ -65,7 +71,7 @@ function render(p) {
             ${variants.map(v => `
               <label class="variant ${v.stock === 0 ? 'is-out' : ''}">
                 <input type="radio" name="variant" value="${v.id}" ${v.id === selected.id ? 'checked' : ''} ${v.stock === 0 ? 'disabled' : ''}>
-                <span class="variant-name">${escapeHtml(v.name)}${v.has_lighting ? ' 💡' : ''}</span>
+                <span class="variant-name">${escapeHtml(v.name)}${v.has_lighting ? '<span class="variant-light" aria-hidden="true"></span>' : ''}</span>
                 <span class="variant-price">${money(v.price)}</span>
                 ${v.stock === 0 ? '<span class="variant-out">Agotado</span>' : ''}
               </label>`).join('')}
@@ -117,6 +123,10 @@ function render(p) {
     if (Number(qty.value) > Number(qty.max)) qty.value = qty.max || 1;
     syncStepper(qty); // el máximo cambia con la versión elegida: activa o desactiva − y +
     document.getElementById('add').disabled = v.stock === 0;
+    if (showsLight) {
+      root.querySelector('.product-media').dataset.luz = v.has_lighting ? 'on' : 'off';
+      document.getElementById('luz-text').textContent = v.has_lighting ? 'Luz encendida' : 'Luz apagada';
+    }
     // si la variante tiene foto propia, se muestra
     const img = images.find(i => i.variant_id === v.id) ?? mainImg;
     if (img) {
@@ -190,6 +200,10 @@ function notFound() {
     const p = await fetchProductBySlug(slug);
     if (!p || !p.variants?.length) return notFound();
 
+    // si la foto está llegando desde la tarjeta (transición entre páginas), se espera a que aterrice
+    // antes de repintar la ficha: así no desaparece a medio vuelo (window.__transicion: js/core/boot.js)
+    await window.__transicion?.finished?.catch(() => {});
+    try { sessionStorage.removeItem('entrelibros_foto'); } catch { /* sin almacenamiento */ }
     const selected = render(p);
     track(EVENTS.PRODUCT_VIEWED, {
       entityType: 'product',

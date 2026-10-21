@@ -155,4 +155,6 @@ document.addEventListener('entrelibros:add-to-cart', e => {
     entityId: item.variantId,
     payload: { sku: item.sku, quantity: added, unit_price: Number(item.unitPrice) },
   });
+  // aviso para el mini-carrito (components/miniCart.js): solo cuando se ha añadido de verdad
+  document.dispatchEvent(new CustomEvent('entrelibros:cart-added', { detail: { ...item, added } }));
 });

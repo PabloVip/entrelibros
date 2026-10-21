@@ -27,6 +27,13 @@ document.addEventListener('click', e => {
   const productId = Number(btn.dataset.fav);
   const active = toggleFavorite(productId);
   syncButtons();
+  // latido del corazón al guardarlo (css: .fav-btn.pop); se quita al acabar para poder repetirlo
+  if (active) {
+    btn.classList.remove('pop');
+    void btn.offsetWidth; // fuerza al navegador a "olvidar" la animación anterior antes de volver a ponerla
+    btn.classList.add('pop');
+    btn.addEventListener('animationend', () => btn.classList.remove('pop'), { once: true });
+  }
   // como en el carrito, solo se registra lo que se añade
   if (active) {
     track(EVENTS.WISHLIST_ITEM_ADDED, { entityType: 'product', entityId: productId, payload: { slug: btn.dataset.slug } });
