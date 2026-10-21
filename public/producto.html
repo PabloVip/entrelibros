@@ -2,28 +2,54 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex, nofollow">
   <title>Producto · Entrelibros</title>
+  <meta name="theme-color" content="#10182B">
+  <meta name="color-scheme" content="light dark">
+  <!-- tema (día/noche) antes de pintar: sin destello al cargar (js/core/boot.js) -->
+  <script src="js/core/boot.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..700,0..100,0..1&family=Instrument+Sans:wght@400..700&display=swap">
   <link rel="stylesheet" href="css/style.css">
   <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="img/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
-  <meta name="theme-color" content="#1D2537">
+  <link rel="manifest" href="manifest.webmanifest">
 </head>
 <body data-page="catalogo">
+  <!-- barra de lectura: se llena al bajar por la ficha (css: animación ligada al scroll) -->
+  <div class="read-progress" aria-hidden="true"></div>
   <div class="academic-banner" role="note">
-    <strong>Prototipo académico</strong> · Grado en Ingeniería Informática (UCAM).
-    Tienda ficticia sin actividad comercial: no introduzcas datos personales reales ni medios de pago reales.
+    <strong>Prototipo académico</strong>
+    <span class="banner-long">del Grado en Ingeniería Informática (UCAM). Tienda ficticia: no introduzcas datos personales ni medios de pago reales.</span>
+    <span class="banner-short">(UCAM): no uses datos reales.</span>
   </div>
   <header id="site-header" class="site-header"></header>
 
   <main class="container" id="contenido">
     <nav class="breadcrumb" aria-label="Migas de pan"><a href="catalogo.html">Catálogo</a> <span id="crumb"></span></nav>
-    <div id="product" aria-busy="true"><p>Cargando producto…</p></div>
+    <!-- Esqueleto con la misma rejilla que la ficha (product.js lo sustituye al llegar los datos) -->
+    <div id="product" aria-busy="true">
+      <p class="visually-hidden">Cargando producto…</p>
+      <div class="product" aria-hidden="true">
+        <div class="product-media"><span class="skeleton sk-photo"></span></div>
+        <div class="product-info stack">
+          <span class="skeleton sk-line w30"></span>
+          <span class="skeleton sk-title w80"></span>
+          <span class="skeleton sk-line w60"></span>
+          <span class="skeleton sk-title w30"></span>
+          <span class="skeleton sk-line w80"></span><span class="skeleton sk-line w80"></span><span class="skeleton sk-line w80"></span>
+        </div>
+      </div>
+    </div>
+    <!-- Si venimos de una tarjeta, su foto se pinta ya en el hueco del esqueleto y el navegador
+         la anima desde la tarjeta hasta aquí (View Transitions; ver js/core/boot.js) -->
+    <script>window.pintarFotoDeLaTarjeta?.();</script>
     <section id="related" class="related" hidden>
       <h2 id="related-title"></h2>
-      <div id="related-list" class="grid grid-small"></div>
+      <div id="related-list" class="grid grid-small rail"></div>
     </section>
   </main>
 

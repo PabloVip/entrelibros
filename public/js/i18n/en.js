@@ -625,6 +625,26 @@ const exact = {
   'El código todavía no está vigente': 'The code is not valid yet',
   'El código ha caducado': 'The code has expired',
   'payload demasiado grande': 'payload too large',
+
+  // ---------- Diseño "Lámpara" (restyling) ----------
+  'del Grado en Ingeniería Informática (UCAM). Tienda ficticia: no introduzcas datos personales ni medios de pago reales.':
+    'of the Computer Engineering degree (UCAM). Fictitious shop: do not enter real personal data or payment details.',
+  '(UCAM): no uses datos reales.': '(UCAM): do not use real data.',
+  'Encender la luz (modo día)': 'Turn the light on (day mode)',
+  'Apagar la luz (modo noche)': 'Turn the light off (night mode)',
+  'Escenas en miniatura para colocar entre tus libros.': 'Miniature scenes to place between your books.',
+  'Pie de página': 'Footer',
+  'Tienda': 'Shop',
+  'Ayuda': 'Help',
+  'Añadido al carrito': 'Added to cart',
+  'Cerrar': 'Close',
+  'También en tu carrito': 'Also in your cart',
+  'Copiar': 'Copy',
+  'Copiado': 'Copied',
+  'Selecciónalo y cópialo': 'Select it and copy it',
+  'Luz encendida': 'Light on',
+  'Luz apagada': 'Light off',
+  'Este hueco de la estantería está vacío.': 'This gap on the shelf is empty.',
 };
 
 // nombres de estados en minúsculas (mensajes del back-office)
@@ -637,6 +657,12 @@ const st = s => STATUS[s] ?? s;
 const plural = (n, one, many) => `${n} ${Number(n) === 1 ? one : many}`;
 
 const patterns = [
+  // diseño "Lámpara": pie y mini-carrito
+  [/^Tienda ficticia: proyecto de la asignatura Soluciones Informáticas para la Empresa \(UCAM\), (\d{4})\.$/,
+    'Fictitious shop: a project for the course Business IT Solutions (UCAM), $1.'],
+  [/^Subtotal \((\d+) artículos?\)$/, m => `Subtotal (${plural(m[1], 'item', 'items')})`],
+  [/^y (\d+) más$/, 'and $1 more'],
+  [/^Copiar el número (.+)$/, 'Copy the number $1'],
   // títulos de pestaña: "<nombre> · Entrelibros"
   [/^(.+) · Back-office · Entrelibros$/, (m, tr) => `${tr(m[1])} · Back-office · Entrelibros`],
   [/^(.+) · Entrelibros$/, (m, tr) => `${tr(m[1])} · Entrelibros`],

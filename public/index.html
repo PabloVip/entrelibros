@@ -2,20 +2,28 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex, nofollow">
   <meta name="description" content="Escenas en miniatura para colocar entre tus libros: calles japonesas, bibliotecas, cafeterías y mundos fantásticos.">
   <title>Entrelibros · Escenas en miniatura para tu estantería</title>
+  <meta name="theme-color" content="#10182B">
+  <meta name="color-scheme" content="light dark">
+  <!-- tema (día/noche) antes de pintar: sin destello al cargar (js/core/boot.js) -->
+  <script src="js/core/boot.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..700,0..100,0..1&family=Instrument+Sans:wght@400..700&display=swap">
   <link rel="stylesheet" href="css/style.css">
   <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="img/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
-  <meta name="theme-color" content="#1D2537">
+  <link rel="manifest" href="manifest.webmanifest">
 </head>
 <body data-page="inicio">
   <div class="academic-banner" role="note">
-    <strong>Prototipo académico</strong> del Grado en Ingeniería Informática (UCAM).
-    Tienda ficticia sin actividad comercial: no introduzcas datos personales reales ni medios de pago reales.
+    <strong>Prototipo académico</strong>
+    <span class="banner-long">del Grado en Ingeniería Informática (UCAM). Tienda ficticia: no introduzcas datos personales ni medios de pago reales.</span>
+    <span class="banner-short">(UCAM): no uses datos reales.</span>
   </div>
   <header id="site-header" class="site-header"></header>
 
@@ -33,15 +41,16 @@
       </div>
       <div class="shelf">
         <div class="books books-left" aria-hidden="true">
-          <span class="book"></span><span class="book"></span><span class="book"></span><span class="book"></span>
-          <span class="book"></span><span class="book"></span><span class="book"></span>
+          <!-- --i: orden de entrada de cada lomo al cargar (css: animation-delay) -->
+          <span class="book" style="--i:6"></span><span class="book" style="--i:5"></span><span class="book" style="--i:4"></span><span class="book" style="--i:3"></span>
+          <span class="book" style="--i:2"></span><span class="book" style="--i:1"></span><span class="book" style="--i:0"></span>
         </div>
         <figure class="nook">
-          <img src="img/productos/callejon-kioto-sakura.jpg" alt="Book nook de un callejón de Kioto con cerezos y farolillos, colocado entre libros" width="250" height="354">
+          <img src="img/productos/callejon-kioto-sakura.jpg" alt="Book nook de un callejón de Kioto con cerezos y farolillos, colocado entre libros" width="250" height="354" fetchpriority="high">
         </figure>
         <div class="books books-right" aria-hidden="true">
-          <span class="book"></span><span class="book"></span><span class="book"></span><span class="book"></span>
-          <span class="book"></span><span class="book leaning"></span>
+          <span class="book" style="--i:0"></span><span class="book" style="--i:1"></span><span class="book" style="--i:2"></span><span class="book" style="--i:3"></span>
+          <span class="book" style="--i:4"></span><span class="book leaning" style="--i:5"></span>
         </div>
       </div>
     </div>
@@ -50,28 +59,44 @@
   <main class="container" id="contenido">
     <section aria-labelledby="themes-title">
       <h2 id="themes-title">Explora por temática</h2>
-      <div id="themes" class="themes"></div>
+      <!-- rail: en el móvil, fila que se desliza con el dedo. Los esqueletos se ven hasta que llegan los datos -->
+      <div id="themes" class="themes rail">
+        <span class="skeleton sk-tile" aria-hidden="true"></span>
+        <span class="skeleton sk-tile" aria-hidden="true"></span>
+        <span class="skeleton sk-tile" aria-hidden="true"></span>
+        <span class="skeleton sk-tile" aria-hidden="true"></span>
+        <span class="skeleton sk-tile" aria-hidden="true"></span>
+        <span class="skeleton sk-tile" aria-hidden="true"></span>
+      </div>
     </section>
 
     <section aria-labelledby="featured-title">
       <h2 id="featured-title">Kits para empezar</h2>
-      <div id="featured" class="grid"></div>
+      <div id="featured" class="grid rail">
+        <div class="sk-card" aria-hidden="true"><span class="skeleton"></span><span class="sk-body"><span class="skeleton sk-line w40"></span><span class="skeleton sk-title w80"></span><span class="skeleton sk-line w60"></span></span></div>
+        <div class="sk-card" aria-hidden="true"><span class="skeleton"></span><span class="sk-body"><span class="skeleton sk-line w40"></span><span class="skeleton sk-title w80"></span><span class="skeleton sk-line w60"></span></span></div>
+        <div class="sk-card" aria-hidden="true"><span class="skeleton"></span><span class="sk-body"><span class="skeleton sk-line w40"></span><span class="skeleton sk-title w80"></span><span class="skeleton sk-line w60"></span></span></div>
+        <div class="sk-card" aria-hidden="true"><span class="skeleton"></span><span class="sk-body"><span class="skeleton sk-line w40"></span><span class="skeleton sk-title w80"></span><span class="skeleton sk-line w60"></span></span></div>
+      </div>
     </section>
 
     <section aria-labelledby="choose-title">
       <h2 id="choose-title">Elige por tu estantería</h2>
       <div class="choose">
         <div class="choose-item">
+          <span class="choose-ico"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 15.5 15.5 3 21 8.5 8.5 21z"/><path d="m7 11.9 1.8 1.8M10 8.9l2.6 2.6M13 5.9l1.8 1.8"/></svg></span>
           <strong>De 10 a 16 cm</strong>
           <p>Es el hueco que ocupa la escena en la balda. Mide el tuyo y filtra por ancho.</p>
           <a href="catalogo.html?tipo=kit&amp;ancho=130">Kits de hasta 13 cm</a>
         </div>
         <div class="choose-item">
+          <span class="choose-ico"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 20v-4M10 20v-8M15 20V8M20 20V4"/></svg></span>
           <strong>Tres niveles</strong>
           <p>De 4 horas de montaje para principiantes a 16 horas para manos con experiencia.</p>
           <a href="catalogo.html?tipo=kit&amp;dificultad=principiante">Kits para empezar</a>
         </div>
         <div class="choose-item">
+          <span class="choose-ico"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path class="bulb-glass" d="M12 5a5.5 5.5 0 0 0-3.3 9.9c.5.4.8 1 .8 1.6V17h5v-.5c0-.6.3-1.2.8-1.6A5.5 5.5 0 0 0 12 5Z"/><path d="M10 19.5h4M10.6 22h2.8"/><path d="M12 .8v1.6M4.4 3.6l1.1 1.1M19.6 3.6l-1.1 1.1M1.2 10.5h1.6M21.2 10.5h1.6"/></svg></span>
           <strong>Con o sin luz</strong>
           <p>Las versiones con LED USB iluminan ventanas y farolas. Las demás admiten el kit LED después.</p>
           <a href="catalogo.html?luz=con">Ver escenas con luz</a>

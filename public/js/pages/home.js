@@ -38,6 +38,8 @@ async function renderFeatured() {
 
 Promise.all([renderThemes(), renderFeatured()]).catch(err => {
   console.error(err);
+  // sin datos, fuera los esqueletos de carga de las temáticas (index.html)
+  document.querySelectorAll('#themes .skeleton').forEach(el => el.remove());
   document.getElementById('featured').innerHTML =
     '<p class="empty error">No se ha podido conectar con la tienda. Inténtalo de nuevo en unos segundos.</p>';
 });
