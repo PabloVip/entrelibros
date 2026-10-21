@@ -9,6 +9,7 @@ import { METHOD_LABELS, PAYMENT_LABELS } from '../services/orderService.js';
 import { statusBadge } from '../components/statusBadge.js';
 import { escapeHtml, money, param, formatDate } from '../core/utils.js';
 import { locale } from '../core/i18n.js';
+import { showCheckoutSteps } from '../components/checkoutSteps.js';
 
 renderLayout();
 
@@ -66,6 +67,8 @@ function render(o, email) {
   const p = o.payment;
   const from = addBusinessDays(o.created_at, s.eta_min);
   const to = addBusinessDays(o.created_at, s.eta_max);
+  // pasos de la compra: confirmación, o pago si el pedido todavía no está pagado
+  showCheckoutSteps(o.status === 'creado' ? 3 : 4);
   const support = `soporte.html?${new URLSearchParams({ pedido: o.order_number, email })}`;
 
   root.innerHTML = `

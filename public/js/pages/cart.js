@@ -7,9 +7,11 @@ import {
 } from '../services/cartService.js';
 import { freeShippingGoals } from '../services/checkoutService.js';
 import { qtyStepper } from '../components/qtyStepper.js';
+import { showCheckoutSteps } from '../components/checkoutSteps.js';
 import { escapeHtml, money } from '../core/utils.js';
 
 renderLayout();
+showCheckoutSteps(1); // pasos de la compra: carrito
 
 const root = document.getElementById('cart');
 const msg  = document.getElementById('cart-msg');

@@ -623,3 +623,16 @@ input[type=email], input[type=password], input[type=date], input:not([type]) { f
 .faq details[open] { padding-bottom: 6px; }
 .faq-actions { display: flex; flex-wrap: wrap; gap: 6px 20px; }
 .faq-actions .link-btn { text-decoration: underline; }
+
+/* ---------- Pasos de la compra (components/checkoutSteps.js) ---------- */
+.steps ol { list-style: none; margin: 0 0 8px; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.steps li { display: flex; align-items: center; gap: 8px; padding-bottom: 8px; border-bottom: 3px solid var(--border); color: var(--muted); font-size: .9rem; }
+.step-num { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border: 2px solid currentColor; border-radius: 999px; font-size: .8rem; font-weight: 700; }
+.steps .step-done { color: var(--ok); border-bottom-color: var(--ok); }
+.steps .step-current { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.steps .step-done .step-num { background: var(--ok); border-color: var(--ok); color: #fff; }
+.steps .step-current .step-num { background: var(--accent); border-color: var(--accent); color: #fff; }
+/* móvil: número encima del texto para que quepan los cuatro en una fila */
+@media (max-width: 560px) {
+  .steps li { flex-direction: column; gap: 4px; font-size: .75rem; text-align: center; }
+}

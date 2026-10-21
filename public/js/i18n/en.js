@@ -173,6 +173,10 @@ const exact = {
     'VAT included. Shipping and discounts are calculated at checkout.',
   'Tramitar pedido': 'Checkout',
   'Seguir comprando': 'Continue shopping',
+  // pasos de la compra
+  'Pasos de la compra': 'Checkout steps',
+  'Confirmación': 'Confirmation',
+  'Completado:': 'Completed:',
   'Tu carrito está vacío.': 'Your cart is empty.',
   'Envío gratis': 'Free shipping',
   'Se cuenta el importe después de aplicar los descuentos.': 'Counted on the amount after discounts.',

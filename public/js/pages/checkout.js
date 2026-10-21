@@ -9,8 +9,10 @@ import { estimate, shippingCost, validateForm, saveLastOrder } from '../services
 import { track, EVENTS } from '../services/eventService.js';
 import { escapeHtml, money } from '../core/utils.js';
 import { prefillCheckout } from '../components/checkoutAccount.js';
+import { showCheckoutSteps } from '../components/checkoutSteps.js';
 
 renderLayout();
+showCheckoutSteps(2); // pasos de la compra: tus datos
 
 const root = document.getElementById('checkout');
 let lines = [];

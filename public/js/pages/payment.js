@@ -9,6 +9,7 @@ import {
 } from '../services/checkoutService.js';
 import { escapeHtml, money, param } from '../core/utils.js';
 import { lang } from '../core/i18n.js';
+import { showCheckoutSteps } from '../components/checkoutSteps.js';
 
 renderLayout();
 
@@ -170,6 +171,7 @@ if (!ORDER_NUMBER_RE.test(orderNumber)) {
     <p class="empty error">Falta el número de pedido o no es válido.</p>
     <p><a class="btn" href="carrito.html">Ir al carrito</a></p>`;
 } else {
+  showCheckoutSteps(3); // pasos de la compra: pago
   render();
   const form = document.getElementById('pay-form');
   form.addEventListener('submit', e => {
