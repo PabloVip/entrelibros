@@ -10,6 +10,7 @@ import {
 import { escapeHtml, money, param } from '../core/utils.js';
 import { lang } from '../core/i18n.js';
 import { showCheckoutSteps } from '../components/checkoutSteps.js';
+import { CARD, PHONE, COPY } from '../components/icons.js';
 
 renderLayout();
 
@@ -36,13 +37,15 @@ function render() {
     <!-- Cada aviso de tarjetas de prueba se ve solo con su método de pago (data-for-method) -->
     <div class="note pay-note" data-for-method="stripe_test">
       <strong>Pago con Stripe en modo prueba:</strong> no se cobra nada. En la página de Stripe usa una de estas tarjetas, con cualquier fecha futura y cualquier CVC:
-      <ul>${STRIPE_TEST_CARDS.map(c => `
-        <li><code>${escapeHtml(c.number)}</code> → ${escapeHtml(c.result)}</li>`).join('')}
+      <ul class="test-cards">${STRIPE_TEST_CARDS.map(c => `
+        <li><code>${escapeHtml(c.number)}</code> → ${escapeHtml(c.result)}
+          <button type="button" class="copy-btn" data-copy="${escapeHtml(c.number.replaceAll(' ', ''))}"
+                  aria-label="Copiar el número ${escapeHtml(c.number)}">${COPY}<span>Copiar</span></button></li>`).join('')}
       </ul>
     </div>
     <div class="note pay-note" data-for-method="tarjeta_simulada" hidden>
       <strong>Pago simulado:</strong> no se cobra nada y no se aceptan tarjetas reales. Usa una de estas tarjetas de prueba:
-      <ul>${TEST_CARDS.map(c => `
+      <ul class="test-cards">${TEST_CARDS.map(c => `
         <li><code>${escapeHtml(c.number)}</code> → ${escapeHtml(c.result)}
           <button type="button" class="link-btn" data-card="${escapeHtml(c.number)}">Usar</button></li>`).join('')}
       </ul>
@@ -53,16 +56,16 @@ function render() {
         <legend class="h3">Método de pago</legend>
         <label class="variant">
           <input type="radio" name="method" value="stripe_test" checked>
-          <span>Tarjeta con Stripe (modo prueba)</span><span></span>
+          <span class="variant-name"><span class="method-ico">${CARD}</span>Tarjeta con Stripe (modo prueba)</span><span></span>
           <small class="ship-info">Te llevamos a la página de pago de Stripe.</small>
         </label>
         <label class="variant">
           <input type="radio" name="method" value="tarjeta_simulada">
-          <span>Tarjeta (simulada)</span><span></span>
+          <span class="variant-name"><span class="method-ico">${CARD}</span>Tarjeta (simulada)</span><span></span>
         </label>
         <label class="variant">
           <input type="radio" name="method" value="bizum_simulado">
-          <span>Bizum (simulado)</span><span></span>
+          <span class="variant-name"><span class="method-ico">${PHONE}</span>Bizum (simulado)</span><span></span>
           <small class="ship-info">Siempre se aprueba; no hace falta ningún dato.</small>
         </label>
       </fieldset>
@@ -180,6 +183,20 @@ if (!ORDER_NUMBER_RE.test(orderNumber)) {
   });
   form.addEventListener('change', e => {
     if (e.target.name === 'method') showMethod(e.target.value);
+  });
+  // "Copiar": copia el número de la tarjeta de prueba de Stripe para pegarlo en su página (Clipboard API)
+  root.addEventListener('click', async e => {
+    const copy = e.target.closest('button[data-copy]');
+    if (!copy) return;
+    const text = copy.querySelector('span');
+    try {
+      await navigator.clipboard.writeText(copy.dataset.copy);
+      copy.classList.add('is-copied');
+      text.textContent = 'Copiado';
+      setTimeout(() => { copy.classList.remove('is-copied'); text.textContent = 'Copiar'; }, 2000);
+    } catch {
+      text.textContent = 'Selecciónalo y cópialo'; // sin permiso para el portapapeles
+    }
   });
   root.addEventListener('click', e => {
     const btn = e.target.closest('button[data-card]');

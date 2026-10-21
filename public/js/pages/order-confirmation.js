@@ -10,6 +10,7 @@ import { statusBadge } from '../components/statusBadge.js';
 import { escapeHtml, money, param, formatDate } from '../core/utils.js';
 import { locale } from '../core/i18n.js';
 import { showCheckoutSteps } from '../components/checkoutSteps.js';
+import { nookLights } from '../components/nookLights.js';
 
 renderLayout();
 
@@ -70,9 +71,14 @@ function render(o, email) {
   // pasos de la compra: confirmación, o pago si el pedido todavía no está pagado
   showCheckoutSteps(o.status === 'creado' ? 3 : 4);
   const support = `soporte.html?${new URLSearchParams({ pedido: o.order_number, email })}`;
+  // escena con las ventanas apagadas (sin pagar) o encendiéndose (pagado); sin escena si hay incidencia o se canceló
+  const scene = ['cancelado', 'incidencia'].includes(o.status) ? '' : nookLights(o.status !== 'creado');
 
   root.innerHTML = `
-    <h1>${heading(o)}</h1>
+    <div class="order-hero">
+      ${scene}
+      <h1>${heading(o)}</h1>
+    </div>
     <div class="order-head">
       <strong class="h3">${escapeHtml(o.order_number)}</strong>
       ${statusBadge(o.status)}
