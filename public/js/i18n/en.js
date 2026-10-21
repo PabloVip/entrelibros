@@ -287,6 +287,7 @@ const exact = {
   // ---------- Confirmación / consulta de pedido ----------
   'Cargando pedido…': 'Loading order…',
   'Confirmando el pago con Stripe…': 'Confirming the payment with Stripe…',
+  'Imprimir justificante': 'Print receipt',
   'Stripe todavía no ha confirmado el pago. Si acabas de pagar, recarga la página en unos segundos.':
     'Stripe has not confirmed the payment yet. If you have just paid, reload the page in a few seconds.',
   'No hemos podido confirmar el pago con Stripe. Recarga la página en unos segundos para volver a intentarlo.':

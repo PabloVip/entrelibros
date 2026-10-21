@@ -127,8 +127,19 @@ function render(o, email) {
         <h2 class="h3">¿Algún problema?</h2>
         <p><a href="${escapeHtml(support)}">Contacta con soporte</a> indicando tu número de pedido.</p>
       </aside>
-    </div>`;
+    </div>
+
+    <!-- no-print: los botones no salen en el justificante impreso (css: @media print) -->
+    <p class="order-actions no-print">
+      <button type="button" class="btn btn-secondary" data-print>Imprimir justificante</button>
+      <a class="btn" href="catalogo.html">Seguir comprando</a>
+    </p>`;
 }
+
+// "Imprimir justificante": abre el diálogo de impresión del navegador (también sirve para guardarlo en PDF)
+root.addEventListener('click', e => {
+  if (e.target.closest('[data-print]')) window.print();
+});
 
 async function load(orderNumber, email) {
   root.setAttribute('aria-busy', 'true');
