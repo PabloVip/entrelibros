@@ -6,6 +6,7 @@
 --
 -- Añade:
 --   · Textos en inglés en productos, variantes y temáticas (opcionales).
+--   · Variantes por color y tamaño (color, color_hex, size y sus textos en inglés) y fotos por color.
 --   · Vista admin_products para el listado del back-office.
 --   · Funciones de administración (todas comprueban is_admin() y validan):
 --       admin_save_product, admin_set_product_active, admin_delete_product,
@@ -25,6 +26,19 @@ alter table public.products
   add column if not exists updated_at           timestamptz not null default now();
 
 alter table public.product_variants add column if not exists name_en text;
+
+-- Opciones de la variante: color y tamaño (opcionales). Un producto puede tener variantes por
+-- color, por tamaño o por las dos cosas (una variante por combinación, cada una con su SKU,
+-- precio y stock). color_hex es el color de la muestra redonda de la ficha.
+alter table public.product_variants
+  add column if not exists color     text,
+  add column if not exists color_en  text,
+  add column if not exists color_hex text,
+  add column if not exists size      text,
+  add column if not exists size_en   text;
+
+-- Foto de un color concreto (null = vale para todos): la ficha la enseña al elegir ese color
+alter table public.product_images add column if not exists color text;
 
 alter table public.themes
   add column if not exists name_en        text,
@@ -54,7 +68,14 @@ select
   (select i.alt_text from public.product_images i
     where i.product_id = p.id order by i.sort_order limit 1)      as image_alt,
   p.name_en, p.short_description_en,
-  t.name_en as theme_name_en
+  t.name_en as theme_name_en,
+  -- colores para los puntos de la tarjeta del catálogo: [{name, name_en, hex}]
+  coalesce((select jsonb_agg(jsonb_build_object('name', c.color, 'name_en', c.color_en, 'hex', c.color_hex) order by c.first_id)
+     from (select v2.color, max(v2.color_en) as color_en, max(v2.color_hex) as color_hex, min(v2.id) as first_id
+             from public.product_variants v2
+            where v2.product_id = p.id and v2.is_active and v2.color is not null
+            group by v2.color) c), '[]'::jsonb)                     as colors,
+  count(distinct v.size)                                            as size_count
 from public.products p
 left join public.themes t on t.id = p.theme_id
 join public.product_variants v on v.product_id = p.id and v.is_active
@@ -158,6 +179,11 @@ declare
   v_url      text;
   v_alt      text;
   v_cid      bigint;
+  v_color    text;
+  v_size     text;
+  v_hex      text;
+  v_with_color int := 0;
+  v_with_size  int := 0;
 begin
   perform public._require_admin();
   v_admin := public._admin_name();
@@ -236,12 +262,38 @@ begin
     if v_stock is null or v_stock not between 0 and 100000 then
       raise exception 'Variante %: el stock debe estar entre 0 y 100000', v_n using errcode = '22023';
     end if;
+    -- color y tamaño (opcionales)
+    v_color := public._opt_text(v_v->>'color', 40);
+    v_size  := public._opt_text(v_v->>'size', 40);
+    v_hex   := public._opt_text(v_v->>'color_hex', 7);
+    if length(btrim(coalesce(v_v->>'color', ''))) > 30 or length(btrim(coalesce(v_v->>'size', ''))) > 30
+       or length(btrim(coalesce(v_v->>'color_en', ''))) > 30 or length(btrim(coalesce(v_v->>'size_en', ''))) > 30 then
+      raise exception 'Variante %: el color y el tamaño tienen como máximo 30 caracteres', v_n using errcode = '22023';
+    end if;
+    if v_color is not null and (v_hex is null or v_hex !~ '^#[0-9A-Fa-f]{6}$') then
+      raise exception 'Variante %: elige el tono del color (#RRGGBB)', v_n using errcode = '22023';
+    end if;
+    if v_color is not null then v_with_color := v_with_color + 1; end if;
+    if v_size  is not null then v_with_size  := v_with_size  + 1; end if;
+    if (v_color is not null or v_size is not null) and (
+         select count(*) from jsonb_array_elements(v_variants) x
+          where lower(coalesce(public._opt_text(x->>'color', 40), '')) = lower(coalesce(v_color, ''))
+            and lower(coalesce(public._opt_text(x->>'size', 40), '')) = lower(coalesce(v_size, ''))) > 1 then
+      raise exception 'Hay dos variantes con el mismo color y tamaño (%)', concat_ws(' · ', v_color, v_size) using errcode = '22023';
+    end if;
     if nullif(v_v->>'id', '') is not null and (v_is_new or not exists (
          select 1 from public.product_variants
           where id = (v_v->>'id')::bigint and product_id = v_id)) then
       raise exception 'Variante %: no pertenece a este producto', v_n using errcode = '22023';
     end if;
   end loop;
+  -- si se usa color (o tamaño), lo llevan todas las variantes: si no, la ficha no sabría qué elegir
+  if v_with_color not in (0, v_n) then
+    raise exception 'Indica el color en todas las variantes o en ninguna' using errcode = '22023';
+  end if;
+  if v_with_size not in (0, v_n) then
+    raise exception 'Indica el tamaño en todas las variantes o en ninguna' using errcode = '22023';
+  end if;
   if v_active and not exists (select 1 from jsonb_array_elements(v_variants) x
                                where coalesce((x->>'is_active')::boolean, true)) then
     raise exception 'Un producto visible en la tienda necesita al menos una variante activa' using errcode = '22023';
@@ -261,6 +313,11 @@ begin
     end if;
     if length(v_alt) not between 3 and 200 then
       raise exception 'Imagen %: el texto alternativo debe tener entre 3 y 200 caracteres', v_n using errcode = '22023';
+    end if;
+    if public._opt_text(v_img->>'color', 40) is not null and not exists (
+         select 1 from jsonb_array_elements(v_variants) x
+          where lower(public._opt_text(x->>'color', 40)) = lower(public._opt_text(v_img->>'color', 40))) then
+      raise exception 'Imagen %: el color no es de ninguna variante', v_n using errcode = '22023';
     end if;
   end loop;
 
@@ -302,10 +359,13 @@ begin
     v_stock := (v_v->>'stock')::numeric::int;
     if v_vid is null then
       insert into public.product_variants (product_id, sku, name, name_en, has_lighting, price, stock,
-                                           is_default, is_active)
+                                           is_default, is_active, color, color_en, color_hex, size, size_en)
       values (v_id, v_sku, btrim(v_v->>'name'), public._opt_text(v_v->>'name_en', 80),
               coalesce((v_v->>'has_lighting')::boolean, false), (v_v->>'price')::numeric, v_stock,
-              false, coalesce((v_v->>'is_active')::boolean, true))
+              false, coalesce((v_v->>'is_active')::boolean, true),
+              public._opt_text(v_v->>'color', 30), public._opt_text(v_v->>'color_en', 30),
+              case when public._opt_text(v_v->>'color', 30) is not null then lower(v_v->>'color_hex') end,
+              public._opt_text(v_v->>'size', 30), public._opt_text(v_v->>'size_en', 30))
       returning id into v_vid;
     else
       select stock, sku into v_old from public.product_variants where id = v_vid;
@@ -313,7 +373,10 @@ begin
         sku = v_sku, name = btrim(v_v->>'name'), name_en = public._opt_text(v_v->>'name_en', 80),
         has_lighting = coalesce((v_v->>'has_lighting')::boolean, false),
         price = (v_v->>'price')::numeric, stock = v_stock,
-        is_active = coalesce((v_v->>'is_active')::boolean, true)
+        is_active = coalesce((v_v->>'is_active')::boolean, true),
+        color = public._opt_text(v_v->>'color', 30), color_en = public._opt_text(v_v->>'color_en', 30),
+        color_hex = case when public._opt_text(v_v->>'color', 30) is not null then lower(v_v->>'color_hex') end,
+        size = public._opt_text(v_v->>'size', 30), size_en = public._opt_text(v_v->>'size_en', 30)
       where id = v_vid;
       if v_old.stock <> v_stock then
         perform public._emit_event('stock.adjusted', 'backoffice', null, 'variant', v_vid::text,
@@ -349,8 +412,8 @@ begin
   delete from public.product_images where product_id = v_id;
   v_n := 0;
   for v_img in select * from jsonb_array_elements(v_images) loop
-    insert into public.product_images (product_id, url, alt_text, sort_order)
-    values (v_id, btrim(v_img->>'url'), btrim(v_img->>'alt_text'), v_n);
+    insert into public.product_images (product_id, url, alt_text, sort_order, color)
+    values (v_id, btrim(v_img->>'url'), btrim(v_img->>'alt_text'), v_n, public._opt_text(v_img->>'color', 30));
     v_n := v_n + 1;
   end loop;
 

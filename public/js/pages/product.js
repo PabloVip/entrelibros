@@ -38,8 +38,52 @@ function specsRows(p) {
     .map(([k, v]) => `<tr><th scope="row">${escapeHtml(k)}</th><td>${escapeHtml(v)}</td></tr>`).join('');
 }
 
+// ---------- Opciones: color y tamaño ----------
+// Si las variantes tienen color y/o tamaño, en lugar de la lista de versiones se enseñan
+// muestras de color y botones de tamaño; la variante es la combinación elegida.
+const same = (a, b) => (a ?? '') === (b ?? '');
+
+function optionLists(variants) {
+  const byId = [...variants].sort((a, b) => a.id - b.id);
+  const colors = [];
+  for (const v of byId) if (v.color && !colors.some(c => c.name === v.color)) colors.push({ name: v.color, hex: v.color_hex });
+  // tamaños de menor a mayor precio medio (pequeño → grande), y si empatan, en el orden de alta
+  const sizes = [...new Set(byId.map(v => v.size).filter(Boolean))];
+  const avg = s => { const l = variants.filter(v => v.size === s); return l.reduce((n, v) => n + Number(v.price), 0) / l.length; };
+  sizes.sort((a, b) => avg(a) - avg(b));
+  return { colors, sizes };
+}
+
+function optionsHtml(variants, selected) {
+  const { colors, sizes } = optionLists(variants);
+  return `
+    ${colors.length ? `
+      <fieldset class="opt-group">
+        <legend>Color: <strong id="opt-color-name">${escapeHtml(selected.color)}</strong></legend>
+        <div class="swatches">${colors.map(c => `
+          <label class="swatch" title="${escapeHtml(c.name)}">
+            <input type="radio" name="color" value="${escapeHtml(c.name)}" ${c.name === selected.color ? 'checked' : ''}>
+            <span class="swatch-dot" style="--sw:${/^#[0-9a-f]{6}$/i.test(c.hex ?? '') ? c.hex : '#999999'}" aria-hidden="true"></span>
+            <span class="visually-hidden">${escapeHtml(c.name)}</span>
+          </label>`).join('')}
+        </div>
+      </fieldset>` : ''}
+    ${sizes.length ? `
+      <fieldset class="opt-group">
+        <legend>Tamaño: <strong id="opt-size-name">${escapeHtml(selected.size)}</strong></legend>
+        <div class="size-pills">${sizes.map(s => `
+          <label class="size-pill">
+            <input type="radio" name="size" value="${escapeHtml(s)}" ${s === selected.size ? 'checked' : ''}>
+            <span>${escapeHtml(s)}</span>
+          </label>`).join('')}
+        </div>
+      </fieldset>` : ''}
+    <input type="hidden" name="variant" value="${selected.id}">`;
+}
+
 function render(p) {
   const variants = [...p.variants].sort((a, b) => a.price - b.price);
+  const hasOptions = variants.some(v => v.color || v.size);
   const images = [...p.images].sort((a, b) => a.sort_order - b.sort_order);
   const selected = defaultVariant(variants);
   const mainImg = images[0];
@@ -66,6 +110,7 @@ function render(p) {
         <p class="tax-note">IVA incluido · gastos de envío calculados en el checkout</p>
 
         <form id="buy" class="buy" novalidate>
+          ${hasOptions ? optionsHtml(variants, selected) : `
           <fieldset class="variants">
             <legend>Elige versión</legend>
             ${variants.map(v => `
@@ -75,7 +120,7 @@ function render(p) {
                 <span class="variant-price">${money(v.price)}</span>
                 ${v.stock === 0 ? '<span class="variant-out">Agotado</span>' : ''}
               </label>`).join('')}
-          </fieldset>
+          </fieldset>`}
 
           <p id="stock" class="stock"></p>
 
@@ -111,6 +156,37 @@ function render(p) {
     return variants.find(x => x.id === id) ?? selected;
   }
 
+  // Color y tamaño → variante. Si la combinación no existe para el color elegido, se pasa al
+  // primer tamaño que sí exista (con stock si lo hay).
+  function syncOptions(changed) {
+    const color = form.color?.value ?? null;
+    let size = form.size?.value ?? null;
+    let v = variants.find(x => same(x.color, color) && same(x.size, size));
+    if (!v && changed === 'color') {
+      const options = variants.filter(x => same(x.color, color));
+      v = options.find(x => x.stock > 0) ?? options[0];
+      size = v?.size ?? null;
+      const radio = [...root.querySelectorAll('input[name=size]')].find(r => r.value === size);
+      if (radio) radio.checked = true;
+    }
+    if (!v) return;
+    form.variant.value = v.id;
+    // tamaños: tachado si no hay stock con este color; desactivado si la combinación no existe
+    for (const r of root.querySelectorAll('input[name=size]')) {
+      const x = variants.find(y => same(y.color, color) && y.size === r.value);
+      r.disabled = !x;
+      r.closest('.size-pill').classList.toggle('is-out', !x || x.stock === 0);
+    }
+    // colores: tachado si ese color está agotado en todos los tamaños
+    for (const r of root.querySelectorAll('input[name=color]')) {
+      r.closest('.swatch').classList.toggle('is-out', !variants.some(y => y.color === r.value && y.stock > 0));
+    }
+    const colorName = document.getElementById('opt-color-name');
+    if (colorName) colorName.textContent = v.color ?? '';
+    const sizeName = document.getElementById('opt-size-name');
+    if (sizeName) sizeName.textContent = v.size ?? '';
+  }
+
   function update() {
     const v = currentVariant();
     const s = stockText(v);
@@ -121,14 +197,15 @@ function render(p) {
     stock.className = `stock stock-${s.cls}`;
     qty.max = Math.min(v.stock, MAX_QTY);
     if (Number(qty.value) > Number(qty.max)) qty.value = qty.max || 1;
+    if (!(Number(qty.value) >= 1)) qty.value = 1; // al volver de una versión agotada (máximo 0)
     syncStepper(qty); // el máximo cambia con la versión elegida: activa o desactiva − y +
     document.getElementById('add').disabled = v.stock === 0;
     if (showsLight) {
       root.querySelector('.product-media').dataset.luz = v.has_lighting ? 'on' : 'off';
       document.getElementById('luz-text').textContent = v.has_lighting ? 'Luz encendida' : 'Luz apagada';
     }
-    // si la variante tiene foto propia, se muestra
-    const img = images.find(i => i.variant_id === v.id) ?? mainImg;
+    // si la variante (o su color) tiene foto propia, se muestra
+    const img = images.find(i => i.variant_id === v.id) ?? (v.color && images.find(i => i.color === v.color)) ?? mainImg;
     if (img) {
       const el = document.getElementById('main-image');
       el.src = img.url; el.alt = img.alt_text;
@@ -136,7 +213,10 @@ function render(p) {
     return v;
   }
 
-  form.addEventListener('change', e => { if (e.target.name === 'variant') update(); });
+  form.addEventListener('change', e => {
+    if (e.target.name === 'color' || e.target.name === 'size') { syncOptions(e.target.name); update(); }
+    if (e.target.name === 'variant') update();
+  });
   form.addEventListener('submit', e => {
     e.preventDefault();
     const v = currentVariant();
@@ -154,7 +234,8 @@ function render(p) {
       detail: {
         variantId: v.id, sku: v.sku, quantity: n,
         productId: p.id, productSlug: p.slug, productName: p.name,
-        variantName: v.name, unitPrice: Number(v.price), image: mainImg?.url ?? null,
+        variantName: v.name, unitPrice: Number(v.price),
+        image: (v.color && images.find(i => i.color === v.color)?.url) ?? mainImg?.url ?? null,
         stock: v.stock, // el carrito no deja pasar de aquí (create_order lo vuelve a comprobar)
       },
     }));
@@ -170,6 +251,7 @@ function render(p) {
     msg.className = 'form-msg ok';
   });
 
+  if (hasOptions) syncOptions();
   update();
   return selected;
 }

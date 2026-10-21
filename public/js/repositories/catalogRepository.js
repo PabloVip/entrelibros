@@ -5,13 +5,15 @@ import { originalsMatching, learn, lang } from '../core/i18n.js';
 // Textos en inglés guardados en la base de datos (columnas *_en, se editan en el back-office):
 // se le pasan al traductor para que la web en inglés los use.
 const PAIRS = [['name', 'name_en'], ['short_description', 'short_description_en'],
-  ['description', 'description_en'], ['theme_name', 'theme_name_en']];
+  ['description', 'description_en'], ['theme_name', 'theme_name_en'],
+  ['color', 'color_en'], ['size', 'size_en']]; // opciones de las variantes (08_admin_catalogo.sql)
 function learnRows(rows) {
   if (lang === 'es' || !rows) return rows;
   const pairs = [];
   const visit = row => {
     if (!row || typeof row !== 'object') return;
     for (const [es, en] of PAIRS) if (row[es] && row[en]) pairs.push([row[es], row[en]]);
+    for (const c of row.colors ?? []) if (c?.name && c?.name_en) pairs.push([c.name, c.name_en]); // tarjetas
     ['theme', 'product'].forEach(k => visit(row[k]));
     (row.variants ?? []).forEach(visit);
   };
@@ -83,7 +85,7 @@ export async function fetchProductBySlug(slug) {
       *,
       theme:themes ( * ),
       variants:product_variants ( * ),
-      images:product_images ( id, url, alt_text, sort_order, variant_id )
+      images:product_images ( id, url, alt_text, sort_order, variant_id, color )
     `)
     .eq('slug', slug)
     .eq('is_active', true) // un admin con sesión abierta también ve archivados: aquí no deben salir

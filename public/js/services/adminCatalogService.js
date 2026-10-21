@@ -19,6 +19,31 @@ export function slugify(text) {
     .slice(0, 80);
 }
 
+/** Prefijo de SKU del producto: EL-<3 letras del nombre> */
+export function skuBase(productName) {
+  return `EL-${slugify(productName).replace(/-/g, '').toUpperCase().slice(0, 3) || 'PRD'}`;
+}
+
+/** Abreviatura de un color o tamaño para el SKU: "Nogal" → NOG, "Mediano (20 cm)" → MED, "XL" → XL */
+export function skuPart(text) {
+  const t = String(text ?? '').trim();
+  if (/^(XXS|XS|S|M|L|XL|XXL)$/i.test(t)) return t.toUpperCase();
+  return slugify(t).replace(/-/g, '').toUpperCase().slice(0, 3) || 'X';
+}
+
+// Tono por defecto de los colores más habituales (se puede cambiar en el selector de color)
+const COLOR_HEX = {
+  natural: '#d9b48a', roble: '#b5895a', nogal: '#6b4428', cerezo: '#8e4a35', haya: '#d8b088', pino: '#e2c193',
+  negro: '#26262b', blanco: '#f4f1ea', gris: '#8a8f98', beige: '#e3d3b5', marron: '#7a4e2d',
+  rojo: '#b23a3a', granate: '#7b2430', rosa: '#e8a0b4', naranja: '#e07a2e', amarillo: '#e0b13a', mostaza: '#c9a23a',
+  verde: '#2e6b45', oliva: '#6b7a3a', azul: '#3b5a8c', marino: '#1f2f55', turquesa: '#2a9d9a',
+  morado: '#6a4c8c', lila: '#b9a3d6', dorado: '#c9a24a', plateado: '#c0c4cc', cobre: '#b8734a', transparente: '#e8eef2',
+};
+export function defaultHex(colorName) {
+  const key = slugify(colorName).split('-')[0];
+  return COLOR_HEX[key] ?? '#999999';
+}
+
 /** Propuesta de SKU para una variante nueva: EL-<3 letras del producto>-<n> */
 export function suggestSku(productName, index) {
   const base = slugify(productName).replace(/-/g, '').toUpperCase().slice(0, 3) || 'PRD';
@@ -39,7 +64,7 @@ const optNum = v => (v === '' || v == null ? null : Number(v));
  * Comprueba el producto del editor. Devuelve { campo: mensaje }.
  * Campos de variantes: "variant-<i>-<campo>"; de imágenes: "image-<i>-<campo>".
  */
-export function validateProduct(p) {
+export function validateProduct(p, opts = { color: false, size: false }) {
   const e = {};
   if (!between(p.name.trim().length, 2, 120)) e.name = 'Entre 2 y 120 caracteres.';
   if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(p.slug) || !between(p.slug.length, 3, 80)) {
@@ -60,8 +85,18 @@ export function validateProduct(p) {
 
   if (!between(p.variants.length, 1, 20)) e.variants = 'Añade entre 1 y 20 versiones.';
   const skus = p.variants.map(v => v.sku.trim().toUpperCase());
+  const combos = p.variants.map(v => `${(v.color ?? '').toLowerCase()}|${(v.size ?? '').toLowerCase()}`);
   p.variants.forEach((v, i) => {
-    if (!between(v.name.trim().length, 2, 80)) e[`variant-${i}-name`] = 'Nombre de 2 a 80 caracteres.';
+    // con color o tamaño el nombre sale de ellos; sin opciones se escribe a mano
+    if (!opts.color && !opts.size && !between(v.name.trim().length, 2, 80)) e[`variant-${i}-name`] = 'Nombre de 2 a 80 caracteres.';
+    if (opts.color) {
+      if (!between((v.color ?? '').length, 1, 30)) e[`variant-${i}-color`] = 'Indica el color (hasta 30 caracteres).';
+      else if (!/^#[0-9a-f]{6}$/i.test(v.color_hex ?? '')) e[`variant-${i}-color_hex`] = 'Elige el tono del color.';
+    }
+    if (opts.size && !between((v.size ?? '').length, 1, 30)) e[`variant-${i}-size`] = 'Indica el tamaño (hasta 30 caracteres).';
+    if ((opts.color || opts.size) && combos.indexOf(combos[i]) !== i && !e[`variant-${i}-color`] && !e[`variant-${i}-size`]) {
+      e[`variant-${i}-${opts.color ? 'color' : 'size'}`] = 'Esta combinación de color y tamaño está repetida.';
+    }
     const sku = skus[i];
     if (!/^[A-Z0-9]+(-[A-Z0-9]+)*$/.test(sku) || !between(sku.length, 3, 40)) e[`variant-${i}-sku`] = 'SKU no válido.';
     else if (skus.indexOf(sku) !== i) e[`variant-${i}-sku`] = 'SKU repetido.';

@@ -1,6 +1,6 @@
 # Entrelibros
 
-Prototipo académico de canal digital de venta: eCommerce de **escenas en miniatura para colocar entre libros** (*book nooks*). Incluye kits completos, accesorios y recambios, con variantes y filtros por temática, dificultad de montaje, dimensiones e iluminación.
+Prototipo académico de canal digital de venta: eCommerce de **escenas en miniatura para colocar entre libros** (*book nooks*). Incluye kits completos, accesorios y recambios, con variantes (también por **color y tamaño**) y filtros por temática, dificultad de montaje, dimensiones e iluminación.
 
 **Tarea 1 · Soluciones Informáticas para la Empresa · Grado en Ingeniería Informática (UCAM)**
 Autores: Pablo ([@PabloVip](https://github.com/PabloVip)) y Nino Iraci ([@ninoiraci](https://github.com/ninoiraci))
@@ -76,6 +76,7 @@ Para nuevas compras usa cualquier email de prueba, por ejemplo `tu.nombre@exampl
 ### Catálogo de prueba
 - 6 temáticas y 18 productos (10 kits, 4 accesorios, 4 recambios) con 31 variantes.
 - Hay una variante agotada y otras con pocas unidades, para ver los avisos de stock.
+- **Sujetalibros de madera** (`11_color_talla.sql`): 3 colores × 3 tamaños = 9 variantes, cada una con su SKU, precio y stock, y una foto por color. *Negro · Grande* está agotado.
 - Los recambios y accesorios están enlazados a los kits con los que son compatibles.
 - Hay 4 pedidos de ejemplo en distintos estados y 3 incidencias de soporte.
 
@@ -166,13 +167,14 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago (s
 | Back-office: panel (ventas, más vendidos, stock, embudo, últimos pedidos) | `admin-panel.html` |
 | Back-office: pedidos y detalle con cambio de estado | `admin-pedidos.html`, `admin-pedido.html?id=…` |
 | Back-office: productos (listado, ajuste rápido de stock, archivar/publicar) | `admin-productos.html` |
-| Back-office: editor de producto (alta, edición, versiones, imágenes, compatibilidades, textos en inglés, duplicar, eliminar) | `admin-producto.html`, `?id=…`, `?duplicar=…` |
+| Back-office: editor de producto (alta, edición, versiones por color y tamaño con generador de combinaciones, imágenes por color, compatibilidades, textos en inglés, duplicar, eliminar) | `admin-producto.html`, `?id=…`, `?duplicar=…` |
 | Back-office: clientes (pedidos, gasto, ticket medio) | `admin-clientes.html` |
 | Back-office: soporte y eventos | `admin-soporte.html`, `admin-eventos.html` |
 | Back-office: ajustes (códigos de descuento, envíos, temáticas) | `admin-ajustes.html` |
 
 ### Back-office de catálogo
 - **Todo lo que se guarda pasa por funciones del servidor** (`08_admin_catalogo.sql`): comprueban que quien llama es administrador (`is_admin()`), validan cada dato y registran un evento con el nombre del admin. El navegador valida lo mismo antes de enviar, para avisar sin esperar.
+- **Variantes por color y tamaño:** en el editor se marca si las versiones se diferencian por color, por tamaño o por las dos cosas. Cada combinación es una versión con su SKU, precio y stock; el botón *Generar combinaciones* crea todas las que falten a partir de las listas de colores y tamaños. Cada color lleva su tono (`#RRGGBB`) y se le puede asignar una foto. En la ficha se eligen con muestras de color y botones de tamaño: las combinaciones agotadas salen tachadas y al cambiar de color se muestra su foto. El servidor (`admin_save_product`) exige que el color y el tamaño estén en todas las versiones o en ninguna y que no se repitan combinaciones.
 - **Productos con pedidos no se borran:** se archivan (dejan de verse en la tienda, pero los pedidos antiguos siguen apuntando a ellos). Las versiones con pedidos que se quitan del formulario se desactivan en lugar de borrarse.
 - **Imágenes:** se pueden subir (se recortan en el navegador a 800×840 y se guardan en Supabase Storage; solo los admins pueden subir) o indicar una dirección `img/…` o `https://…`.
 - **Textos en inglés:** cada producto, versión y temática tiene campos opcionales en inglés (`name_en`, `description_en`…). La web en inglés los usa; si faltan, muestra el texto en español.
@@ -192,6 +194,7 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago (s
    8. `08_admin_catalogo.sql`
    9. `09_cuentas_clientes.sql`
    10. `10_stripe.sql`
+   11. `11_color_talla.sql` (producto de ejemplo con variantes por color y tamaño)
 
    Todos se pueden volver a ejecutar. `04_seed.sql` deja la tienda con los datos de prueba iniciales; si se vuelve a cargar, hay que ejecutar después `08_admin_catalogo.sql` (rellena los textos en inglés de los productos de ejemplo).
 3. En **Project Settings → API**, copia la *Project URL* y la *publishable key* en `public/js/config.js`. Esa clave es pública por diseño; **nunca** pongas la *secret / service_role key* en el front.
@@ -271,6 +274,7 @@ Todas están recortadas a 800×840 px y comprimidas.
 | Torre del dragón | Generada con IA (Google Gemini) |
 | Callejón de Praga | Generada con IA (Google Gemini) |
 | Despacho del detective victoriano | Generada con IA (Google Gemini) |
+| Sujetalibros de madera (3 colores) | Ilustración vectorial hecha para el proyecto |
 | Kit LED USB universal | Foto de Zishan khan en [Unsplash](https://unsplash.com/photos/assorted-colored-led-lights-NHnW3cmrCeo) |
 | Set de libros en miniatura | Foto de Alan Cheung en [Unsplash](https://unsplash.com/photos/many-small-open-books-arranged-on-a-wooden-surface-bAOopOtWkbc) |
 | Cubierta antipolvo de metacrilato | Foto de T en [Unsplash](https://unsplash.com/photos/diorama-displayed-in-a-framed-box-on-brick-wall-Lj8Cllwi8Tw) |

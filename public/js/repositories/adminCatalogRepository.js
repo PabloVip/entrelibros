@@ -25,7 +25,7 @@ export async function getProductForEdit(id) {
     .from('products')
     .select(`*,
       variants:product_variants ( * ),
-      images:product_images ( id, url, alt_text, sort_order ),
+      images:product_images ( id, url, alt_text, sort_order, color ),
       compat:product_compatibility!product_compatibility_product_id_fkey ( compatible_with_id )`)
     .eq('id', id)
     .maybeSingle();

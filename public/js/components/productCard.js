@@ -15,7 +15,15 @@ export function productCard(item) {
     item.difficulty ? DIFFICULTY_LABELS[item.difficulty] : null,
     item.width_mm ? `${(item.width_mm / 10).toLocaleString(locale)} cm de ancho` : null,
     item.product_type === 'kit' ? lightingLabel(item) : null,
+    Number(item.size_count) > 1 ? `${item.size_count} tamaños` : null,
   ].filter(Boolean);
+  // colores disponibles (variantes por color): un punto por color
+  const colors = Array.isArray(item.colors) ? item.colors : [];
+  const swatches = colors.length > 1 ? `
+        <ul class="card-colors">
+          ${colors.slice(0, 6).map(c => `<li title="${escapeHtml(c.name)}"><span aria-hidden="true" style="--sw:${/^#[0-9a-f]{6}$/i.test(c.hex ?? '') ? c.hex : '#999999'}"></span></li>`).join('')}
+          <li><span class="visually-hidden">${colors.length} colores</span>${colors.length > 6 ? `+${colors.length - 6}` : ''}</li>
+        </ul>` : '';
 
   return `
     <article class="card ${soldOut ? 'is-soldout' : ''}">
@@ -29,6 +37,7 @@ export function productCard(item) {
         ${item.theme_name ? `<p class="card-theme">${escapeHtml(item.theme_name)}</p>` : ''}
         <h3 class="card-title"><a href="${href}">${escapeHtml(item.name)}</a></h3>
         <p class="card-desc">${escapeHtml(item.short_description)}</p>
+        ${swatches}
         ${chips.length ? `<ul class="chips">${chips.map(c => `<li>${escapeHtml(c)}</li>`).join('')}</ul>` : ''}
         <div class="card-foot">
           <p class="card-price">${price}</p>

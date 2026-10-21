@@ -683,7 +683,7 @@ const patterns = [
   [/^¡Últimas (\d+) unidades!$/, 'Only $1 left!'],
   [/^Indica una cantidad entre 1 y (\d+)\.$/, 'Enter a quantity between 1 and $1.'],
   // el final opcional dice por qué se ha añadido menos de lo pedido: máximo por línea (m[4]) o stock (m[5])
-  [/^Añadido al carrito: (\d+) × (.+) · (.+?)\.(?: Has llegado al máximo de (\d+) unidades\.| Ya tienes en el carrito todas las unidades que quedan \((\d+)\)\.)?$/,
+  [/^Añadido al carrito: (\d+) × (.+?) · (.+?)\.(?: Has llegado al máximo de (\d+) unidades\.| Ya tienes en el carrito todas las unidades que quedan \((\d+)\)\.)?$/,
     (m, tr) => `Added to cart: ${m[1]} × ${tr(m[2])} · ${tr(m[3])}.`
       + (m[4] ? ` You have reached the maximum of ${m[4]} units.` : '')
       + (m[5] ? ` You now have all the remaining units in your cart (${m[5]}).` : '')],

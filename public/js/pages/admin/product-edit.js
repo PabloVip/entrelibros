@@ -9,6 +9,7 @@ import {
 } from '../../repositories/adminCatalogRepository.js';
 import {
   TYPE_OPTIONS, DIFFICULTY_OPTIONS, slugify, suggestSku, validateProduct, prepareImage,
+  skuBase, skuPart, defaultHex,
 } from '../../services/adminCatalogService.js';
 import { toast, errorText } from '../../components/toast.js';
 import { escapeHtml, money, formatDate, param } from '../../core/utils.js';
@@ -31,8 +32,15 @@ let confirmingDelete = false;
 
 function emptyVariant(i) {
   return { id: null, name: i === 0 ? 'Estándar' : '', name_en: '', sku: '', price: '', stock: 0,
-           has_lighting: false, is_default: i === 0, is_active: true };
+           has_lighting: false, is_default: i === 0, is_active: true,
+           color: '', color_en: '', color_hex: '#999999', size: '', size_en: '' };
 }
+
+// Variantes por color y/o tamaño (state.opts). Solo es para el formulario: no se envía.
+const usesOptions = () => state.opts.color || state.opts.size;
+const distinct = list => [...new Set(list.map(x => x.trim()).filter(Boolean))];
+const colorsInUse = () => (state.opts.color ? distinct(state.variants.map(v => v.color)) : []);
+const sizesInUse = () => (state.opts.size ? distinct(state.variants.map(v => v.size)) : []);
 
 function blankProduct() {
   return {
@@ -41,6 +49,7 @@ function blankProduct() {
     short_description: '', description: '', is_active: true,
     name_en: '', short_description_en: '', description_en: '',
     variants: [emptyVariant(0)], images: [], compatible_with: [],
+    opts: { color: false, size: false },
   };
 }
 
@@ -55,20 +64,41 @@ function fromServer(p) {
     variants: p.variants.map(v => ({
       id: v.id, name: v.name, name_en: v.name_en ?? '', sku: v.sku, price: v.price, stock: v.stock,
       has_lighting: v.has_lighting, is_default: v.is_default, is_active: v.is_active,
+      color: v.color ?? '', color_en: v.color_en ?? '', color_hex: v.color_hex ?? defaultHex(v.color ?? ''),
+      size: v.size ?? '', size_en: v.size_en ?? '',
     })),
-    images: p.images.map(i => ({ url: i.url, alt_text: i.alt_text })),
+    images: p.images.map(i => ({ url: i.url, alt_text: i.alt_text, color: i.color ?? '' })),
+    opts: { color: p.variants.some(v => v.color), size: p.variants.some(v => v.size) },
     compatible_with: p.compat.map(c => c.compatible_with_id),
   };
 }
 
 /** Lo que se envía al servidor. */
 function payload() {
+  const { opts, ...rest } = state;
   return {
-    ...state,
+    ...rest,
     slug: state.slug.trim(),
     difficulty: state.product_type === 'kit' ? state.difficulty : null,
     compatible_with: state.product_type === 'kit' ? [] : state.compatible_with,
-    variants: state.variants.map(v => ({ ...v, sku: v.sku.trim().toUpperCase() })),
+    variants: state.variants.map(v => {
+      const color = opts.color ? v.color.trim() : '';
+      const size = opts.size ? v.size.trim() : '';
+      const colorEn = color ? v.color_en.trim() : '';
+      const sizeEn = size ? v.size_en.trim() : '';
+      const out = {
+        ...v, sku: v.sku.trim().toUpperCase(),
+        color: color || null, color_en: colorEn || null, color_hex: color ? v.color_hex : null,
+        size: size || null, size_en: sizeEn || null,
+      };
+      // con color o tamaño, el nombre de la versión es "Color · Tamaño" (carrito, pedidos y facturas)
+      if (opts.color || opts.size) {
+        out.name = [color, size].filter(Boolean).join(' · ');
+        out.name_en = colorEn || sizeEn ? [colorEn || color, sizeEn || size].filter(Boolean).join(' · ') : '';
+      }
+      return out;
+    }),
+    images: state.images.map(i => ({ ...i, color: opts.color && i.color ? i.color : null })),
   };
 }
 
@@ -150,10 +180,19 @@ function measuresPanel() {
 }
 
 function variantsPanel() {
+  const { color: byColor, size: bySize } = state.opts;
+  const opts = byColor || bySize;
   const rows = state.variants.map((v, i) => `
     <tr data-vrow="${i}">
-      <td><label class="visually-hidden" for="v-${i}-name">Nombre de la versión ${i + 1}</label>
-        <input id="v-${i}-name" data-v="${i}" data-vf="name" maxlength="80" value="${escapeHtml(v.name)}" class="${inv(`variant-${i}-name`)}" placeholder="Con kit LED USB"></td>
+      ${opts ? '' : `<td><label class="visually-hidden" for="v-${i}-name">Nombre de la versión ${i + 1}</label>
+        <input id="v-${i}-name" data-v="${i}" data-vf="name" maxlength="80" value="${escapeHtml(v.name)}" class="${inv(`variant-${i}-name`)}" placeholder="Con kit LED USB"></td>`}
+      ${byColor ? `<td class="w-color"><div class="color-cell">
+        <label class="visually-hidden" for="v-${i}-color_hex">Tono del color de la versión ${i + 1}</label>
+        <input id="v-${i}-color_hex" type="color" data-v="${i}" data-vf="color_hex" value="${escapeHtml(v.color_hex || '#999999')}" class="${inv(`variant-${i}-color_hex`)}">
+        <label class="visually-hidden" for="v-${i}-color">Color de la versión ${i + 1}</label>
+        <input id="v-${i}-color" data-v="${i}" data-vf="color" maxlength="30" value="${escapeHtml(v.color)}" class="${inv(`variant-${i}-color`)}" placeholder="Nogal" list="color-names"></div></td>` : ''}
+      ${bySize ? `<td class="w-size"><label class="visually-hidden" for="v-${i}-size">Tamaño de la versión ${i + 1}</label>
+        <input id="v-${i}-size" data-v="${i}" data-vf="size" maxlength="30" value="${escapeHtml(v.size)}" class="${inv(`variant-${i}-size`)}" placeholder="Mediano (20 cm)"></td>` : ''}
       <td class="w-sku"><label class="visually-hidden" for="v-${i}-sku">SKU de la versión ${i + 1}</label>
         <input id="v-${i}-sku" data-v="${i}" data-vf="sku" maxlength="40" value="${escapeHtml(v.sku)}" class="${inv(`variant-${i}-sku`)}" spellcheck="false"></td>
       <td class="w-num"><label class="visually-hidden" for="v-${i}-price">Precio de la versión ${i + 1}</label>
@@ -165,24 +204,99 @@ function variantsPanel() {
       <td class="w-chk"><input type="checkbox" data-v="${i}" data-vf="is_active" ${v.is_active ? 'checked' : ''} aria-label="Versión ${i + 1} a la venta"></td>
       <td><button type="button" class="icon-btn" data-remove-variant="${i}" ${state.variants.length === 1 ? 'disabled' : ''} aria-label="Quitar la versión ${i + 1}">×</button></td>
     </tr>`).join('');
+  const FIELD = { name: 'nombre', sku: 'SKU', price: 'precio', stock: 'stock', color: 'color', color_hex: 'tono', size: 'tamaño' };
   const vErrors = Object.entries(errors).filter(([k]) => k.startsWith('variant-')).map(([k, m]) => {
     const [, i, f] = k.split('-');
-    return `Versión ${Number(i) + 1} (${({ name: 'nombre', sku: 'SKU', price: 'precio', stock: 'stock' })[f]}): ${m}`;
+    return `Versión ${Number(i) + 1} (${FIELD[f] ?? f}): ${m}`;
   });
   return `
     <section class="panel">
       <h2 class="h3">Versiones, precio y stock</h2>
       <p class="hint muted">Lo que realmente se compra. Precio con IVA incluido. Si una versión ya tiene pedidos y la quitas, se desactiva en lugar de borrarse.</p>
+      <fieldset class="opt-toggle">
+        <legend>Las versiones se diferencian por</legend>
+        <label><input type="checkbox" data-opt="color" ${byColor ? 'checked' : ''}> Color</label>
+        <label><input type="checkbox" data-opt="size" ${bySize ? 'checked' : ''}> Tamaño</label>
+        ${opts ? '<span class="hint muted">El nombre de cada versión se forma solo: "Color · Tamaño". En la ficha se eligen con muestras de color y botones de tamaño.</span>' : ''}
+      </fieldset>
+      ${opts ? generatorBox() : ''}
       <div class="table-wrap">
-        <table class="data-table variants-table">
-          <thead><tr><th>Versión</th><th>SKU</th><th class="num">Precio (€)</th><th class="num">Stock</th>
+        <table class="data-table variants-table ${opts ? 'has-options' : ''}">
+          <thead><tr>${opts ? '' : '<th>Versión</th>'}${byColor ? '<th>Color</th>' : ''}${bySize ? '<th>Tamaño</th>' : ''}<th>SKU</th><th class="num">Precio (€)</th><th class="num">Stock</th>
             <th class="w-chk">Luz</th><th class="w-chk">Por defecto</th><th class="w-chk">A la venta</th><th><span class="visually-hidden">Quitar</span></th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
+      <datalist id="color-names">${['Natural', 'Roble', 'Nogal', 'Negro', 'Blanco', 'Gris', 'Rojo', 'Azul', 'Verde', 'Dorado'].map(c => `<option value="${c}">`).join('')}</datalist>
       ${errors.variants || vErrors.length ? `<p class="field-error">${[errors.variants, ...vErrors].filter(Boolean).map(m => `<span>${escapeHtml(m)}</span>`).join('<br>')}</p>` : ''}
       <p><button type="button" class="btn btn-small btn-secondary" id="add-variant" ${state.variants.length >= 20 ? 'disabled' : ''}>+ Añadir versión</button></p>
     </section>`;
+}
+
+// Generador: crea de golpe una versión por cada combinación de colores y tamaños
+function generatorBox() {
+  const { color: byColor, size: bySize } = state.opts;
+  return `
+    <details class="gen-box" ${state.variants.length <= 1 && !state.variants[0]?.id ? 'open' : ''}>
+      <summary>Generar combinaciones</summary>
+      <div class="form-grid">
+        ${byColor ? `<div class="field full"><label for="g-colors">Colores (separados por comas)</label>
+          <input id="g-colors" value="${escapeHtml(colorsInUse().join(', '))}" placeholder="Natural, Nogal, Negro"></div>` : ''}
+        ${bySize ? `<div class="field full"><label for="g-sizes">Tamaños (separados por comas, de menor a mayor)</label>
+          <input id="g-sizes" value="${escapeHtml(sizesInUse().join(', '))}" placeholder="Pequeño (15 cm), Mediano (20 cm), Grande (25 cm)"></div>` : ''}
+        <div class="field"><label for="g-price">Precio de las nuevas (€)</label>
+          <input id="g-price" type="number" min="0" max="9999" step="0.01" value="${escapeHtml(state.variants[0]?.price ?? '')}"></div>
+        <div class="field"><label for="g-stock">Stock de las nuevas</label>
+          <input id="g-stock" type="number" min="0" max="100000" step="1" value="0"></div>
+      </div>
+      <p class="hint muted">Añade las combinaciones que falten (las que ya existen se mantienen) con su SKU propuesto. Después puedes ajustar precio, stock y tono de cada una. Máximo 20 versiones.</p>
+      <p><button type="button" class="btn btn-small" id="generate">Generar versiones</button> <span id="gen-msg" class="form-msg" role="status"></span></p>
+    </details>`;
+}
+
+function generate() {
+  const split = id => distinct((document.getElementById(id)?.value ?? '').split(','));
+  const colors = state.opts.color ? split('g-colors') : [''];
+  const sizes = state.opts.size ? split('g-sizes') : [''];
+  const msg = document.getElementById('gen-msg');
+  if (!colors.length || !sizes.length) {
+    msg.textContent = 'Escribe al menos un valor en cada lista.';
+    msg.className = 'form-msg error';
+    return;
+  }
+  const price = document.getElementById('g-price').value;
+  const stock = document.getElementById('g-stock').value || 0;
+  const key = (c, z) => `${c.toLowerCase()}|${z.toLowerCase()}`;
+  // la versión vacía del producto nuevo se sustituye
+  if (state.variants.length === 1 && !state.variants[0].id && !state.variants[0].color.trim() && !state.variants[0].size.trim()) {
+    state.variants = [];
+  }
+  const existing = new Set(state.variants.map(v => key(state.opts.color ? v.color.trim() : '', state.opts.size ? v.size.trim() : '')));
+  const missing = colors.flatMap(c => sizes.map(z => [c, z])).filter(([c, z]) => !existing.has(key(c, z)));
+  if (state.variants.length + missing.length > 20) {
+    if (!state.variants.length) state.variants = [emptyVariant(0)];
+    msg.textContent = `Saldrían ${state.variants.length + missing.length} versiones y el máximo es 20.`;
+    msg.className = 'form-msg error';
+    return;
+  }
+  const skus = new Set(state.variants.map(v => v.sku.trim().toUpperCase()));
+  const base = skuBase(state.name);
+  for (const [c, z] of missing) {
+    let sku = [base, c && skuPart(c), z && skuPart(z)].filter(Boolean).join('-');
+    for (let n = 2; skus.has(sku); n++) sku = `${sku.replace(/-\d+$/, '')}-${n}`;
+    skus.add(sku);
+    const sameColor = state.variants.find(v => c && v.color.trim().toLowerCase() === c.toLowerCase());
+    const sameSize = state.variants.find(v => z && v.size.trim().toLowerCase() === z.toLowerCase());
+    state.variants.push({
+      ...emptyVariant(state.variants.length), name: '', sku, price, stock,
+      color: c, color_hex: sameColor?.color_hex ?? defaultHex(c), color_en: sameColor?.color_en ?? '',
+      size: z, size_en: sameSize?.size_en ?? '', is_default: false,
+    });
+  }
+  if (!state.variants.some(v => v.is_default) && state.variants[0]) state.variants[0].is_default = true;
+  errors = {};
+  render();
+  toast(missing.length ? `${missing.length} ${missing.length === 1 ? 'versión añadida' : 'versiones añadidas'}. Revisa precios y stock y guarda.` : 'Ya existían todas las combinaciones.');
 }
 
 function imagesPanel() {
@@ -195,6 +309,12 @@ function imagesPanel() {
         <label class="visually-hidden" for="i-${i}-alt">Texto alternativo de la imagen ${i + 1}</label>
         <input id="i-${i}-alt" data-i="${i}" data-if="alt_text" maxlength="200" value="${escapeHtml(img.alt_text)}" class="${inv(`image-${i}-alt_text`)}" placeholder="Describe la imagen (accesibilidad)">
         ${errors[`image-${i}-url`] || errors[`image-${i}-alt_text`] ? `<p class="field-error">${escapeHtml(errors[`image-${i}-url`] ?? errors[`image-${i}-alt_text`])}</p>` : ''}
+        ${state.opts.color && colorsInUse().length ? `
+          <label class="img-color"><span>Foto del color</span>
+            <select data-i="${i}" data-if="color">
+              <option value="">Todos los colores</option>
+              ${colorsInUse().map(c => `<option value="${escapeHtml(c)}" ${c === img.color ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('')}
+            </select></label>` : ''}
         ${i === 0 ? '<small class="muted">Imagen principal (tarjetas y ficha)</small>' : ''}
       </div>
       <div class="img-actions">
@@ -249,7 +369,13 @@ function englishPanel() {
           <input id="f-short_en" data-field="short_description_en" maxlength="200" value="${escapeHtml(s.short_description_en)}" lang="en"></div>
         <div class="field full"><label for="f-desc_en">Descripción (EN)</label>
           <textarea id="f-desc_en" data-field="description_en" maxlength="4000" rows="4" lang="en">${escapeHtml(s.description_en)}</textarea></div>
-        ${s.variants.map((v, i) => `
+        ${usesOptions() ? [
+          ...colorsInUse().map(c => ['color', c]), ...sizesInUse().map(z => ['size', z]),
+        ].map(([kind, value], n) => {
+          const v = s.variants.find(x => x[kind].trim() === value);
+          return `<div class="field"><label for="en-${kind}-${n}">${kind === 'color' ? 'Color' : 'Tamaño'} "${escapeHtml(value)}" (EN)</label>
+            <input id="en-${kind}-${n}" data-en-kind="${kind}" data-en-value="${escapeHtml(value)}" maxlength="30" value="${escapeHtml(v?.[`${kind}_en`] ?? '')}" lang="en"></div>`;
+        }).join('') : s.variants.map((v, i) => `
           <div class="field"><label for="v-${i}-name_en">Versión "${escapeHtml(v.name || i + 1)}" (EN)</label>
             <input id="v-${i}-name_en" data-v="${i}" data-vf="name_en" maxlength="80" value="${escapeHtml(v.name_en)}" lang="en"></div>`).join('')}
       </div>
@@ -329,10 +455,22 @@ root.addEventListener('input', e => {
     const f = t.dataset.vf;
     if (f === 'is_default') state.variants.forEach((x, i) => { x.is_default = i === Number(t.dataset.v); });
     else v[f] = t.type === 'checkbox' ? t.checked : t.value;
+    if (f === 'color_hex' && v.color.trim()) { // un color tiene un solo tono: se aplica a todas sus versiones
+      state.variants.forEach((x, i) => {
+        if (x.color.trim() !== v.color.trim()) return;
+        x.color_hex = t.value;
+        const input = document.getElementById(`v-${i}-color_hex`);
+        if (input && input !== t) input.value = t.value;
+      });
+    }
     if (f === 'name') { // el nombre de la versión también aparece en "Textos en inglés"
       const label = root.querySelector(`label[for="v-${t.dataset.v}-name_en"]`);
       if (label) label.textContent = `Versión "${t.value || Number(t.dataset.v) + 1}" (EN)`;
     }
+  } else if (t.dataset.enKind) {
+    // traducción de un color o tamaño: se aplica a todas las versiones que lo llevan
+    const kind = t.dataset.enKind;
+    state.variants.filter(v => v[kind].trim() === t.dataset.enValue).forEach(v => { v[`${kind}_en`] = t.value; });
   } else if (t.dataset.i !== undefined) {
     state.images[Number(t.dataset.i)][t.dataset.if] = t.value;
   } else if (t.dataset.compat) {
@@ -354,6 +492,28 @@ root.addEventListener('input', e => {
 root.addEventListener('change', e => {
   const f = e.target.dataset.field;
   if (f === 'product_type' || f === 'is_active') render();
+  if (e.target.dataset.opt) {
+    const kind = e.target.dataset.opt;
+    state.opts[kind] = e.target.checked;
+    if (kind === 'color' && e.target.checked) {
+      state.variants.forEach(v => { if (!v.color_hex || v.color_hex === '#999999') v.color_hex = defaultHex(v.color); });
+    }
+    errors = {};
+    render();
+  }
+  // un color o tamaño nuevo aparece en "Textos en inglés" y en las fotos por color
+  const vf = e.target.dataset.vf;
+  if (vf === 'color' || vf === 'size') {
+    const v = state.variants[Number(e.target.dataset.v)];
+    if (vf === 'color' && (!v.color_hex || v.color_hex === '#999999')) v.color_hex = defaultHex(v.color);
+    // otra versión con el mismo color ya tiene tono y traducción: se copian
+    const twin = state.variants.find(x => x !== v && x[vf].trim() && x[vf].trim() === v[vf].trim());
+    if (twin) {
+      v[`${vf}_en`] = twin[`${vf}_en`];
+      if (vf === 'color') v.color_hex = twin.color_hex;
+    }
+    render();
+  }
   if (e.target.id === 'f-upload' && e.target.files[0]) addFile(e.target.files[0]);
 });
 
@@ -385,6 +545,8 @@ root.addEventListener('click', async e => {
     if (!url) return input.focus();
     state.images.push({ url, alt_text: state.name ? `${state.name}` : '' });
     render();
+  } else if (b.id === 'generate') {
+    generate();
   } else if (b.id === 'save') {
     save();
   } else if (b.id === 'delete') {
@@ -449,7 +611,7 @@ async function addFile(file) {
 async function save() {
   const btn = document.getElementById('save');
   const msg = document.getElementById('save-msg');
-  errors = validateProduct(payload());
+  errors = validateProduct(payload(), state.opts);
   if (Object.keys(errors).length) {
     render();
     document.getElementById('save-msg').textContent =
