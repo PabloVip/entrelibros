@@ -480,7 +480,7 @@ const patterns = [
   // listados
   [/^(.+) · (\d+) (versión|versiones) · editado (.+)$/, (m, tr) => `${tr(m[1])} · ${plural(m[2], 'version', 'versions')} · edited ${m[4]}`],
   [/^(\d+) clientes?$/, m => plural(m[1], 'customer', 'customers')],
-  [/^(\d+) uds\.$/, m => plural(m[1], 'unit', 'units')],
+  [/^(\d+) uds?\.$/, m => plural(m[1], 'unit', 'units')],
   [/^Quedan (\d+)$/, '$1 left'],
   [/^([▲▼]) (\d+) % frente al periodo anterior$/, '$1 $2% vs previous period'],
   [/^(\d+) pagados$/, '$1 paid'],

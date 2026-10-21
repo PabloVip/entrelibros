@@ -80,7 +80,7 @@ function renderTop(orders) {
   document.getElementById('top-products').innerHTML = top.length ? `
     <ol class="rank">${top.map(([name, u]) => `
       <li><span>${escapeHtml(name)}</span><strong>${money(u.amount)}</strong>
-        <small class="muted">${u.qty} uds.</small><span></span>
+        <small class="muted">${u.qty} ${u.qty === 1 ? 'ud.' : 'uds.'}</small><span></span>
         <span class="meter"><span style="width:${(u.amount / max) * 100}%"></span></span></li>`).join('')}
     </ol>` : '<p class="empty">Todavía no hay ventas en este periodo.</p>';
 }
