@@ -2,23 +2,45 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex, nofollow">
   <title>Página no encontrada · Entrelibros</title>
-  <style>
-    body { font-family: system-ui, sans-serif; background: #faf7f2; color: #2b2420; text-align: center; padding: 64px 16px; }
-    a { color: #8a4b2a; }
-  </style>
+  <meta name="theme-color" content="#10182B">
+  <meta name="color-scheme" content="light dark">
+  <!-- Rutas absolutas del repo en GitHub Pages (esta página puede salir en cualquier dirección):
+       ajustarlas si el repo se llama distinto -->
+  <script src="/entrelibros/js/core/boot.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..700,0..100,0..1&family=Instrument+Sans:wght@400..700&display=swap">
+  <link rel="stylesheet" href="/entrelibros/css/style.css">
   <link rel="icon" href="/entrelibros/img/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/entrelibros/img/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="/entrelibros/img/apple-touch-icon.png">
-  <meta name="theme-color" content="#1D2537">
 </head>
 <body>
-  <h1>Página no encontrada</h1>
-  <p>La página que buscas no existe o se ha movido.</p>
-  <!-- Ruta absoluta del repo en GitHub Pages: ajustar si el repo se llama distinto -->
-  <p><a href="/entrelibros/">Volver a la tienda</a></p>
+  <div class="academic-banner" role="note">
+    <strong>Prototipo académico</strong>
+    <span class="banner-long">del Grado en Ingeniería Informática (UCAM). Tienda ficticia: no introduzcas datos personales ni medios de pago reales.</span>
+    <span class="banner-short">(UCAM): no uses datos reales.</span>
+  </div>
+  <main class="not-found" id="contenido">
+    <div>
+      <!-- una balda con un libro que falta: el hueco es la página que no está -->
+      <div class="lost-shelf" aria-hidden="true">
+        <span class="book"></span><span class="book"></span><span class="book"></span>
+        <span class="lost-gap">?</span>
+        <span class="book"></span><span class="book"></span><span class="book"></span>
+      </div>
+      <h1>Página no encontrada</h1>
+      <p>Este hueco de la estantería está vacío.</p>
+      <p>La página que buscas no existe o se ha movido.</p>
+      <div class="hero-actions">
+        <a class="btn" href="/entrelibros/">Volver a la tienda</a>
+        <a class="btn btn-ghost" href="/entrelibros/catalogo.html">Ver el catálogo</a>
+      </div>
+    </div>
+  </main>
   <script type="module" src="/entrelibros/js/core/i18n.js"></script>
 </body>
 </html>
