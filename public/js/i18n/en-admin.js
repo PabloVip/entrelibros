@@ -295,6 +295,13 @@ const exact = {
   'Ya existe otro producto con ese slug': 'Another product already uses that slug',
   'Ya existe un método de envío con ese código': 'A shipping method with that code already exists',
 
+  // ---------- Correo con la factura (pedido.html) ----------
+  'Enviar la factura a mi correo': 'Email me the invoice',
+  'Enviando la factura…': 'Sending the invoice…',
+  'Te la acabamos de enviar: espera un par de minutos antes de pedirla otra vez.': 'We have just sent it: wait a couple of minutes before asking again.',
+  'El envío de correos no está activado en la tienda: descarga la factura con el botón de arriba.': 'Email sending is not enabled in the shop: download the invoice with the button above.',
+  'No hemos podido enviar el correo ahora. Descarga la factura o inténtalo más tarde.': 'We could not send the email right now. Download the invoice or try again later.',
+
   // ---------- Sandbox de Bizum (pago.html) ----------
   'Bizum en sandbox:': 'Bizum sandbox:',
   'es una simulación, no se cobra nada y no se usan teléfonos reales. Usa uno de estos teléfonos de prueba:': 'it is a simulation: nothing is charged and no real phone numbers are used. Use one of these test phones:',
@@ -571,6 +578,10 @@ const patterns = [
   [/^Editar (.+)$/, (m, tr) => `Edit ${tr(m[1])}`],
   [/^(.+): (activado|desactivado)\.$/, m => `${m[1]}: ${m[2] === 'activado' ? 'activated' : 'deactivated'}.`],
   [/^(\d+-\d+) días laborables$/, '$1 working days'],
+
+  // correo con la factura
+  [/^Te hemos enviado la confirmación y la factura a (.+)\.$/, 'We have sent the confirmation and the invoice to $1.'],
+  [/^La confirmación y la factura se enviaron a (.+)\.$/, 'The confirmation and the invoice were sent to $1.'],
 
   // sandbox de Bizum
   [/^Enviando la solicitud de pago al (.+)…$/, 'Sending the payment request to $1…'],

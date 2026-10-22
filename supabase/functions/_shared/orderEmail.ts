@@ -1,21 +1,24 @@
-// Correo de confirmación del pedido después de pagar con Stripe.
+// Correo de confirmación del pedido, con la factura en PDF adjunta (invoicePdf.ts).
 //
 // Lo envía el servidor (nunca el navegador) con la API de correo transaccional de Brevo, la misma
-// cuenta que usa Supabase Auth para los correos de las cuentas. Se llama una sola vez por pedido:
-// confirmPaidSession (stripe.ts) solo lo hace cuando confirm_stripe_payment acaba de registrar el
-// pago (already_confirmed = false). Si la vuelta del cliente y el webhook llegan a la vez, solo uno
-// de los dos lo registra y solo ese manda el correo.
+// cuenta que usa Supabase Auth para los correos de las cuentas. Lo piden:
+//   · confirmPaidSession (stripe.ts) al registrar un pago de Stripe (vuelta del cliente o webhook);
+//   · la Edge Function send-order-email, desde la página del pedido (pagos simulados y botón de reenvío).
+// Un solo correo por pedido: antes de enviar se "reserva" con orders.confirmation_email_at
+// (13_correo_factura.sql). Reenviar a petición del cliente exige que hayan pasado 2 minutos.
+// Cada envío queda como evento de negocio email.sent o email.failed (con el motivo) en el back-office.
 //
 // Secrets de Supabase (Edge Functions → Secrets):
 //   BREVO_API_KEY   clave de API de Brevo (xkeysib-…). No es la clave SMTP.
 //   MAIL_FROM       remitente verificado en Brevo (el mismo que el de los correos de Supabase Auth)
 //   MAIL_FROM_NAME  opcional; por defecto "Entrelibros"
-// Si falta BREVO_API_KEY o MAIL_FROM no se envía nada y queda un aviso en los logs: el pago no falla.
+// Si falta BREVO_API_KEY o MAIL_FROM no se envía nada y el pago no falla.
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.45.4';
-
-type Lang = 'es' | 'en';
+import { buildInvoicePdf, invoiceFileName, type Lang } from './invoicePdf.ts';
 
 interface OrderRow {
+  id: number;
+  customer_id: number;
   order_number: string;
   status: string;
   created_at: string;
@@ -43,7 +46,7 @@ interface OrderRow {
     line_total: number;
     variant: { name_en: string | null; product: { name_en: string | null } | null } | null;
   }[];
-  payments: { method: string; status: string; card_last4: string | null; transaction_ref: string }[];
+  payments: { method: string; status: string; card_last4: string | null; transaction_ref: string; created_at: string }[];
 }
 
 // ---------- Textos ----------
@@ -61,10 +64,12 @@ const T = {
     total: 'Total', vat: (r: string) => `IVA incluido (${r} %)`,
     shipTo: 'Envío a', method: 'Método', eta: 'Entrega estimada',
     etaRange: (a: string, b: string) => `entre el ${a} y el ${b}`,
-    notes: 'Notas', payment: 'Pago', card: 'Tarjeta (Stripe, prueba)', ref: 'Referencia',
+    notes: 'Notas', payment: 'Pago', ref: 'Referencia',
+    methods: { stripe_test: 'Tarjeta (Stripe, prueba)', tarjeta_simulada: 'Tarjeta (simulada)', bizum_simulado: 'Bizum (simulado)' } as Record<string, string>,
+    attached: 'Te adjuntamos la factura en PDF.',
     button: 'Ver mi pedido',
     help: 'Si tienes cualquier problema, responde a este correo o escríbenos desde Soporte indicando tu número de pedido.',
-    fake: 'Entrelibros es una tienda ficticia, proyecto de la asignatura Soluciones Informáticas para la Empresa (UCAM). El pago se ha hecho con Stripe en modo prueba: no se ha cobrado nada.',
+    fake: 'Entrelibros es una tienda ficticia, proyecto de la asignatura Soluciones Informáticas para la Empresa (UCAM). El pago es de prueba: no se ha cobrado nada.',
     shipping_methods: {} as Record<string, string>,
     locale: 'es-ES',
   },
@@ -80,10 +85,12 @@ const T = {
     total: 'Total', vat: (r: string) => `VAT included (${r}%)`,
     shipTo: 'Ship to', method: 'Method', eta: 'Estimated delivery',
     etaRange: (a: string, b: string) => `between ${a} and ${b}`,
-    notes: 'Notes', payment: 'Payment', card: 'Card (Stripe, test)', ref: 'Reference',
+    notes: 'Notes', payment: 'Payment', ref: 'Reference',
+    methods: { stripe_test: 'Card (Stripe, test)', tarjeta_simulada: 'Card (simulated)', bizum_simulado: 'Bizum (simulated)' } as Record<string, string>,
+    attached: 'Your invoice is attached as a PDF.',
     button: 'View my order',
     help: 'If anything is wrong, reply to this email or contact us from Support with your order number.',
-    fake: 'Entrelibros is a fictitious shop, a project for the Business IT Solutions course (UCAM). The payment was made with Stripe in test mode: nothing has been charged.',
+    fake: 'Entrelibros is a fictitious shop, a project for the Business IT Solutions course (UCAM). The payment is a test one: nothing has been charged.',
     shipping_methods: {
       estandar: 'Standard home delivery',
       express: 'Express delivery 24/48 h',
@@ -188,13 +195,14 @@ export function buildOrderEmail(o: OrderRow, lang: Lang, orderUrl: string) {
         ${shipName ? `<br><br><strong>${esc(t.method)}:</strong> ${esc(shipName)}` : ''}
         ${eta ? `<br><strong>${esc(t.eta)}:</strong> ${esc(eta)}` : ''}
         ${o.customer_notes ? `<br><strong>${esc(t.notes)}:</strong> ${esc(o.customer_notes)}` : ''}
-        ${payment ? `<br><br><strong>${esc(t.payment)}:</strong> ${esc(t.card)}${payment.card_last4 ? ` ···· ${esc(payment.card_last4)}` : ''}` : ''}
+        ${payment ? `<br><br><strong>${esc(t.payment)}:</strong> ${esc(t.methods[payment.method] ?? payment.method)}${payment.card_last4 ? ` ···· ${esc(payment.card_last4)}` : ''}` : ''}
       </td></tr>
     </table>
 
     <p style="margin:26px 0;text-align:center;">
       <a href="${esc(orderUrl)}" style="display:inline-block;background:${C.accent};color:${C.night};text-decoration:none;font-weight:bold;padding:12px 26px;border-radius:999px;">${esc(t.button)}</a>
     </p>
+    <p style="margin:0 0 8px;font-size:13px;color:${C.muted};line-height:1.5;">${esc(t.attached)}</p>
     <p style="margin:0;font-size:13px;color:${C.muted};line-height:1.5;">${esc(t.help)}</p>
   </td></tr>
   <tr><td style="padding:16px 28px;background:${C.bg};font-size:11px;color:${C.muted};line-height:1.5;">${esc(t.fake)}</td></tr>
@@ -211,8 +219,8 @@ export function buildOrderEmail(o: OrderRow, lang: Lang, orderUrl: string) {
     `${t.shipTo}: ${address.join(', ')}`,
     ...(shipName ? [`${t.method}: ${shipName}`] : []),
     ...(eta ? [`${t.eta}: ${eta}`] : []),
-    ...(payment ? [`${t.payment}: ${t.card}${payment.card_last4 ? ` ···· ${payment.card_last4}` : ''}`] : []),
-    '', `${t.button}: ${orderUrl}`, '', t.help, '', t.fake,
+    ...(payment ? [`${t.payment}: ${t.methods[payment.method] ?? payment.method}${payment.card_last4 ? ` ···· ${payment.card_last4}` : ''}`] : []),
+    '', `${t.button}: ${orderUrl}`, '', t.attached, t.help, '', t.fake,
   ].join('\n');
 
   return { subject, html, text, to: { email: o.customer?.email ?? '', name: o.customer?.full_name ?? o.ship_name } };
@@ -220,38 +228,106 @@ export function buildOrderEmail(o: OrderRow, lang: Lang, orderUrl: string) {
 
 // ---------- Envío ----------
 
-/**
- * `client`: el cliente de Supabase con la clave secreta (db() de stripe.ts).
- * Lee el pedido de la BD y manda el correo de confirmación. Nunca lanza errores: el pago ya está
- * registrado y un fallo del correo no puede deshacerlo; solo queda en los logs de la función.
- */
-export async function sendOrderConfirmation(client: SupabaseClient, orderNumber: string, lang: Lang, siteBase: string) {
-  try {
-    const apiKey = Deno.env.get('BREVO_API_KEY') ?? '';
-    const from = Deno.env.get('MAIL_FROM') ?? '';
-    if (!apiKey || !from) {
-      console.warn('[correo] sin BREVO_API_KEY o MAIL_FROM: no se envía la confirmación de', orderNumber);
-      return { sent: false };
-    }
+/** Bytes → base64 (el adjunto de Brevo va en base64). */
+function toBase64(bytes: Uint8Array) {
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
 
-    const { data: order, error } = await client
+/** Datos de la factura a partir del pedido (en inglés si el cliente compró en inglés). */
+function invoiceData(o: OrderRow, lang: Lang) {
+  const t = T[lang];
+  const p = o.payments.find(x => x.status === 'aprobado') ?? o.payments[0];
+  return {
+    order_number: o.order_number,
+    paid_at: p?.created_at ?? o.created_at,
+    customer_name: o.customer?.full_name ?? o.ship_name,
+    email: o.customer?.email ?? '',
+    ship: {
+      name: o.ship_name, address: o.ship_address, postcode: o.ship_postcode, city: o.ship_city, province: o.ship_province,
+      method: o.shipping ? (lang === 'en' ? t.shipping_methods[o.shipping.code] ?? o.shipping.name : o.shipping.name) : '',
+    },
+    items: o.items.map(i => ({
+      name: lang === 'en' ? i.variant?.product?.name_en || i.product_name : i.product_name,
+      variant: lang === 'en' ? i.variant?.name_en || i.variant_name : i.variant_name,
+      sku: i.sku, quantity: i.quantity, unit_price: Number(i.unit_price), line_total: Number(i.line_total),
+    })),
+    subtotal: Number(o.subtotal), discount_code: o.discount_code, discount_amount: Number(o.discount_amount),
+    shipping_cost: Number(o.shipping_cost), tax_rate: Number(o.tax_rate), tax_amount: Number(o.tax_amount), total: Number(o.total),
+    payment: { method: t.methods[p?.method ?? ''] ?? p?.method ?? '', last4: p?.card_last4 ?? null, ref: p?.transaction_ref ?? '' },
+  };
+}
+
+const PAID = '(pago_simulado,pendiente_preparacion,enviado,entregado,incidencia)';
+const RESEND_MS = 2 * 60 * 1000;
+
+export interface SendResult {
+  sent: boolean;
+  /** sin enviar: disabled (faltan los secrets) · already (ya se envió) · wait (reenvío antes de 2 min) · error */
+  reason?: 'disabled' | 'already' | 'wait' | 'error';
+}
+
+/**
+ * Envía el correo de confirmación con la factura adjunta. Nunca lanza errores: el pago ya está
+ * registrado y un fallo del correo no puede deshacerlo (queda como evento email.failed).
+ * `client`: cliente de Supabase con la clave secreta (db() de stripe.ts).
+ * `resend`: el cliente pide que se lo vuelvan a enviar (botón de la página del pedido).
+ */
+export async function sendOrderConfirmation(
+  client: SupabaseClient, orderNumber: string, lang: Lang, siteBase: string, opts: { resend?: boolean } = {},
+): Promise<SendResult> {
+  const apiKey = Deno.env.get('BREVO_API_KEY') ?? '';
+  const from = Deno.env.get('MAIL_FROM') ?? '';
+  if (!apiKey || !from) {
+    console.warn('[correo] sin BREVO_API_KEY o MAIL_FROM: no se envía la confirmación de', orderNumber);
+    return { sent: false, reason: 'disabled' };
+  }
+
+  // 1) Reserva: un solo envío a la vez y solo de pedidos pagados. Cada UPDATE es atómico: si llegan
+  //    dos peticiones a la vez, solo una encuentra la condición y "gana". Un reenvío además vale si el
+  //    último envío fue hace más de 2 minutos.
+  const now = new Date();
+  const claim = (only: (q: any) => any) => only(client.from('orders')
+    .update({ confirmation_email_at: now.toISOString() })
+    .eq('order_number', orderNumber)
+    .filter('status', 'in', PAID)).select('id');
+  let { data: claimed, error: claimError } = await claim(q => q.is('confirmation_email_at', null));
+  if (!claimError && !claimed?.length && opts.resend) {
+    ({ data: claimed, error: claimError } = await claim(q => q.lt('confirmation_email_at', new Date(now.getTime() - RESEND_MS).toISOString())));
+  }
+  if (claimError) {
+    console.error('[correo] no se ha podido reservar el envío de', orderNumber, claimError);
+    return { sent: false, reason: 'error' };
+  }
+  if (!claimed?.length) return { sent: false, reason: opts.resend ? 'wait' : 'already' };
+
+  let order: OrderRow | null = null;
+  try {
+    // 2) Datos del pedido
+    const { data, error } = await client
       .from('orders')
-      .select(`order_number, status, created_at, subtotal, discount_code, discount_amount, shipping_cost,
+      .select(`id, customer_id, order_number, status, created_at, subtotal, discount_code, discount_amount, shipping_cost,
         tax_rate, tax_amount, total, ship_name, ship_address, ship_city, ship_postcode, ship_province, customer_notes,
         customer:customers ( email, full_name ),
         shipping:shipping_methods ( code, name, eta_days_min, eta_days_max ),
         items:order_items ( product_name, variant_name, sku, unit_price, quantity, line_total,
           variant:product_variants ( name_en, product:products ( name_en ) ) ),
-        payments ( method, status, card_last4, transaction_ref )`)
+        payments ( method, status, card_last4, transaction_ref, created_at )`)
       .eq('order_number', orderNumber)
       .maybeSingle<OrderRow>();
     if (error) throw error;
-    if (!order?.customer?.email) throw new Error(`pedido ${orderNumber} sin email`);
+    if (!data?.customer?.email) throw new Error(`pedido ${orderNumber} sin email`);
+    order = data;
 
-    const orderUrl = `${siteBase}pedido.html?${new URLSearchParams({ pedido: order.order_number, email: order.customer.email })}`
+    // 3) Correo + factura en PDF
+    const orderUrl = `${siteBase}pedido.html?${new URLSearchParams({ pedido: order.order_number, email: order.customer!.email })}`
       + (lang === 'en' ? '&lang=en' : '');
     const mail = buildOrderEmail(order, lang, orderUrl);
+    const fileName = invoiceFileName(order.order_number, lang);
+    const pdf = toBase64(buildInvoicePdf(invoiceData(order, lang), lang));
 
+    // 4) Envío con la API de Brevo
     const res = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: { 'api-key': apiKey, 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -261,14 +337,31 @@ export async function sendOrderConfirmation(client: SupabaseClient, orderNumber:
         subject: mail.subject,
         htmlContent: mail.html,
         textContent: mail.text,
+        attachment: [{ name: fileName, content: pdf }],
         tags: ['pedido-confirmado'],
       }),
     });
-    if (!res.ok) throw new Error(`Brevo respondió ${res.status}: ${await res.text()}`);
+    if (!res.ok) throw new Error(`Brevo respondió ${res.status}: ${(await res.text()).slice(0, 300)}`);
+
     console.log('[correo] confirmación enviada:', orderNumber);
+    await logEvent(client, 'email.sent', order, { order_number: order.order_number, attachment: fileName, resend: !!opts.resend });
     return { sent: true };
   } catch (err) {
     console.error('[correo] no se ha podido enviar la confirmación de', orderNumber, err);
-    return { sent: false };
+    // se libera la reserva para poder reintentarlo
+    await client.from('orders').update({ confirmation_email_at: null }).eq('order_number', orderNumber);
+    await logEvent(client, 'email.failed', order, {
+      order_number: orderNumber, error: String((err as Error)?.message ?? err).slice(0, 300),
+    });
+    return { sent: false, reason: 'error' };
   }
+}
+
+/** Evento de negocio del envío (se ve en Back-office → Eventos). Si falla, solo queda en los logs. */
+async function logEvent(client: SupabaseClient, type: string, order: OrderRow | null, payload: Record<string, unknown>) {
+  const { error } = await client.from('events').insert({
+    event_type: type, source: 'servidor', entity_type: 'order', entity_id: order ? String(order.id) : null,
+    order_id: order?.id ?? null, customer_id: order?.customer_id ?? null, payload,
+  });
+  if (error) console.error('[correo] evento', type, error);
 }

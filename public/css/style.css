@@ -1084,6 +1084,7 @@ input.cart-qty:disabled { background: transparent; color: var(--muted); }
 #invoice-msg:not(:empty) { margin: -8px 0 16px; }
 .order-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; align-items: start; }
 .order-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 28px 0 0; }
+.mail-note { margin: -6px 0 18px; font-size: .88rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; } /* correo con la factura (pedido.html) */
 .span-2 { grid-column: 1 / -1; }
 .stack { display: flex; flex-direction: column; gap: 8px; }
 .stack label { font-size: .85rem; font-weight: 600; }

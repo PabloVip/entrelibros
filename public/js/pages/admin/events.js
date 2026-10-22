@@ -20,7 +20,7 @@ form.type.insertAdjacentHTML('beforeend',
    'product.created', 'product.updated', 'product.published', 'product.archived', 'product.deleted',
    'stock.adjusted', 'discount.saved', 'shipping_method.saved', 'theme.saved', 'theme.deleted',
    // cuentas de cliente (09_cuentas_clientes.sql)
-   'customer.registered', 'customer.profile_updated'].map(t => `<option value="${t}">${t}</option>`).join(''));
+   'customer.registered', 'customer.profile_updated', 'email.sent', 'email.failed'].map(t => `<option value="${t}">${t}</option>`).join(''));
 
 const pedido = Number(new URLSearchParams(location.search).get('pedido'));
 if (Number.isInteger(pedido) && pedido > 0) form.orderId.value = pedido;

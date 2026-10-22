@@ -81,6 +81,15 @@ export function confirmStripeCheckout(sessionId) {
   return invoke('confirm-checkout-session', { session_id: sessionId });
 }
 
+/**
+ * Correo de confirmación con la factura en PDF (Edge Function send-order-email). El servidor solo lo
+ * manda al email del pedido, si está pagado y una vez; `resend` lo vuelve a pedir (cada 2 minutos como mucho).
+ * Devuelve { sent, reason } — reason: already | wait | disabled | error.
+ */
+export function sendOrderEmail(orderNumber, email, lang, resend = false) {
+  return invoke('send-order-email', { order_number: orderNumber, email, lang, resend });
+}
+
 /** Pedido para la confirmación; null si el número y el email no coinciden. */
 export async function getOrderSummary(orderNumber, email) {
   const { data, error } = await supabase.rpc('get_order_summary', { p_order_number: orderNumber, p_email: email });

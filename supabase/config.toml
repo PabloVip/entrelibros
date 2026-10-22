@@ -16,3 +16,8 @@ verify_jwt = false
 # Stripe no manda ningún JWT: la función comprueba la firma del aviso con STRIPE_WEBHOOK_SECRET
 [functions.stripe-webhook]
 verify_jwt = false
+
+# Correo de confirmación con la factura: lo pide la página del pedido, también sin cuenta.
+# Solo envía al email del pedido, si coincide con el número y está pagado (send-order-email/index.ts).
+[functions.send-order-email]
+verify_jwt = false

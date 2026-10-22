@@ -3,12 +3,12 @@
 // Al volver de Stripe la URL trae además ?session_id=cs_test_…: antes de enseñar el pedido se
 // pide al servidor que confirme el pago con Stripe (Edge Function confirm-checkout-session).
 import { renderLayout } from '../core/layout.js';
-import { getOrderSummary, confirmStripeCheckout } from '../repositories/checkoutRepository.js';
+import { getOrderSummary, confirmStripeCheckout, sendOrderEmail } from '../repositories/checkoutRepository.js';
 import { ORDER_NUMBER_RE, STRIPE_SESSION_RE } from '../services/checkoutService.js';
 import { METHOD_LABELS, PAYMENT_LABELS } from '../services/orderService.js';
 import { statusBadge } from '../components/statusBadge.js';
 import { escapeHtml, money, param, formatDate } from '../core/utils.js';
-import { locale } from '../core/i18n.js';
+import { locale, lang } from '../core/i18n.js';
 import { showCheckoutSteps } from '../components/checkoutSteps.js';
 import { nookLights } from '../components/nookLights.js';
 import { downloadInvoice, hasInvoice } from '../services/invoiceService.js';
@@ -19,6 +19,7 @@ const root = document.getElementById('order');
 const dayFmt = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long' });
 let stripeNotice = ''; // aviso si el pago de Stripe no se ha podido confirmar todavía
 let current = null;    // pedido que se está enseñando (para la factura)
+let mailed = false;    // ya se ha pedido el correo de este pedido en esta visita
 
 /** Suma días laborables (sin sábados ni domingos; los festivos no se tienen en cuenta). */
 function addBusinessDays(date, days) {
@@ -88,6 +89,9 @@ function render(o, email) {
       ${hasInvoice(o) ? '<button type="button" class="btn btn-small no-print order-invoice" data-invoice>Descargar factura (PDF)</button>' : ''}
     </div>
     <p id="invoice-msg" class="form-msg no-print" role="status"></p>
+    ${hasInvoice(o) ? `
+      <p class="mail-note no-print"><span id="mail-msg" role="status"></span>
+        <button type="button" class="link-btn" data-resend hidden>Enviar la factura a mi correo</button></p>` : ''}
 
     ${o.status === 'creado' && stripeNotice ? `<p class="note" role="status">${escapeHtml(stripeNotice)}</p>` : ''}
     ${o.status === 'creado' ? `
@@ -155,6 +159,7 @@ function render(o, email) {
 root.addEventListener('click', e => {
   if (e.target.closest('[data-print]')) window.print();
   if (e.target.closest('[data-invoice]')) invoice();
+  if (e.target.closest('[data-resend]')) mailInvoice(true);
 });
 
 // "Descargar factura (PDF)": se genera en el navegador con los datos del pedido (services/invoiceService.js)
@@ -177,6 +182,36 @@ async function invoice() {
   }
 }
 
+// Correo de confirmación con la factura en PDF. Al abrir un pedido pagado se pide una vez: el servidor
+// solo lo envía la primera vez (en Stripe ya lo mandó al confirmar el pago), así que en las visitas
+// siguientes responde "ya enviado". El botón "Enviar la factura a mi correo" lo vuelve a pedir.
+async function mailInvoice(resend) {
+  if (!current || (mailed && !resend)) return;
+  mailed = true;
+  const msg = document.getElementById('mail-msg');
+  const btn = root.querySelector('[data-resend]');
+  if (!msg) return;
+  const to = current.email;
+  if (resend) { btn.disabled = true; msg.textContent = 'Enviando la factura…'; }
+  try {
+    const r = await sendOrderEmail(current.order.order_number, to, lang, resend);
+    if (r.sent) msg.textContent = `Te hemos enviado la confirmación y la factura a ${to}.`;
+    else if (r.reason === 'already') msg.textContent = `La confirmación y la factura se enviaron a ${to}.`;
+    else if (r.reason === 'wait') msg.textContent = 'Te la acabamos de enviar: espera un par de minutos antes de pedirla otra vez.';
+    else if (r.reason === 'disabled') msg.textContent = 'El envío de correos no está activado en la tienda: descarga la factura con el botón de arriba.';
+    else msg.textContent = 'No hemos podido enviar el correo ahora. Descarga la factura o inténtalo más tarde.';
+    btn.hidden = r.reason === 'disabled';
+  } catch (err) {
+    console.error(err);
+    // la función aún no está desplegada (404) o no hay conexión: la factura se puede descargar igual
+    msg.textContent = '';
+    btn.hidden = !resend;
+    if (resend) msg.textContent = 'No hemos podido enviar el correo ahora. Descarga la factura o inténtalo más tarde.';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 async function load(orderNumber, email) {
   root.setAttribute('aria-busy', 'true');
   try {
@@ -186,9 +221,11 @@ async function load(orderNumber, email) {
       return;
     }
     current = { order, email };
+    mailed = false;
     render(order, email);
     // Desde "Mi cuenta" (botón Factura) se llega con ?factura=1: se descarga sin pulsar nada más
     if (param('factura') === '1' && hasInvoice(order)) invoice();
+    if (hasInvoice(order)) mailInvoice(false);
   } catch (err) {
     console.error(err);
     root.innerHTML = err?.code === 'PGRST202'
