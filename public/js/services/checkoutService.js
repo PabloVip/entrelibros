@@ -69,6 +69,20 @@ export const TEST_CARDS = [
   { number: '4000 0000 0000 0002', result: 'rechazada' },
 ];
 
+// Teléfonos de prueba del sandbox de Bizum (simulate_payment, 05_checkout.sql). Nunca un teléfono real.
+export const BIZUM_TEST_PHONES = [
+  { number: '600 000 001', result: 'recibe la solicitud en el móvil: la aceptas o la rechazas' },
+  { number: '600 000 002', result: 'no tiene Bizum activado' },
+  { number: '600 000 003', result: 'supera el límite de Bizum' },
+];
+
+/** Teléfono escrito → sus 9 cifras si es uno de prueba (admite espacios y +34); si no, null. */
+export function testPhoneDigits(value) {
+  let digits = String(value ?? '').replace(/[\s().+-]/g, '');
+  if (/^34[0-9]{9}$/.test(digits)) digits = digits.slice(2);
+  return BIZUM_TEST_PHONES.some(p => p.number.replaceAll(' ', '') === digits) ? digits : null;
+}
+
 // Tarjetas de prueba de Stripe (modo test). Se escriben en la página de Stripe, no en la nuestra:
 // la tienda nunca ve el número de la tarjeta.
 export const STRIPE_TEST_CARDS = [

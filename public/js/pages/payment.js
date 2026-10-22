@@ -6,7 +6,9 @@ import { renderLayout } from '../core/layout.js';
 import { simulatePayment, createStripeCheckout } from '../repositories/checkoutRepository.js';
 import {
   ORDER_NUMBER_RE, TEST_CARDS, STRIPE_TEST_CARDS, testCardDigits, getLastOrder,
+  BIZUM_TEST_PHONES, testPhoneDigits,
 } from '../services/checkoutService.js';
+import { openBizumSandbox } from '../components/bizumSandbox.js';
 import { escapeHtml, money, param } from '../core/utils.js';
 import { lang } from '../core/i18n.js';
 import { showCheckoutSteps } from '../components/checkoutSteps.js';
@@ -51,6 +53,14 @@ function render() {
       </ul>
     </div>
 
+    <div class="note pay-note" data-for-method="bizum_simulado" hidden>
+      <strong>Bizum en sandbox:</strong> es una simulación, no se cobra nada y no se usan teléfonos reales. Usa uno de estos teléfonos de prueba:
+      <ul class="test-cards">${BIZUM_TEST_PHONES.map(p => `
+        <li><code>${escapeHtml(p.number)}</code> → ${escapeHtml(p.result)}
+          <button type="button" class="link-btn" data-phone="${escapeHtml(p.number)}">Usar</button></li>`).join('')}
+      </ul>
+    </div>
+
     <form id="pay-form" class="card-form" novalidate>
       <fieldset class="form-section variants">
         <legend class="h3">Método de pago</legend>
@@ -66,7 +76,7 @@ function render() {
         <label class="variant">
           <input type="radio" name="method" value="bizum_simulado">
           <span class="variant-name"><span class="method-ico">${PHONE}</span>Bizum (simulado)</span><span></span>
-          <small class="ship-info">Siempre se aprueba; no hace falta ningún dato.</small>
+          <small class="ship-info">Recibes la solicitud en el móvil del sandbox y la aceptas.</small>
         </label>
       </fieldset>
 
@@ -78,6 +88,13 @@ function render() {
         <p id="err-card" class="field-error"></p>
       </div>
 
+      <div class="field" id="phone-field" hidden>
+        <label for="f-phone">Teléfono de prueba (Bizum)</label>
+        <input id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="off"
+               maxlength="16" placeholder="600 000 001" aria-describedby="err-phone">
+        <p id="err-phone" class="field-error"></p>
+      </div>
+
       <button type="submit" class="btn">Pagar con Stripe</button>
       <p id="pay-msg" class="form-msg" role="alert"></p>
     </form>`;
@@ -87,7 +104,9 @@ function render() {
 function showMethod(method) {
   for (const el of root.querySelectorAll('[data-for-method]')) el.hidden = el.dataset.forMethod !== method;
   document.getElementById('card-field').hidden = method !== 'tarjeta_simulada';
-  root.querySelector('#pay-form button[type=submit]').textContent = method === 'stripe_test' ? 'Pagar con Stripe' : 'Pagar';
+  document.getElementById('phone-field').hidden = method !== 'bizum_simulado';
+  root.querySelector('#pay-form button[type=submit]').textContent =
+    method === 'stripe_test' ? 'Pagar con Stripe' : method === 'bizum_simulado' ? 'Enviar solicitud de Bizum' : 'Pagar';
 }
 
 /** Mensaje de error de Stripe para el cliente. */
@@ -134,9 +153,47 @@ function payErrorText(err) {
   return 'No se ha podido procesar el pago. Revisa tu conexión e inténtalo de nuevo.';
 }
 
+/**
+ * Bizum en sandbox: se abre el "móvil" simulado, el cliente acepta, rechaza o deja caducar la
+ * solicitud y el servidor registra el resultado (simulate_payment decide con el teléfono de prueba).
+ */
+async function payWithBizum(form) {
+  const errPhone = document.getElementById('err-phone');
+  const phone = testPhoneDigits(form.elements.phone.value);
+  if (!phone) {
+    errPhone.textContent = 'Usa uno de los teléfonos de prueba indicados arriba.';
+    form.elements.phone.setAttribute('aria-invalid', 'true');
+    form.elements.phone.focus();
+    return;
+  }
+  errPhone.textContent = '';
+  form.elements.phone.removeAttribute('aria-invalid');
+  const btn = form.querySelector('button[type=submit]');
+  btn.disabled = true;
+  say('');
+  const sb = openBizumSandbox({ phone, amount: last?.total ?? null, orderNumber });
+  try {
+    await sb.connect();
+    // solo el teléfono que tiene Bizum activo recibe la solicitud; los otros los rechaza el "banco"
+    const decision = phone === '600000001' ? await sb.ask() : null;
+    sb.processing();
+    const r = await simulatePayment(orderNumber, 'bizum_simulado', phone, decision);
+    const ok = r.status === 'aprobado';
+    await sb.result(ok, ok ? `Has pagado ${last ? money(last.total) : 'el pedido'} con Bizum.` : (r.failure_reason ?? 'Pago rechazado.'));
+    if (ok) { location.href = confirmationUrl(); return; }
+    say(`Pago rechazado: ${escapeHtml(r.failure_reason ?? 'motivo desconocido')}. Puedes intentarlo de nuevo.`, 'error');
+  } catch (err) {
+    console.error(err);
+    sb.close();
+    say(payErrorText(err), 'error');
+  }
+  btn.disabled = false;
+}
+
 async function pay(form) {
   const method = form.elements.method.value;
   if (method === 'stripe_test') return payWithStripe(form.querySelector('button[type=submit]'));
+  if (method === 'bizum_simulado') return payWithBizum(form);
   const errCard = document.getElementById('err-card');
   let card = null;
   if (method === 'tarjeta_simulada') {
@@ -197,6 +254,14 @@ if (!ORDER_NUMBER_RE.test(orderNumber)) {
     } catch {
       text.textContent = 'Selecciónalo y cópialo'; // sin permiso para el portapapeles
     }
+  });
+  root.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-phone]');
+    if (!btn) return;
+    form.elements.method.value = 'bizum_simulado';
+    showMethod('bizum_simulado');
+    form.elements.phone.value = btn.dataset.phone;
+    form.elements.phone.focus();
   });
   root.addEventListener('click', e => {
     const btn = e.target.closest('button[data-card]');

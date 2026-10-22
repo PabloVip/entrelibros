@@ -534,6 +534,37 @@ input.cart-qty:disabled { background: transparent; color: var(--muted); }
 .size-pill:has(input:focus-visible) span { outline: 3px solid var(--luz); outline-offset: 2px; }
 .size-pill.is-out span { color: var(--muted); text-decoration: line-through; }
 .size-pill:has(input:disabled) { cursor: not-allowed; opacity: .45; }
+/* Sandbox ficticio de Bizum (components/bizumSandbox.js): un "móvil" simulado en un <dialog> */
+.sandbox { border: 0; padding: 18px; border-radius: var(--r-lg); background: var(--surface); color: var(--text);
+  width: min(380px, calc(100vw - 32px)); box-shadow: 0 30px 80px -20px rgb(0 0 0 / .5); }
+.sandbox::backdrop { background: rgb(10 14 26 / .6); backdrop-filter: blur(3px); }
+.sandbox-bar { margin: 0 0 12px; font-size: .82rem; color: var(--muted); text-align: center; }
+.sandbox-bar strong { color: var(--text); }
+.sandbox-phone { margin: 0 auto; width: 100%; max-width: 300px; border-radius: 34px; padding: 12px; background: #10182B;
+  box-shadow: inset 0 0 0 2px #2A3550; }
+.sandbox-notch { width: 90px; height: 18px; border-radius: 0 0 12px 12px; background: #0A0F1C; margin: -12px auto 8px; }
+.sandbox-screen { min-height: 330px; border-radius: 24px; background: #F4F1EA; color: #10182B; padding: 18px 16px;
+  display: flex; flex-direction: column; gap: 12px; justify-content: center; text-align: center; }
+.sandbox-screen p { margin: 0; }
+.sandbox-screen .muted { color: #566079; }
+.sandbox-time { font-size: .75rem; color: #566079; }
+.sandbox-card { background: #fff; border-radius: 16px; padding: 14px; box-shadow: 0 6px 20px -10px rgb(16 24 43 / .4); display: grid; gap: 6px; }
+.sandbox-label { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: #566079; }
+.sandbox-amount { font-size: 1.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sandbox-count { font-size: .8rem; color: #8E2F3B; font-weight: 600; }
+.sandbox-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sandbox-actions:has(> :only-child) { grid-template-columns: 1fr; }
+.sandbox-actions .btn { width: 100%; padding-inline: 8px; }
+.sandbox-wait { display: grid; gap: 14px; justify-items: center; }
+.sandbox-spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid #D7DDE6; border-top-color: #8E2F3B; animation: sb-spin .8s linear infinite; }
+@keyframes sb-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .sandbox-spinner { animation-duration: 3s; } }
+.sandbox-result { display: grid; gap: 8px; justify-items: center; }
+.sandbox-icon { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font-size: 1.7rem; color: #fff; }
+.sandbox-result.is-ok .sandbox-icon { background: #2E6B45; }
+.sandbox-result.is-ko .sandbox-icon { background: #A3302A; }
+.sandbox-note { margin: 12px 0 0; font-size: .78rem; color: var(--muted); text-align: center; }
+
 /* Puntos de recogida en el checkout (components/pickupPicker.js) */
 .pickup-tools { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
 .pickup-tools input { flex: 1 1 200px; min-width: 0; }

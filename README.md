@@ -46,7 +46,9 @@ El rechazo lo muestra Stripe en su página: el pedido sigue en `creado` y no se 
 | `4242 4242 4242 4242` | Pago aprobado |
 | `4000 0000 0000 0002` | Pago rechazado (el pedido sigue en `creado` y se puede reintentar) |
 | Cualquier otro número | No se acepta: el simulador nunca admite tarjetas reales |
-| *Bizum simulado* | Siempre aprobado, sin pedir datos |
+| *Bizum simulado* (sandbox), teléfono `600 000 001` | Se abre un móvil simulado con la solicitud: *Aceptar* → aprobado; *Rechazar* o dejarla caducar (45 s) → rechazado |
+| *Bizum simulado*, teléfono `600 000 002` | Rechazado: el número no tiene Bizum activado |
+| *Bizum simulado*, teléfono `600 000 003` | Rechazado: supera el límite |
 
 ### Códigos de descuento
 | Código | Condición |

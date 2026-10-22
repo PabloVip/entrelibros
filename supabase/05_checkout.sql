@@ -287,10 +287,19 @@ grant execute on function public.create_order(jsonb, jsonb, jsonb, text, text, t
 --   Bizum simulado → siempre aprobado
 -- Devuelve {order_number, status, transaction_ref, amount, failure_reason}
 -- ---------------------------------------------------------
+-- Bizum simulado (sandbox ficticio): p_card_number lleva el TELÉFONO de prueba y
+-- p_bizum_decision lo que el cliente hizo en el móvil simulado ('aceptado' | 'rechazado' | 'caducado').
+--   600 000 001 → el móvil recibe la solicitud: se aprueba si la acepta
+--   600 000 002 → rechazado: ese número no tiene Bizum activado
+--   600 000 003 → rechazado: supera el límite
+--   Cualquier otro teléfono → error (nunca se usa un teléfono real)
+-- La firma cambia (4 parámetros): se borra la antigua para que no queden dos versiones.
+drop function if exists public.simulate_payment(text, text, text);
 create or replace function public.simulate_payment(
-  p_order_number text,
-  p_method       text,
-  p_card_number  text default null
+  p_order_number   text,
+  p_method         text,
+  p_card_number    text default null,
+  p_bizum_decision text default null
 ) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare
@@ -318,8 +327,27 @@ begin
 
   -- 1) Resultado del simulador
   if p_method = 'bizum_simulado' then
-    v_status := 'aprobado';
-    v_card   := null;
+    v_card := regexp_replace(coalesce(p_card_number, ''), '[\s().+-]', '', 'g');
+    if v_card ~ '^34[0-9]{9}$' then v_card := substr(v_card, 3); end if;  -- prefijo +34
+    if v_card = '600000001' then
+      if p_bizum_decision = 'aceptado' then
+        v_status := 'aprobado';
+      elsif p_bizum_decision = 'caducado' then
+        v_status := 'rechazado';
+        v_reason := 'La solicitud de Bizum ha caducado sin respuesta (sandbox)';
+      else
+        v_status := 'rechazado';
+        v_reason := 'Has rechazado el pago en el móvil (sandbox)';
+      end if;
+    elsif v_card = '600000002' then
+      v_status := 'rechazado';
+      v_reason := 'Ese número no tiene Bizum activado (sandbox)';
+    elsif v_card = '600000003' then
+      v_status := 'rechazado';
+      v_reason := 'El importe supera el límite de Bizum de ese número (sandbox)';
+    else
+      raise exception 'Usa uno de los teléfonos de prueba del sandbox de Bizum' using errcode = '22023';
+    end if;
   elsif v_card = '4242424242424242' then
     v_status := 'aprobado';
   elsif v_card = '4000000000000002' then
@@ -380,7 +408,7 @@ begin
     'transaction_ref', v_ref, 'amount', v_order.total, 'failure_reason', v_reason);
 end $$;
 
-grant execute on function public.simulate_payment(text, text, text) to anon, authenticated;
+grant execute on function public.simulate_payment(text, text, text, text) to anon, authenticated;
 
 -- ---------------------------------------------------------
 -- get_order_summary: datos para la página de confirmación
