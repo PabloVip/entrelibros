@@ -11,6 +11,16 @@ export async function fetchShippingMethods() {
   return data;
 }
 
+/** Puntos de recogida activos (envío "punto"; supabase/12_puntos_entrega.sql). */
+export async function fetchPickupPoints() {
+  const { data, error } = await supabase
+    .from('pickup_points')
+    .select('code, name, address, postcode, city, province, lat, lng, hours')
+    .order('city');
+  if (error) throw error;
+  return data;
+}
+
 /** Descuento orientativo para el resumen. Devuelve {valid, code, description, discount_amount} o {valid:false, reason}. */
 export async function validateDiscount(code, subtotal) {
   const { data, error } = await supabase.rpc('validate_discount', { p_code: code, p_subtotal: subtotal });

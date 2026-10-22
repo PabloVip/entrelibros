@@ -534,6 +534,30 @@ input.cart-qty:disabled { background: transparent; color: var(--muted); }
 .size-pill:has(input:focus-visible) span { outline: 3px solid var(--luz); outline-offset: 2px; }
 .size-pill.is-out span { color: var(--muted); text-decoration: line-through; }
 .size-pill:has(input:disabled) { cursor: not-allowed; opacity: .45; }
+/* Puntos de recogida en el checkout (components/pickupPicker.js) */
+.pickup-tools { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+.pickup-tools input { flex: 1 1 200px; min-width: 0; }
+.pickup-body { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 12px; }
+.pickup-map { height: 340px; border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--border); background: var(--surface-2, var(--surface));
+  display: grid; place-items: center; z-index: 0; }
+.pickup-map.leaflet-container { display: block; }
+.pickup-list { max-height: 340px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0 2px 0 0; }
+.pickup-item { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--surface); cursor: pointer; font-size: .88rem; }
+.pickup-item:hover { border-color: var(--border-strong); }
+.pickup-item.is-selected, .pickup-item:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); background: var(--accent-soft); }
+.pickup-item input { width: auto; margin-top: 3px; flex: none; }
+.pickup-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.pickup-dist { font-weight: 650; font-size: .82rem; white-space: nowrap; }
+.pickup-pin span { display: block; width: 22px; height: 22px; margin: 2px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+  background: #8E2F3B; border: 2px solid #fff; box-shadow: 0 2px 6px rgb(0 0 0 / .35); }
+.pickup-pin.is-active span { background: #FFB547; width: 26px; height: 26px; margin: 0; }
+:root[data-theme="noche"] .pickup-map .leaflet-tile-pane { filter: invert(.92) hue-rotate(180deg) brightness(.9) contrast(.9); }
+@media (max-width: 760px) {
+  .pickup-body { grid-template-columns: 1fr; }
+  .pickup-map { height: 260px; }
+  .pickup-list { max-height: 300px; }
+}
 /* puntos de color en las tarjetas del catálogo (components/productCard.js) */
 .card-colors { display: flex; align-items: center; gap: 5px; list-style: none; margin: 0 0 8px; padding: 0; font-size: .8rem; color: var(--muted); }
 .card-colors li span[aria-hidden] { display: block; width: 14px; height: 14px; border-radius: 50%; background: var(--sw); box-shadow: 0 0 0 1px var(--border-strong); }

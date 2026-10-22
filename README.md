@@ -174,6 +174,7 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago (s
 
 ### Back-office de catálogo
 - **Todo lo que se guarda pasa por funciones del servidor** (`08_admin_catalogo.sql`): comprueban que quien llama es administrador (`is_admin()`), validan cada dato y registran un evento con el nombre del admin. El navegador valida lo mismo antes de enviar, para avisar sin esperar.
+- **Recogida en punto de entrega:** al elegir ese envío en el checkout, la dirección de casa se cambia por un **mapa** (Leaflet con mapas de OpenStreetMap) y una lista de puntos de recogida (`pickup_points`, 13 puntos de ejemplo en varias ciudades), con buscador por ciudad o código postal y botón *Usar mi ubicación* que los ordena por distancia. El servidor (`create_order`) exige un punto activo y pone como dirección del pedido la del punto, aunque el navegador mande otra; el pedido guarda `pickup_point_id` y la confirmación muestra el punto, su horario y un enlace al mapa. Los puntos son ficticios (calles reales, ningún comercio real).
 - **Variantes por color y tamaño:** en el editor se marca si las versiones se diferencian por color, por tamaño o por las dos cosas. Cada combinación es una versión con su SKU, precio y stock; el botón *Generar combinaciones* crea todas las que falten a partir de las listas de colores y tamaños. Cada color lleva su tono (`#RRGGBB`) y se le puede asignar una foto. En la ficha se eligen con muestras de color y botones de tamaño: las combinaciones agotadas salen tachadas y al cambiar de color se muestra su foto. El servidor (`admin_save_product`) exige que el color y el tamaño estén en todas las versiones o en ninguna y que no se repitan combinaciones.
 - **Productos con pedidos no se borran:** se archivan (dejan de verse en la tienda, pero los pedidos antiguos siguen apuntando a ellos). Las versiones con pedidos que se quitan del formulario se desactivan en lugar de borrarse.
 - **Imágenes:** se pueden subir (se recortan en el navegador a 800×840 y se guardan en Supabase Storage; solo los admins pueden subir) o indicar una dirección `img/…` o `https://…`.
@@ -195,6 +196,7 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago (s
    9. `09_cuentas_clientes.sql`
    10. `10_stripe.sql`
    11. `11_color_talla.sql` (producto de ejemplo con variantes por color y tamaño)
+   12. `12_puntos_entrega.sql` (puntos de recogida) y, después, **otra vez `05_checkout.sql`** (el pedido guarda el punto elegido)
 
    Todos se pueden volver a ejecutar. `04_seed.sql` deja la tienda con los datos de prueba iniciales; si se vuelve a cargar, hay que ejecutar después `08_admin_catalogo.sql` (rellena los textos en inglés de los productos de ejemplo).
 3. En **Project Settings → API**, copia la *Project URL* y la *publishable key* en `public/js/config.js`. Esa clave es pública por diseño; **nunca** pongas la *secret / service_role key* en el front.

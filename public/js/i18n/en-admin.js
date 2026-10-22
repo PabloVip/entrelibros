@@ -295,6 +295,28 @@ const exact = {
   'Ya existe otro producto con ese slug': 'Another product already uses that slug',
   'Ya existe un método de envío con ese código': 'A shipping method with that code already exists',
 
+  // ---------- Puntos de recogida (checkout y confirmación) ----------
+  'Punto de recogida': 'Pickup point',
+  'Elige dónde quieres recoger el pedido. Te avisaremos cuando llegue.': 'Choose where you want to collect your order. We will let you know when it arrives.',
+  'Buscar un punto por ciudad o código postal': 'Search for a point by city or postcode',
+  'Ciudad o código postal': 'City or postcode',
+  'Usar mi ubicación': 'Use my location',
+  'Mapa de puntos de recogida': 'Map of pickup points',
+  'Puntos de recogida': 'Pickup points',
+  'Cargando el mapa…': 'Loading the map…',
+  'Cargando los puntos de recogida…': 'Loading the pickup points…',
+  'No hay puntos de recogida con esa búsqueda.': 'No pickup points match that search.',
+  'No se ha podido cargar el mapa. Elige el punto en la lista.': 'The map could not be loaded. Choose the point from the list.',
+  'No se han podido cargar los puntos de recogida. Elige otro método de envío o inténtalo de nuevo.': 'The pickup points could not be loaded. Choose another shipping method or try again.',
+  'Tu navegador no permite compartir la ubicación.': 'Your browser does not allow sharing your location.',
+  'Buscando los puntos más cercanos…': 'Finding the nearest points…',
+  'No se ha podido obtener tu ubicación. Busca por ciudad o código postal.': 'Your location could not be obtained. Search by city or postcode.',
+  'Nota para el pedido': 'Order note',
+  'Elige un punto de recogida en el mapa o en la lista.': 'Choose a pickup point on the map or in the list.',
+  'Falta elegir el punto de recogida.': 'You still need to choose the pickup point.',
+  'Elige un punto de recogida en el mapa': 'Choose a pickup point on the map',
+  'Ver en el mapa': 'View on the map',
+
   // ---------- Color y tamaño (ficha y editor) ----------
   'Color:': 'Colour:',
   'Tamaño:': 'Size:',
@@ -515,6 +537,19 @@ const patterns = [
   [/^Editar (.+)$/, (m, tr) => `Edit ${tr(m[1])}`],
   [/^(.+): (activado|desactivado)\.$/, m => `${m[1]}: ${m[2] === 'activado' ? 'activated' : 'deactivated'}.`],
   [/^(\d+-\d+) días laborables$/, '$1 working days'],
+
+  // puntos de recogida
+  [/^El más cercano está a (.+)\.$/, 'The nearest one is $1 away.'],
+  [/^Recogida en (Punto Entrelibros .+)$/, (m, tr) => `Pickup at ${tr(m[1])}`],
+  [/^Horario: (.+)$/, (m, tr) => `Opening hours: ${tr(m[1])}`],
+  [/^Recoge el pedido a nombre de (.+) con tu número de pedido\.$/, 'Collect the order in the name of $1 with your order number.'],
+  // horarios de los puntos: "L-V 9:30-20:30 · S 10:00-14:00" → "Mon-Fri 9:30-20:30 · Sat 10:00-14:00"
+  [/^[LMXJVSD](?:-[LMXJVSD])? \d{1,2}:\d{2}.*$/, m => m[0]
+    .replace(/\b([LMXJVSD])(?:-([LMXJVSD]))?(?= \d)/g, (x, a, b) => {
+      const d = { L: 'Mon', M: 'Tue', X: 'Wed', J: 'Thu', V: 'Fri', S: 'Sat', D: 'Sun' };
+      return b ? `${d[a]}-${d[b]}` : d[a];
+    })
+    .replace(/ y /g, ' and ')],
 
   // color y tamaño
   [/^(\d+) tamaños$/, '$1 sizes'],

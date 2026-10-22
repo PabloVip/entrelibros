@@ -3,13 +3,14 @@
 import { renderLayout } from '../core/layout.js';
 import { getSessionId } from '../core/session.js';
 import { fetchVariantsByIds } from '../repositories/catalogRepository.js';
-import { fetchShippingMethods, validateDiscount, createOrder } from '../repositories/checkoutRepository.js';
+import { fetchShippingMethods, validateDiscount, createOrder, fetchPickupPoints } from '../repositories/checkoutRepository.js';
 import { getCart, clearCart, refreshFromCatalog, lineProblem, subtotal } from '../services/cartService.js';
 import { estimate, shippingCost, validateForm, saveLastOrder } from '../services/checkoutService.js';
 import { track, EVENTS } from '../services/eventService.js';
 import { escapeHtml, money } from '../core/utils.js';
 import { prefillCheckout } from '../components/checkoutAccount.js';
 import { showCheckoutSteps } from '../components/checkoutSteps.js';
+import { mountPickupPicker } from '../components/pickupPicker.js';
 
 renderLayout();
 showCheckoutSteps(2); // pasos de la compra: tus datos
@@ -18,6 +19,8 @@ const root = document.getElementById('checkout');
 let lines = [];
 let methods = [];
 let discount = null; // código aplicado: { code, description, amount }
+let picker = null;   // selector de punto de recogida (se crea al elegir ese envío)
+const PICKUP = 'punto'; // código del envío "Recogida en punto de entrega"
 
 const FIELDS = ['full_name', 'email', 'phone', 'address', 'city', 'postcode', 'province', 'notes'];
 
@@ -67,13 +70,16 @@ function renderForm(priceChanges) {
         </fieldset>
 
         <fieldset class="form-section">
-          <legend class="h3">Dirección de envío</legend>
-          ${field('address', 'Dirección', 'type="text" autocomplete="street-address" required maxlength="200"')}
-          <div class="field-row">
-            ${field('postcode', 'Código postal', 'type="text" autocomplete="postal-code" inputmode="numeric" required maxlength="5"')}
-            ${field('city', 'Ciudad', 'type="text" autocomplete="address-level2" required maxlength="80"')}
+          <legend class="h3" id="address-legend">Dirección de envío</legend>
+          <!-- con "Recogida en punto de entrega" se oculta: la dirección es la del punto elegido -->
+          <div id="home-address">
+            ${field('address', 'Dirección', 'type="text" autocomplete="street-address" required maxlength="200"')}
+            <div class="field-row">
+              ${field('postcode', 'Código postal', 'type="text" autocomplete="postal-code" inputmode="numeric" required maxlength="5"')}
+              ${field('city', 'Ciudad', 'type="text" autocomplete="address-level2" required maxlength="80"')}
+            </div>
+            ${field('province', 'Provincia', 'type="text" autocomplete="address-level1" required maxlength="80"')}
           </div>
-          ${field('province', 'Provincia', 'type="text" autocomplete="address-level1" required maxlength="80"')}
           <div class="field">
             <label for="f-notes">Nota para el pedido <span class="muted">(opcional)</span></label>
             <textarea id="f-notes" name="notes" rows="3" maxlength="500" aria-describedby="notes-count err-notes"></textarea>
@@ -85,6 +91,13 @@ function renderForm(priceChanges) {
         <fieldset class="form-section variants">
           <legend class="h3">Método de envío</legend>
           ${methods.map(m => shippingOption(m, m.code === defaultCode)).join('')}
+        </fieldset>
+
+        <fieldset class="form-section" id="pickup-section" hidden>
+          <legend class="h3">Punto de recogida</legend>
+          <p class="muted small">Elige dónde quieres recoger el pedido. Te avisaremos cuando llegue.</p>
+          <div id="pickup-picker"></div>
+          <p id="err-pickup" class="field-error" role="alert"></p>
         </fieldset>
 
         <fieldset class="form-section">
@@ -142,11 +155,43 @@ function renderSummary() {
     <p class="muted small">IVA incluido: ${money(e.tax)}</p>`;
 }
 
+const isPickup = () => selectedMethod()?.code === PICKUP;
+
 function formValues(form) {
   const values = {};
   for (const name of FIELDS) values[name] = form.elements[name].value.trim();
   values.email = values.email.toLowerCase();
+  // recogida en punto: la dirección del pedido es la del punto (el servidor la vuelve a poner)
+  const point = isPickup() ? picker?.selected() : null;
+  if (point) Object.assign(values, { address: `${point.name} · ${point.address}`.slice(0, 200), city: point.city, postcode: point.postcode, province: point.province });
   return values;
+}
+
+/** Enseña el mapa de puntos (envío "punto") o la dirección de casa (el resto). */
+async function toggleShipping(form) {
+  const pickup = isPickup();
+  document.getElementById('home-address').hidden = pickup;
+  document.getElementById('address-legend').textContent = pickup ? 'Nota para el pedido' : 'Dirección de envío';
+  const section = document.getElementById('pickup-section');
+  section.hidden = !pickup;
+  if (!pickup) return;
+  if (picker) { picker.refresh(); return; }
+  const box = document.getElementById('pickup-picker');
+  box.innerHTML = '<p class="muted small">Cargando los puntos de recogida…</p>';
+  try {
+    const points = await fetchPickupPoints();
+    picker = mountPickupPicker(box, points, {
+      postcode: form.elements.postcode.value.trim(),
+      onChange: () => {
+        document.getElementById('err-pickup').textContent = '';
+        const msg = document.getElementById('order-msg');
+        if (msg.classList.contains('error')) { msg.textContent = ''; msg.className = 'form-msg'; }
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    box.innerHTML = '<p class="empty error">No se han podido cargar los puntos de recogida. Elige otro método de envío o inténtalo de nuevo.</p>';
+  }
 }
 
 /** Marca los campos incorrectos y devuelve el foco al primero. */
@@ -204,6 +249,13 @@ function orderErrorText(err) {
 
 async function submitOrder(form) {
   const msg = document.getElementById('order-msg');
+  if (isPickup() && !picker?.selected()) {
+    document.getElementById('err-pickup').textContent = 'Elige un punto de recogida en el mapa o en la lista.';
+    document.getElementById('pickup-section').scrollIntoView({ block: 'center', behavior: 'smooth' });
+    msg.textContent = 'Falta elegir el punto de recogida.';
+    msg.className = 'form-msg error';
+    return;
+  }
   const values = formValues(form);
   const errors = validateForm(values);
   showErrors(form, errors);
@@ -233,6 +285,7 @@ async function submitOrder(form) {
       shipping: {
         name: values.full_name, address: values.address, city: values.city,
         postcode: values.postcode, province: values.province, notes: values.notes,
+        pickup_point: isPickup() ? picker.selected().code : null, // 12_puntos_entrega.sql
       },
       items: lines.map(l => ({ variant_id: l.variantId, quantity: l.quantity })), // sin precios
       shippingCode: selectedMethod().code,
@@ -259,7 +312,7 @@ function bindForm() {
     submitOrder(form);
   });
   form.addEventListener('change', e => {
-    if (e.target.name === 'shipping') renderSummary();
+    if (e.target.name === 'shipping') { renderSummary(); toggleShipping(form); }
   });
   form.addEventListener('input', e => {
     // un campo marcado con error se limpia en cuanto su valor pasa a ser válido
@@ -328,6 +381,7 @@ function bindForm() {
     renderSummary();
     bindForm();
     prefillCheckout(document.getElementById('checkout-form')); // datos de "Mi cuenta" (Pablo)
+    toggleShipping(document.getElementById('checkout-form')); // por si el navegador recuerda "punto" al volver atrás
 
     track(EVENTS.CHECKOUT_STARTED, {
       entityType: 'checkout',

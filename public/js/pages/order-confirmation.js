@@ -122,7 +122,12 @@ function render(o, email) {
 
       <aside class="panel">
         <h2 class="h3">Envío</h2>
-        <p>${escapeHtml(s.name)}<br>${escapeHtml(s.address)}<br>${escapeHtml(s.postcode)} ${escapeHtml(s.city)} (${escapeHtml(s.province)})</p>
+        ${s.pickup ? `
+          <p><strong>Recogida en ${escapeHtml(s.pickup.name)}</strong><br>${escapeHtml(s.pickup.address)}<br>${escapeHtml(s.postcode)} ${escapeHtml(s.city)} (${escapeHtml(s.province)})<br>
+            <small class="muted">Horario: ${escapeHtml(s.pickup.hours)}</small><br>
+            <a href="https://www.openstreetmap.org/?mlat=${Number(s.pickup.lat)}&amp;mlon=${Number(s.pickup.lng)}#map=17/${Number(s.pickup.lat)}/${Number(s.pickup.lng)}" target="_blank" rel="noopener">Ver en el mapa</a></p>
+          <p class="muted small">Recoge el pedido a nombre de ${escapeHtml(s.name)} con tu número de pedido.</p>`
+        : `<p>${escapeHtml(s.name)}<br>${escapeHtml(s.address)}<br>${escapeHtml(s.postcode)} ${escapeHtml(s.city)} (${escapeHtml(s.province)})</p>`}
         ${s.notes ? `<p class="muted small">Nota: ${escapeHtml(s.notes)}</p>` : ''}
         <p>${escapeHtml(s.method)}: ${escapeHtml(s.eta_min)}-${escapeHtml(s.eta_max)} días laborables.<br>
           <strong>Entrega estimada:</strong> entre el ${escapeHtml(dayFmt.format(from))} y el ${escapeHtml(dayFmt.format(to))}.</p>

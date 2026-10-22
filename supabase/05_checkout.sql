@@ -121,7 +121,24 @@ declare
   v_ship_cost   numeric(10,2);
   v_total       numeric(10,2);
   v_tax         numeric(10,2);
+  v_point       record;          -- punto de recogida (12_puntos_entrega.sql)
+  v_point_id    bigint;
 begin
+  -- 0) Recogida en punto de entrega: la dirección del pedido es la del punto elegido en el mapa
+  --    (p_shipping.pickup_point = código del punto). La dirección que mande el navegador no cuenta.
+  if btrim(coalesce(p_shipping_code, '')) = 'punto' then
+    select * into v_point from public.pickup_points
+     where code = upper(btrim(coalesce(p_shipping->>'pickup_point', ''))) and is_active;
+    if not found then
+      raise exception 'Elige un punto de recogida en el mapa' using errcode = '22023';
+    end if;
+    v_point_id := v_point.id;
+    v_address  := left(v_point.name || ' · ' || v_point.address, 200);
+    v_city     := v_point.city;
+    v_postcode := v_point.postcode;
+    v_province := v_point.province;
+  end if;
+
   -- 1) Validación de los datos del cliente y del envío
   if jsonb_typeof(p_customer) is distinct from 'object' or jsonb_typeof(p_shipping) is distinct from 'object' then
     raise exception 'Faltan los datos del cliente o del envío' using errcode = '22023';
@@ -230,10 +247,10 @@ begin
     begin
       insert into public.orders (order_number, customer_id, status, subtotal, discount_code, discount_amount,
         shipping_method_id, shipping_cost, tax_rate, tax_amount, total,
-        ship_name, ship_address, ship_city, ship_postcode, ship_province, customer_notes)
+        ship_name, ship_address, ship_city, ship_postcode, ship_province, customer_notes, pickup_point_id)
       values (v_order_num, v_customer_id, 'creado', v_subtotal, v_code, v_disc_amount,
         v_ship.id, v_ship_cost, c_tax_rate, v_tax, v_total,
-        v_ship_name, v_address, v_city, v_postcode, v_province, v_notes)
+        v_ship_name, v_address, v_city, v_postcode, v_province, v_notes, v_point_id)
       returning id into v_order_id;
       exit;
     exception when unique_violation then
@@ -401,7 +418,11 @@ begin
       'city',     o.ship_city,
       'postcode', o.ship_postcode,
       'province', o.ship_province,
-      'notes',    o.customer_notes),
+      'notes',    o.customer_notes,
+      -- punto de recogida (null si es envío a domicilio)
+      'pickup',   (select jsonb_build_object('name', pp.name, 'address', pp.address, 'hours', pp.hours,
+                                             'lat', pp.lat, 'lng', pp.lng)
+                     from public.pickup_points pp where pp.id = o.pickup_point_id)),
     'items', (select coalesce(jsonb_agg(jsonb_build_object(
                 'product_name', i.product_name, 'variant_name', i.variant_name, 'sku', i.sku,
                 'unit_price', i.unit_price, 'quantity', i.quantity, 'line_total', i.line_total) order by i.id), '[]'::jsonb)
