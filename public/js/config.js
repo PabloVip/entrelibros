@@ -10,4 +10,4 @@ export const TAX_RATE = 21; // IVA general (%) — solo para mostrar; el cálcul
 
 // Bot de Telegram de soporte (Tarea 2). Solo el nombre de usuario, sin @ (no es un secreto).
 // Vacío = no se ofrece seguir la incidencia por Telegram.
-export const TELEGRAM_BOT = '';
+export const TELEGRAM_BOT = 'EntrelibrosBot';
