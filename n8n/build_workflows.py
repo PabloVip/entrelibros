@@ -60,7 +60,7 @@ class WF:
         wf = {'id': WF_IDS[self.key], 'name': self.name, 'nodes': self.nodes, 'connections': self.conn,
               'active': False, 'settings': {'executionOrder': 'v1', 'saveManualExecutions': True,
                                             'saveDataSuccessExecution': 'all', 'saveDataErrorExecution': 'all',
-                                            'timezone': 'Europe/Madrid'},
+                                            'timezone': 'Europe/Madrid', 'executionTimeout': 300},
               'pinData': {}, 'meta': {'templateCredsSetupCompleted': False},
               'tags': [], 'description': description}
         (OUT / file).write_text(json.dumps(wf, ensure_ascii=False, indent=2) + '\n')
@@ -280,11 +280,11 @@ a.add('Agente de soporte', '@n8n/n8n-nodes-langchain.agent', 1.9, {
     'text': ("=Incidencia {{ $json.ticket.ticket_number }} ({{ $json.ticket.category }}) recibida el {{ $json.ticket.sla_due_at ? $now.toISO() : '' }}.\n"
              "Cliente: {{ $json.ticket.customer_email }}. Pedido: {{ $json.ticket.order_number || 'sin pedido' }}.\n"
              "Motivo: {{ $json.ticket.reason }}. Mensaje del cliente:\n\"\"\"{{ $json.ticket.message }}\"\"\""),
-    'hasOutputParser': True,
-    'options': {'systemMessage': system, 'maxIterations': 8, 'returnIntermediateSteps': True}},
-    (260, 300), onError='continueErrorOutput', retryOnFail=True, maxTries=2, waitBetweenTries=3000)
+    'hasOutputParser': False,
+    'options': {'systemMessage': system, 'maxIterations': 6, 'returnIntermediateSteps': True}},
+    (260, 300), onError='continueErrorOutput', retryOnFail=True, maxTries=3, waitBetweenTries=5000)
 a.add('Gemini', '@n8n/n8n-nodes-langchain.lmChatGoogleGemini', 1, {
-    'modelName': 'models/gemini-2.5-flash', 'options': {'temperature': 0.2, 'maxOutputTokens': 2048}},
+    'modelName': 'models/gemini-3.1-flash-lite', 'options': {'temperature': 0.2, 'maxOutputTokens': 2048}},
     (120, 540), creds=['gemini'])
 
 TOOLS = [
@@ -321,17 +321,24 @@ SCHEMA = {
         'risks': {'type': 'array', 'items': {'type': 'string'}},
     },
 }
-a.add('Formato de salida', '@n8n/n8n-nodes-langchain.outputParserStructured', 1.2, {
-    'schemaType': 'manual', 'inputSchema': json.dumps(SCHEMA, ensure_ascii=False, indent=2)}, (900, 560))
-a.nodes[-1]['typeVersion'] = 1.3
+# Sin Structured Output Parser: con Gemini 3.x la herramienta interna format_final_json_response dejaba la
+# ejecución colgada. El agente devuelve el JSON como texto y el nodo Code siguiente lo extrae y lo valida
+# contra SCHEMA (mismos campos), así que la salida sigue siendo estructurada y comprobada.
 a.link('Gemini', 'Agente de soporte', kind='ai_languageModel')
-a.link('Formato de salida', 'Agente de soporte', kind='ai_outputParser')
 
 code(a, 'Comprobar salida del agente', r"""// Barreras sobre la salida del agente antes de guardarla (no se confía a ciegas en el modelo).
 const input = $('Desde el flujo principal').item.json;
-const out = $json.output ?? {};
+// El agente devuelve el JSON como texto: se extrae y se valida aquí (si no es JSON válido, se escala a una persona)
+function parseOutput(o) {
+  if (o && typeof o === 'object') return o;
+  const t = String(o ?? '');
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const raw = fence ? fence[1] : t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1);
+  try { return JSON.parse(raw); } catch { return { _invalid: true, proposed_action: 'Revisar manualmente: la respuesta del agente no era JSON válido', justification: t.slice(0, 300) }; }
+}
+const out = parseOutput($json.output);
 const steps = $json.intermediateSteps ?? [];
-const warnings = [];
+const warnings = out._invalid ? ['La salida del agente no era JSON válido'] : [];
 const CASES = ['pieza_faltante','pieza_danada','retraso_envio','duda_montaje','consulta_general','fuera_de_alcance'];
 const ACTIONS = ['enviar_respuesta_cliente','reenviar_pieza','escalar_a_humano','solicitar_informacion'];
 let confidence = Math.min(1, Math.max(0, Number(out.confidence ?? 0)));
@@ -357,7 +364,7 @@ return [{ json: {
   customer_message: message || null,
   justification: String(out.justification ?? '').slice(0, 1000),
   risks: [...(out.risks ?? []), ...warnings],
-  final_status: 'pendiente_revision', model: 'gemini-2.5-flash', execution_id: $execution.id,
+  final_status: 'pendiente_revision', model: 'gemini-3.1-flash-lite', execution_id: $execution.id,
   telegram_linked: input.ticket.telegram_linked,
   review_text: reviewText(),
 } }];

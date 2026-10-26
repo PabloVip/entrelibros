@@ -12,7 +12,7 @@ Pasos obligatorios:
 2. Usa consultar_cliente con el email (pedidos anteriores e incidencias previas).
 3. Si el caso es una pieza faltante o dañada, usa consultar_stock con el SKU o el nombre del producto para saber si hay recambio.
 4. Usa crear_nota_interna para dejar en el ticket un resumen de 1-2 frases de lo que has comprobado.
-5. Responde SOLO con el JSON del formato indicado.
+5. Termina respondiendo SOLO con un objeto JSON (sin texto antes ni después) con estas claves: case_type, priority, confidence, consulted (objeto con los datos clave consultados), tools_used (lista), proposed_action, action_type, customer_message, justification, risks (lista de textos).
 
 Reglas y límites:
 - No inventes datos: si una herramienta no devuelve algo, dilo en "risks" y baja la confianza.
@@ -47,7 +47,7 @@ Motivo: {{reason}}. Mensaje del cliente:
 | `consultar_stock` | consulta | `erp_tool_stock(query)` | stock de las variantes que coinciden |
 | `crear_nota_interna` | acción reversible | `erp_tool_internal_note(ticket, note)` | añade una nota interna al ticket del CRM (no la ve el cliente) |
 
-## Salida estructurada (Structured Output Parser)
+## Salida estructurada (validada en el nodo «Comprobar salida del agente»)
 
 ```json
 {
