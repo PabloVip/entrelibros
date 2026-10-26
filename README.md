@@ -241,6 +241,41 @@ En el repositorio, ve a **Settings → Pages → Source: GitHub Actions**. El wo
 
 > GitHub Pages guarda los ficheros en caché unos minutos. Tras un despliegue, recarga con **Cmd+Shift+R** (Mac) o **Ctrl+Shift+R** (Windows).
 
+## Tarea 2 · Integración con el back-office, automatización e IA agéntica
+
+La tienda se integra con un **ERP/CRM académico** (esquema `erp` de Supabase) a través de **n8n**:
+
+```
+Tienda (Supabase) ── evento ──► integration_outbox ──pg_net──► n8n (Render)
+                                   ▲  reintentos (pg_cron)        │ valida y normaliza (contrato v1)
+                                   └──────── ACK ◄────────────────┤ crea/actualiza pedido, stock o ticket en erp.*
+                                                                  │ registra cada paso en integration_log
+                                                                  ├─► Telegram (avisos internos)
+                                                                  └─► Agente de IA (Gemini) ──► propuesta
+                                                                        └─► revisión humana en Telegram ──► respuesta al cliente
+```
+
+| Escenario | Evento de la tienda | Resultado |
+|---|---|---|
+| 1. Pedido integrado | `order.created`, `payment.simulated` | Pedido de venta en `erp.sales_orders` con cliente, líneas, importe, estado y fecha |
+| 2. Sincronización | `order.status_changed`, `stock.adjusted` | Estado del pedido / inventario del ERP actualizados (idempotente, con control de orden) |
+| 3. Postventa | `support.requested` | Ticket en el CRM; el agente consulta pedido, cliente y stock y propone respuesta; una persona la aprueba en Telegram y se envía al cliente por el bot |
+
+| Qué | Dónde |
+|---|---|
+| SQL (cola, ERP, log, agente, Telegram, métricas) | `supabase/14_integracion.sql` |
+| Workflows de n8n (exportados) | `n8n/workflows/*.json` (se generan con `n8n/build_workflows.py`) |
+| Código de validación del payload | `n8n/code/validar-evento.js` |
+| Instrucciones y herramientas del agente | `n8n/prompts/agente-soporte.md` |
+| Contrato de integración | `docs/tarea2/contrato.md` |
+| Payloads de prueba (3 escenarios + error) | `docs/tarea2/payloads/` |
+| Matriz de decisión | `docs/tarea2/matriz-decision.md` |
+| Puesta en marcha (Render, credenciales, Telegram) | `docs/tarea2/despliegue-render.md`, `render.yaml`, `n8n/env.example` |
+| Cuadro de mando | Back-office → **Integración** (`admin-integracion.html`) |
+
+Ningún secreto está en el repositorio: la clave secreta de Supabase, el token del bot y la clave de Gemini se
+guardan como credenciales cifradas de n8n; el secreto del webhook, en `integration_settings` (sin acceso por la API).
+
 ## 8. Limitaciones conocidas
 
 - **Back-office público en cuanto a páginas.** GitHub Pages es estático, así que cualquiera puede abrir `admin*.html`, pero sin una sesión de administrador las políticas RLS no devuelven ningún dato.

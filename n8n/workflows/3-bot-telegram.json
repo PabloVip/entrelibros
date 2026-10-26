@@ -1,0 +1,739 @@
+{
+  "id": "EntrelibrosBotTelegram",
+  "name": "Entrelibros · Bot de Telegram (clientes)",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "c25cf9b8-bed2-5a69-9c26-65ea00d50e44",
+      "name": "Telegram · mensaje recibido",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "entrelibrosTelegram",
+          "name": "Entrelibros · Telegram bot"
+        }
+      },
+      "webhookId": "4a1233d3-9498-5c5d-a3e4-7b0c2a77ce30"
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $json.message ?? {};\nconst text = String(msg.text ?? '').trim();\nconst chat_id = String(msg.chat?.id ?? '');\nconst username = msg.from?.username ?? null;\nconst name = msg.from?.first_name ?? '';\nlet kind = 'mensaje', token = null;\nconst start = text.match(/^\\/start(?:\\s+([a-f0-9]{8,40}))?$/i);\nif (start) { kind = start[1] ? 'vincular' : 'bienvenida'; token = start[1] ?? null; }\nelse if (/^\\/id\\b/i.test(text)) kind = 'id';\nelse if (!text) kind = 'ignorar';\nreturn [{ json: { kind, token, chat_id, username, name, text: text.slice(0, 2000) } }];"
+      },
+      "id": "d5458ea7-12ef-574d-b5a2-40f3c1f295ac",
+      "name": "Interpretar mensaje",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "4af2872f-9d5f-54c8-b8b2-0f4abebec177",
+                    "leftValue": "={{ $json.kind }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "vincular"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Vincular"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "5c856b4d-c123-5491-bba0-552a929ec374",
+                    "leftValue": "={{ $json.kind }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "mensaje"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Mensaje"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "5f5d30d6-0caa-5ee6-bbd0-696923753fc4",
+                    "leftValue": "={{ $json.kind }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "bienvenida"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Bienvenida"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "cd0de1e9-7a23-5b32-bae9-a2881e4a1560",
+                    "leftValue": "={{ $json.kind }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "id"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Id"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e6979b82-29a0-5019-b7aa-68f435ed1c69",
+      "name": "¿Qué pide?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/erp_link_telegram",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_token: $json.token, p_chat_id: $json.chat_id, p_username: $json.username }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "931d1885-17bf-5963-af0a-7b2ce0f4596a",
+      "name": "Vincular chat con la incidencia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "entrelibrosSupabase",
+          "name": "Entrelibros · Supabase (secret key)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "774c22bb-1d2f-5892-8e22-4380a14c12ae",
+              "leftValue": "={{ $json.result }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "vinculado"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bf13c59a-17d0-598f-981f-80183c69f22e",
+      "name": "¿Token válido?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Interpretar mensaje').item.json.chat_id }}",
+        "text": "=✅ Listo, {{ $('Interpretar mensaje').item.json.name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}. Te avisaremos aquí de la incidencia <b>{{ $('Vincular chat con la incidencia').item.json.ticket_ref }}</b>.\nPuedes escribirnos por este chat y lo añadiremos a tu incidencia.\n\n<i>Entrelibros es un prototipo académico (UCAM).</i>",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "99c8a88c-9d8a-5d4e-8fe9-86849dab67c0",
+      "name": "Confirmar vinculación",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1200,
+        40
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "entrelibrosTelegram",
+          "name": "Entrelibros · Telegram bot"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "webhookId": "8bea1db9-2a5e-5c0a-8f82-5df04a696237"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Interpretar mensaje').item.json.chat_id }}",
+        "text": "=El enlace no es válido o ha caducado. Vuelve a abrirlo desde la página de soporte de Entrelibros.",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "864adb8d-8b31-5978-a5bd-9cde7f4a725f",
+      "name": "Enlace no válido",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1200,
+        200
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "entrelibrosTelegram",
+          "name": "Entrelibros · Telegram bot"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "webhookId": "0ca38464-0891-5598-9d08-153a4e8650e7"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Respuestas ya aprobadas por una persona que esperaban a que el cliente vinculara Telegram\nconst r = $('Vincular chat con la incidencia').item.json;\nreturn (r.pending ?? []).map(p => ({ json: { ...p, ticket_ref: r.ticket_ref, chat_id: $('Interpretar mensaje').item.json.chat_id } }));"
+      },
+      "id": "87d7252a-398b-5e89-a6f5-8265a97a7f3a",
+      "name": "Respuestas pendientes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "=📦 <b>Entrelibros · incidencia {{ $json.ticket_ref }}</b>\n\n{{ $json.customer_message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "a439641f-ced8-539a-b560-0ecd8e6a2ed3",
+      "name": "Enviar pendiente",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1680,
+        40
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "entrelibrosTelegram",
+          "name": "Entrelibros · Telegram bot"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "webhookId": "b310c754-5ec0-571f-9d18-c54ec14e0d87"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/erp_mark_delivered",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_id: $('Respuestas pendientes').item.json.decision_id, p_simulated: false }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "810d1df4-5ecb-5dd7-b6da-cf3fc7a044c5",
+      "name": "Marcar pendiente enviada",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        40
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "entrelibrosSupabase",
+          "name": "Entrelibros · Supabase (secret key)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/erp_customer_message",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_chat_id: $json.chat_id, p_text: $json.text }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "a5280356-4bad-52ed-8760-ca0e30bf4a4a",
+      "name": "Mensaje al CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "entrelibrosSupabase",
+          "name": "Entrelibros · Supabase (secret key)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "847373c4-f84b-59ff-bcdf-ff063683a135",
+              "leftValue": "={{ $json.result }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "registrado"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "deb5838b-cdbf-5f7f-bc95-a5bef7d1a116",
+      "name": "¿Tiene incidencia?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Interpretar mensaje').item.json.chat_id }}",
+        "text": "=Recibido 👍 Lo hemos añadido a tu incidencia <b>{{ $json.ticket_ref }}</b>. Una persona del equipo lo revisará.",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "e7584258-2294-5564-914e-3e0278e6a965",
+      "name": "Acuse de recibo",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1200,
+        280
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "entrelibrosTelegram",
+          "name": "Entrelibros · Telegram bot"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "webhookId": "254bfcee-d341-5bf0-a404-04c4c027530d"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.ENTRELIBROS_OPS_CHAT_ID }}",
+        "text": "=💬 <b>Mensaje del cliente</b> · {{ $('Mensaje al CRM').item.json.ticket_ref }}\n{{ $('Interpretar mensaje').item.json.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "a49a2705-3308-5678-90e8-13e7fe8d0a81",
+      "name": "Aviso a operaciones",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1440,
+        280
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "entrelibrosTelegram",
+          "name": "Entrelibros · Telegram bot"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "webhookId": "5a99de8e-77ce-5d2d-843e-da811fdcd870"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Interpretar mensaje').item.json.chat_id }}",
+        "text": "=No tienes ninguna incidencia vinculada a este chat. Ábrela desde la página de soporte de Entrelibros y pulsa «Seguir la incidencia en Telegram».",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "0b9d92cb-3ed3-56f5-b38c-0d5d3bd59b6e",
+      "name": "Sin incidencia",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1200,
+        440
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "entrelibrosTelegram",
+          "name": "Entrelibros · Telegram bot"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "webhookId": "7aaff37d-027b-5ea7-a6e9-879014813427"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Interpretar mensaje').item.json.chat_id }}",
+        "text": "=Hola 👋 Soy el bot de soporte de <b>Entrelibros</b> (prototipo académico de la UCAM).\nPara seguir una incidencia, ábrela desde la web y pulsa «Seguir la incidencia en Telegram».",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "0bde135b-49c3-5039-9639-f0fae0b9076a",
+      "name": "Bienvenida",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        720,
+        520
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "entrelibrosTelegram",
+          "name": "Entrelibros · Telegram bot"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "webhookId": "d109c0dc-1d25-5d25-9c3d-7711d5e89bb8"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Interpretar mensaje').item.json.chat_id }}",
+        "text": "=Tu chat id es <code>{{ $json.chat_id }}</code> (para configurar ENTRELIBROS_OPS_CHAT_ID).",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "48c2fdb7-112c-5bed-9bb0-127df29375a3",
+      "name": "Responder con el id",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        720,
+        680
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "entrelibrosTelegram",
+          "name": "Entrelibros · Telegram bot"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "webhookId": "87302505-3363-5729-8ace-3e5dbb60800b"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/erp_log",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_entry: { execution_id: $execution.id, workflow: 'bot-telegram', step: 'mensaje', entity_type: 'ticket', entity_ref: $json.ticket_ref ?? null, status: $json.result === 'token_no_valido' || $json.result === 'sin_incidencia' ? 'ignorado' : 'ok', message: 'Telegram: ' + $('Interpretar mensaje').item.json.kind + ' → ' + $json.result } }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "c6ba8302-c597-5d3c-a727-ea01c2858839",
+      "name": "Log · bot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        600
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "entrelibrosSupabase",
+          "name": "Entrelibros · Supabase (secret key)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Telegram · mensaje recibido": {
+      "main": [
+        [
+          {
+            "node": "Interpretar mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Interpretar mensaje": {
+      "main": [
+        [
+          {
+            "node": "¿Qué pide?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Qué pide?": {
+      "main": [
+        [
+          {
+            "node": "Vincular chat con la incidencia",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mensaje al CRM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Bienvenida",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder con el id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vincular chat con la incidencia": {
+      "main": [
+        [
+          {
+            "node": "¿Token válido?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log · bot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Token válido?": {
+      "main": [
+        [
+          {
+            "node": "Confirmar vinculación",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enlace no válido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar vinculación": {
+      "main": [
+        [
+          {
+            "node": "Respuestas pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuestas pendientes": {
+      "main": [
+        [
+          {
+            "node": "Enviar pendiente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar pendiente": {
+      "main": [
+        [
+          {
+            "node": "Marcar pendiente enviada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensaje al CRM": {
+      "main": [
+        [
+          {
+            "node": "¿Tiene incidencia?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log · bot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Tiene incidencia?": {
+      "main": [
+        [
+          {
+            "node": "Acuse de recibo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sin incidencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Acuse de recibo": {
+      "main": [
+        [
+          {
+            "node": "Aviso a operaciones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "timezone": "Europe/Madrid"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [],
+  "description": "Bot de Telegram del cliente: vincula el chat con la incidencia (/start <token>), entrega las respuestas aprobadas pendientes y registra en el CRM los mensajes del cliente."
+}

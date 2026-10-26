@@ -1486,3 +1486,17 @@ html.cambiando-tema .shop-header, html.cambiando-tema .main-nav { view-transitio
   .order-grid { grid-template-columns: 2fr 1fr; }
   .order-hero { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ---------- Back-office · Integración (Tarea 2) ---------- */
+.page-head-actions { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; }
+.ticket-list, .decision-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+.ticket summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.activity { margin: 12px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
+.decision header { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+.decision-grid { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 6px 14px; margin: 0 0 10px; }
+.decision-grid dt { color: var(--muted); font-size: .85rem; }
+.decision-grid dd { margin: 0; overflow-wrap: anywhere; }
+.decision-grid ul { margin: 0; padding-left: 18px; }
+.decision blockquote { margin: 0; padding: 8px 12px; border-left: 3px solid var(--accent); background: var(--bg); border-radius: 6px; }
+pre.json { max-height: 320px; overflow: auto; font-size: .8rem; background: var(--bg); padding: 10px; border-radius: 6px; }
+@media (max-width: 640px) { .decision-grid { grid-template-columns: minmax(0, 1fr); } .decision-grid dd { margin-bottom: 6px; } }

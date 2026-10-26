@@ -12,3 +12,10 @@ export async function createSupportRequest({ email, orderNumber, reason, message
   if (error) throw error;
   return data;
 }
+
+/** Token para seguir la incidencia en Telegram (t.me/<bot>?start=<token>); null si no coincide el email. */
+export async function telegramToken(ticketNumber, email) {
+  const { data, error } = await supabase.rpc('support_telegram_token', { p_ticket: ticketNumber, p_email: email });
+  if (error) throw error;
+  return data;
+}

@@ -1,0 +1,905 @@
+{
+  "id": "EntrelibrosEventosERP",
+  "name": "Entrelibros · Eventos de la tienda → ERP",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "entrelibros/eventos",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "961ce493-2c4f-574d-a7cd-f6f6f43eb07b",
+      "name": "Webhook · evento de la tienda",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "entrelibrosWebhookKey",
+          "name": "Entrelibros · Webhook key"
+        }
+      },
+      "webhookId": "5f0c4f8e-7a2e-4c3b-9d4a-0e7c1b2a3f40",
+      "notes": "Lo llama Supabase (pg_net) con el contrato entrelibros.event.v1 y la cabecera X-Entrelibros-Key.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Nodo Code de n8n «Validar y normalizar» (workflow «Entrelibros · Eventos → ERP»).\n// Entrada: el cuerpo del webhook (contrato entrelibros.event.v1, ver docs/tarea2/contrato.md).\n// Salida: un único item con\n//   valid       true / false\n//   errors      [{field, type, message}]   type ∈ contrato | formato | coherencia\n//   route       order | stock | ticket | ignorar\n//   event       {event_id, event_type, occurred_at, source}\n//   normalized  datos ya normalizados para el ERP (solo si valid)\n// Este fichero es la copia legible del código que hay dentro del workflow exportado.\n\nconst body = $input.first().json.body ?? $input.first().json;\nconst errors = [];\nconst fail = (field, type, message) => errors.push({ field, type, message });\n\nconst UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nconst EMAIL = /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/;\nconst ORDER = /^EL-\\d{8}-[A-Z0-9]{4}$/;\nconst TICKET = /^SOP-\\d{8}-[A-Z0-9]{4}$/;\nconst ORDER_STATUS = ['creado', 'pago_simulado', 'pendiente_preparacion', 'enviado', 'entregado', 'cancelado', 'incidencia'];\nconst ROUTES = {\n  'order.created': 'order', 'payment.simulated': 'order', 'order.status_changed': 'order',\n  'stock.adjusted': 'stock', 'support.requested': 'ticket', 'support.status_changed': 'ticket',\n};\nconst money = v => Math.round(Number(v) * 100) / 100;\nconst isNum = v => v !== null && v !== '' && Number.isFinite(Number(v));\nconst isDate = v => typeof v === 'string' && !Number.isNaN(Date.parse(v));\n\n// ---------- 1. Sobre (envelope) ----------\nif (body?.contract !== 'entrelibros.event.v1') fail('contract', 'contrato', 'Contrato desconocido o ausente');\nif (!UUID.test(body?.event_id ?? '')) fail('event_id', 'contrato', 'event_id debe ser un UUID');\nif (!ROUTES[body?.event_type]) fail('event_type', 'contrato', `Tipo de evento no admitido: ${body?.event_type}`);\nif (!isDate(body?.occurred_at)) fail('occurred_at', 'formato', 'occurred_at no es una fecha ISO 8601');\nif (!body?.data || typeof body.data !== 'object') fail('data', 'contrato', 'Falta el objeto data');\n\nconst route = ROUTES[body?.event_type] ?? 'ignorar';\nconst d = body?.data ?? {};\nlet normalized = null;\n\n// ---------- 2. Pedido (escenarios 1 y 2) ----------\nfunction normalizeOrder(o) {\n  if (!o) { fail('data.order', 'contrato', 'Falta el pedido'); return null; }\n  if (!ORDER.test(o.order_number ?? '')) fail('order.order_number', 'formato', 'Número de pedido con formato incorrecto');\n  if (!ORDER_STATUS.includes(o.status)) fail('order.status', 'contrato', `Estado desconocido: ${o.status}`);\n  if (!isDate(o.created_at)) fail('order.created_at', 'formato', 'Fecha del pedido no válida');\n  const email = String(o.customer?.email ?? '').trim().toLowerCase();\n  if (!EMAIL.test(email)) fail('order.customer.email', 'contrato', 'Email del cliente ausente o no válido');\n  if (!Array.isArray(o.lines) || o.lines.length === 0) fail('order.lines', 'contrato', 'El pedido no tiene líneas');\n  for (const k of ['subtotal', 'shipping', 'tax', 'total']) {\n    if (!isNum(o.amounts?.[k])) fail(`order.amounts.${k}`, 'formato', `Importe ${k} ausente o no numérico`);\n  }\n  const lines = (o.lines ?? []).map((l, i) => {\n    if (!l.sku) fail(`order.lines[${i}].sku`, 'contrato', 'Línea sin SKU');\n    if (!Number.isInteger(Number(l.quantity)) || Number(l.quantity) <= 0) fail(`order.lines[${i}].quantity`, 'formato', 'Cantidad no válida');\n    if (isNum(l.unit_price) && isNum(l.line_total) && Math.abs(money(l.unit_price * l.quantity) - money(l.line_total)) > 0.01) {\n      fail(`order.lines[${i}].line_total`, 'coherencia', 'precio × cantidad no coincide con el importe de la línea');\n    }\n    return {\n      sku: String(l.sku ?? '').toUpperCase(),\n      description: [l.product_name, l.variant_name].filter(Boolean).join(' · '),\n      quantity: Number(l.quantity), unit_price: money(l.unit_price), line_total: money(l.line_total),\n    };\n  });\n  const a = o.amounts ?? {};\n  if (lines.length && isNum(a.subtotal)) {\n    const sum = money(lines.reduce((s, l) => s + l.line_total, 0));\n    if (Math.abs(sum - money(a.subtotal)) > 0.01) fail('order.amounts.subtotal', 'coherencia', `Suma de líneas ${sum} ≠ subtotal ${a.subtotal}`);\n  }\n  if ([a.subtotal, a.discount ?? 0, a.shipping, a.total].every(isNum)) {\n    const expected = money(Number(a.subtotal) - Number(a.discount ?? 0) + Number(a.shipping));\n    if (Math.abs(expected - money(a.total)) > 0.01) fail('order.amounts.total', 'coherencia', `subtotal − descuento + envío = ${expected} ≠ total ${a.total}`);\n  }\n  const ship = o.shipping ?? {};\n  const pay = o.payment ?? null;\n  return {\n    order_number: o.order_number, status: o.status, created_at: new Date(o.created_at).toISOString(),\n    currency: (o.currency ?? 'EUR').toUpperCase(),\n    amounts: { subtotal: money(a.subtotal), discount: money(a.discount ?? 0), shipping: money(a.shipping),\n               tax: money(a.tax), total: money(a.total) },\n    customer: {\n      email, shop_id: o.customer?.shop_id ?? null,\n      full_name: String(o.customer?.full_name ?? '').trim().replace(/\\s+/g, ' '),\n      // teléfono normalizado a +34XXXXXXXXX cuando es un móvil o fijo español de 9 cifras\n      phone: (() => { const p = String(o.customer?.phone ?? '').replace(/[^\\d+]/g, '');\n                      return /^[6789]\\d{8}$/.test(p) ? '+34' + p : (p || null); })(),\n    },\n    shipping: {\n      method: ship.method ?? ship.method_code ?? null,\n      pickup_point: ship.pickup_point ?? null,\n      full_address: [ship.address, [ship.postcode, ship.city].filter(Boolean).join(' '), ship.province, ship.country]\n        .filter(Boolean).join(', '),\n    },\n    payment: pay ? {\n      method: { stripe_test: 'Tarjeta (Stripe test)', tarjeta_simulada: 'Tarjeta simulada', bizum_simulado: 'Bizum simulado' }[pay.method] ?? pay.method,\n      reference: pay.reference ?? null,\n      status_erp: pay.status === 'aprobado' ? 'pagado' : pay.status === 'rechazado' ? 'rechazado' : 'pendiente',\n    } : { status_erp: 'pendiente' },\n    lines,\n  };\n}\n\n// ---------- 3. Stock (escenario 2) ----------\nfunction normalizeStock(s) {\n  if (!s?.sku) fail('stock.sku', 'contrato', 'Falta el SKU');\n  if (!Number.isInteger(Number(s?.to)) || Number(s?.to) < 0) fail('stock.to', 'formato', 'Stock final no válido');\n  return { sku: String(s?.sku ?? '').toUpperCase(), on_hand: Number(s?.to), from: s?.from ?? null, description: s?.description ?? null };\n}\n\n// ---------- 4. Incidencia (escenario 3) ----------\nconst CATEGORY = {\n  pieza_faltante: ['Logística · pieza faltante', 'alta', 24],\n  pieza_danada: ['Calidad · pieza dañada', 'alta', 24],\n  retraso_envio: ['Logística · retraso de envío', 'media', 48],\n  duda_montaje: ['Atención · duda de montaje', 'baja', 72],\n  otro: ['Otros', 'media', 72],\n};\nfunction normalizeTicket(t) {\n  if (!t) { fail('data.ticket', 'contrato', 'Falta la incidencia'); return null; }\n  if (!TICKET.test(t.ticket_number ?? '')) fail('ticket.ticket_number', 'formato', 'Número de incidencia con formato incorrecto');\n  const email = String(t.customer_email ?? '').trim().toLowerCase();\n  if (!EMAIL.test(email)) fail('ticket.customer_email', 'contrato', 'Email del cliente ausente o no válido');\n  if (!CATEGORY[t.reason]) fail('ticket.reason', 'contrato', `Motivo desconocido: ${t.reason}`);\n  if (t.order_number && !ORDER.test(t.order_number)) fail('ticket.order_number', 'formato', 'Número de pedido con formato incorrecto');\n  const [category, priority, slaHours] = CATEGORY[t.reason] ?? CATEGORY.otro;\n  const created = isDate(t.created_at) ? new Date(t.created_at) : new Date();\n  return {\n    ticket_number: t.ticket_number, customer_email: email, customer_name: t.customer_name ?? null,\n    order_number: t.order_number ?? null, reason: t.reason, category, priority, status: t.status,\n    subject: `${category}${t.order_number ? ' · ' + t.order_number : ''}`,\n    message: String(t.message ?? '').trim().slice(0, 2000),\n    sla_due_at: new Date(created.getTime() + slaHours * 3600e3).toISOString(),\n    telegram_linked: Boolean(t.telegram_linked),\n  };\n}\n\nif (route === 'order') normalized = normalizeOrder(d.order);\nelse if (route === 'stock') normalized = normalizeStock(d.stock);\nelse if (route === 'ticket') normalized = normalizeTicket(d.ticket);\n\nreturn [{\n  json: {\n    valid: errors.length === 0,\n    errors,\n    error_type: errors[0]?.type ?? null,\n    route,\n    event: { event_id: body?.event_id ?? null, event_type: body?.event_type ?? null,\n             occurred_at: body?.occurred_at ?? null, source: body?.source ?? null },\n    entity_ref: d.ticket?.ticket_number ?? d.order?.order_number ?? d.stock?.sku ?? null,\n    normalized,\n    started_at: Date.now(),\n  },\n}];\n"
+      },
+      "id": "2c9f3d9e-5a67-50b4-ac34-9f67f617c670",
+      "name": "Validar y normalizar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "notes": "Campos obligatorios, formatos, coherencia de importes y normalización (ver n8n/code/validar-evento.js).",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c2747fca-54df-5a9a-84d5-62207ea07531",
+              "leftValue": "={{ $json.valid }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "a6a815de-92a9-5181-8fc6-fede74867d54",
+      "name": "¿Payload válido?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "0f387a62-79a1-5a65-a98b-ebab08d6750d",
+                    "leftValue": "={{ $json.route }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "order"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Pedido"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "eb0aed21-2089-5a84-83ce-f8aa5181a47e",
+                    "leftValue": "={{ $json.route }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "stock"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Stock"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c2b620e0-dd51-5269-8766-684154a00963",
+                    "leftValue": "={{ $json.route }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "ticket"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Incidencia"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c40abe99-a704-5f02-81c9-ba1a52640ec1",
+      "name": "Según el tipo de evento",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        720,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/erp_upsert_order",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_event_id: $('Validar y normalizar').item.json.event.event_id, p_occurred_at: $('Validar y normalizar').item.json.event.occurred_at, p_order: $('Validar y normalizar').item.json.normalized }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "6c9fe4f6-f887-529b-87f7-e507182cdfa0",
+      "name": "ERP · pedido de venta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        980,
+        60
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "entrelibrosSupabase",
+          "name": "Entrelibros · Supabase (secret key)"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "notes": "Escenarios 1 y 2: crea o actualiza el pedido (idempotente).",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/erp_set_stock",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_event_id: $('Validar y normalizar').item.json.event.event_id, p_sku: $('Validar y normalizar').item.json.normalized.sku, p_on_hand: $('Validar y normalizar').item.json.normalized.on_hand, p_description: $('Validar y normalizar').item.json.normalized.description }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "2f35ebdc-e753-55cf-b8a7-3f632281f97a",
+      "name": "ERP · inventario",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        980,
+        220
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "entrelibrosSupabase",
+          "name": "Entrelibros · Supabase (secret key)"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "notes": "Escenario 2: sincroniza el stock.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/erp_upsert_ticket",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_event_id: $('Validar y normalizar').item.json.event.event_id, p_ticket: $('Validar y normalizar').item.json.normalized }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "58150667-34e2-56e3-b056-da6f41e894e9",
+      "name": "CRM · incidencia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        980,
+        380
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "entrelibrosSupabase",
+          "name": "Entrelibros · Supabase (secret key)"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "notes": "Escenario 3: ticket asociado a cliente y pedido.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Une la respuesta del ERP con los datos del evento y decide los pasos siguientes.\nconst v = $('Validar y normalizar').item.json;\nconst r = $json;                                   // respuesta de la función erp_*\nconst result = r.result ?? 'ok';\nconst status = ['duplicado', 'obsoleto'].includes(result) ? result : 'ok';\nconst ev = v.event.event_type;\nconst paid = ev === 'payment.simulated' && v.normalized?.payment?.status_erp === 'pagado';\nconst fmt = n => Number(n).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });\nconst esc = t => String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nlet notice = null;\nif (status === 'ok' && paid) {\n  notice = `🧾 <b>Pedido pagado integrado en el ERP</b>\\n${v.entity_ref} · ${fmt(v.normalized.amounts.total)} · ${v.normalized.lines.length} líneas\\nCliente: ${esc(v.normalized.customer.email)}`;\n} else if (status === 'ok' && ev === 'order.status_changed') {\n  notice = `🔄 <b>Estado sincronizado</b>\\n${v.entity_ref}: ${r.previous_status ?? '—'} → ${r.status}`;\n} else if (status === 'ok' && ev === 'stock.adjusted') {\n  notice = `📦 <b>Stock sincronizado</b>\\n${v.entity_ref}: ${r.from ?? '—'} → ${r.on_hand} uds.`;\n} else if (status === 'ok' && ev === 'support.requested') {\n  notice = `🆘 <b>Nueva incidencia en el CRM</b>\\n${v.entity_ref} · ${esc(v.normalized.category)} · prioridad ${v.normalized.priority}\\nEl agente de IA la está analizando…`;\n}\nreturn [{ json: {\n  status, result, erp: r,\n  event_id: v.event.event_id, event_type: ev, entity_ref: v.entity_ref, route: v.route,\n  launch_agent: status === 'ok' && result === 'creado' && ev === 'support.requested',\n  agent_input: { event: v.event, ticket: v.normalized, parent_execution: $execution.id },\n  notice,\n  duration_ms: Date.now() - v.started_at,\n} }];"
+      },
+      "id": "23710aed-2e77-5300-a4a9-257cffe121cb",
+      "name": "Preparar resultado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1240,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/erp_log",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_entry: { execution_id: $execution.id, workflow: 'eventos-erp', step: 'resultado', event_id: $json.event_id, event_type: $json.event_type, entity_type: $json.route, entity_ref: $json.entity_ref, status: $json.status, message: 'ERP: ' + $json.result, details: $json.erp, duration_ms: $json.duration_ms } }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "8ae7a609-b00d-5003-b0ac-5c79407f8cc3",
+      "name": "Log · resultado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1480,
+        220
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "entrelibrosSupabase",
+          "name": "Entrelibros · Supabase (secret key)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/erp_ack",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_event_id: $('Preparar resultado').item.json.event_id, p_ok: true, p_detail: $('Preparar resultado').item.json.result }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "8fda0c5e-a903-509f-b9bd-59879519c8d9",
+      "name": "ACK correcto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1720,
+        220
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "entrelibrosSupabase",
+          "name": "Entrelibros · Supabase (secret key)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ result: $('Preparar resultado').item.json.result, event_id: $('Preparar resultado').item.json.event_id, execution_id: $execution.id }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "a67213bf-dab2-50e7-bcc0-bbbfe77506ba",
+      "name": "Responder 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1960,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ee05a7b5-7eb0-53a9-b5a3-80e4560016b1",
+              "leftValue": "={{ $('Preparar resultado').item.json.notice }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "50558c78-ffd6-5b82-af66-540ed59b518a",
+      "name": "¿Avisar a operaciones?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1960,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.ENTRELIBROS_OPS_CHAT_ID }}",
+        "text": "={{ $('Preparar resultado').item.json.notice }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "e4f3d56b-17f9-519a-a7cb-d1dc872d5a67",
+      "name": "Telegram · aviso a operaciones",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2200,
+        280
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "entrelibrosTelegram",
+          "name": "Entrelibros · Telegram bot"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "webhookId": "daa0f078-b10b-5a14-b194-b9f8df05ca99"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b859f94f-6be0-5235-ae22-dbcdd6728705",
+              "leftValue": "={{ $('Preparar resultado').item.json.launch_agent }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "f7cf92c1-edfa-5489-be5d-4a86a6f1e1c4",
+      "name": "¿Incidencia nueva?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2440,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "EntrelibrosAgenteSoporte",
+          "mode": "id"
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "id": "9108adf0-be4f-5684-9640-addf9f82d1ee",
+      "name": "Lanzar agente de soporte",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2680,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('Preparar resultado').item.json.agent_input }];"
+      },
+      "id": "e66b66aa-e7b7-5c24-bcae-b5425b74d2f3",
+      "name": "Datos para el agente",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2560,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const v = $json;\nreturn [{ json: {\n  event_id: v.event.event_id, event_type: v.event.event_type, entity_ref: v.entity_ref,\n  error_type: v.error_type ?? 'contrato', retry: false, http_code: 422,\n  message: v.errors.map(e => `${e.field}: ${e.message}`).join(' · '),\n  details: { errors: v.errors }, duration_ms: Date.now() - v.started_at,\n} }];"
+      },
+      "id": "12e814db-0484-5cb4-8409-9d9c30b0227d",
+      "name": "Error de validación",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error de la llamada al ERP: 4xx con prefijo de negocio = datos (no se reintenta);\n// sin respuesta, 5xx o timeout = técnico (se reintenta desde la cola de Supabase).\nconst v = $('Validar y normalizar').item.json;\nconst err = $json.error ?? {};\nconst msg = String(err.message ?? err.description ?? JSON.stringify(err)).slice(0, 500);\nconst code = Number(err.httpCode ?? err.status ?? 0);\nconst m = msg.match(/(contrato|formato|coherencia|negocio):/);\nconst type = m ? m[1] : (code >= 400 && code < 500 ? 'negocio' : 'tecnico');\nreturn [{ json: {\n  event_id: v.event.event_id, event_type: v.event.event_type, entity_ref: v.entity_ref,\n  error_type: type, retry: type === 'tecnico', http_code: type === 'tecnico' ? 503 : 422,\n  message: msg, details: { http_code: code || null }, duration_ms: Date.now() - v.started_at,\n} }];"
+      },
+      "id": "72e78625-bac3-506e-8b3d-a027dd252cbe",
+      "name": "Clasificar error del ERP",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1240,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/erp_log",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_entry: { execution_id: $execution.id, workflow: 'eventos-erp', step: 'resultado', event_id: $('Unir errores').item.json.event_id, event_type: $('Unir errores').item.json.event_type, entity_ref: $('Unir errores').item.json.entity_ref, status: 'error', error_type: $('Unir errores').item.json.error_type, message: $('Unir errores').item.json.message, details: $('Unir errores').item.json.details, duration_ms: $('Unir errores').item.json.duration_ms } }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "04b6635d-0f86-5b65-b77b-14b815eaddbb",
+      "name": "Log · error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1480,
+        560
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "entrelibrosSupabase",
+          "name": "Entrelibros · Supabase (secret key)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/erp_ack",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_event_id: $('Unir errores').item.json.event_id || '00000000-0000-0000-0000-000000000000', p_ok: false, p_detail: $('Unir errores').item.json.error_type + ': ' + $('Unir errores').item.json.message, p_retry: $('Unir errores').item.json.retry }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "4998faa8-2149-587f-8a07-815eab514416",
+      "name": "ACK con error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1720,
+        560
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "entrelibrosSupabase",
+          "name": "Entrelibros · Supabase (secret key)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {},
+      "id": "01f6f0ee-cb77-5a47-ac63-8c5c4460e940",
+      "name": "Unir errores",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        660
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.ENTRELIBROS_OPS_CHAT_ID }}",
+        "text": "=⚠️ <b>Error de integración</b> ({{ $('Unir errores').item.json.error_type }})\n{{ $('Unir errores').item.json.event_type }} · {{ $('Unir errores').item.json.entity_ref }}\n{{ $('Unir errores').item.json.message.slice(0, 300).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}\n{{ $('Unir errores').item.json.retry ? 'Se reintentará automáticamente.' : 'No se reintenta: revisar los datos.' }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "cc3499b8-9a60-5225-9a82-07c352aa94da",
+      "name": "Telegram · alerta de error",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1960,
+        560
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "entrelibrosTelegram",
+          "name": "Entrelibros · Telegram bot"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "webhookId": "acbb0434-7156-503e-a52f-7f22ad32b4a0"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ result: 'error', error_type: $('Unir errores').item.json.error_type, message: $('Unir errores').item.json.message, event_id: $('Unir errores').item.json.event_id, execution_id: $execution.id }) }}",
+        "options": {
+          "responseCode": "={{ $('Unir errores').item.json.http_code }}"
+        }
+      },
+      "id": "fab9dc18-475e-57f5-b30b-a5c0295b52a6",
+      "name": "Responder error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1960,
+        720
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook · evento de la tienda": {
+      "main": [
+        [
+          {
+            "node": "Validar y normalizar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar y normalizar": {
+      "main": [
+        [
+          {
+            "node": "¿Payload válido?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Payload válido?": {
+      "main": [
+        [
+          {
+            "node": "Según el tipo de evento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error de validación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Según el tipo de evento": {
+      "main": [
+        [
+          {
+            "node": "ERP · pedido de venta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ERP · inventario",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CRM · incidencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ERP · pedido de venta": {
+      "main": [
+        [
+          {
+            "node": "Preparar resultado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Clasificar error del ERP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ERP · inventario": {
+      "main": [
+        [
+          {
+            "node": "Preparar resultado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Clasificar error del ERP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM · incidencia": {
+      "main": [
+        [
+          {
+            "node": "Preparar resultado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Clasificar error del ERP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar resultado": {
+      "main": [
+        [
+          {
+            "node": "Log · resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log · resultado": {
+      "main": [
+        [
+          {
+            "node": "ACK correcto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ACK correcto": {
+      "main": [
+        [
+          {
+            "node": "Responder 200",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "¿Avisar a operaciones?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Avisar a operaciones?": {
+      "main": [
+        [
+          {
+            "node": "Telegram · aviso a operaciones",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "¿Incidencia nueva?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram · aviso a operaciones": {
+      "main": [
+        [
+          {
+            "node": "¿Incidencia nueva?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Incidencia nueva?": {
+      "main": [
+        [
+          {
+            "node": "Datos para el agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Datos para el agente": {
+      "main": [
+        [
+          {
+            "node": "Lanzar agente de soporte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error de validación": {
+      "main": [
+        [
+          {
+            "node": "Unir errores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clasificar error del ERP": {
+      "main": [
+        [
+          {
+            "node": "Unir errores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unir errores": {
+      "main": [
+        [
+          {
+            "node": "Log · error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log · error": {
+      "main": [
+        [
+          {
+            "node": "ACK con error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ACK con error": {
+      "main": [
+        [
+          {
+            "node": "Responder error",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram · alerta de error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "timezone": "Europe/Madrid"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [],
+  "description": "Recibe los eventos de la tienda (webhook), valida el contrato, crea o actualiza el pedido, el stock o la incidencia en el ERP/CRM, registra el resultado y confirma a Supabase. Rama de error con log y alerta."
+}

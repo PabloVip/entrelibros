@@ -1,0 +1,63 @@
+# Render Blueprint (Tarea 2): n8n en un Web Service gratuito, con la base de datos de n8n en el
+# Postgres de Supabase (esquema "n8n"), para que los workflows y credenciales no se pierdan
+# cuando Render reinicia el servicio. Los valores con "sync: false" se rellenan a mano en Render
+# (son secretos o dependen de tu proyecto) y NO se guardan en el repositorio.
+# Guía paso a paso: docs/tarea2/despliegue-render.md
+services:
+  - type: web
+    name: entrelibros-n8n
+    runtime: image
+    image:
+      url: docker.io/n8nio/n8n:2.44.7
+    plan: free
+    region: frankfurt
+    healthCheckPath: /healthz
+    envVars:
+      - key: N8N_PORT
+        value: "10000"
+      - key: N8N_WEBHOOK_URL
+        sync: false                     # https://entrelibros-n8n.onrender.com/
+      - key: N8N_ENCRYPTION_KEY
+        generateValue: true             # cifra las credenciales guardadas en la BD
+      - key: GENERIC_TIMEZONE
+        value: Europe/Madrid
+      - key: TZ
+        value: Europe/Madrid
+      - key: N8N_DIAGNOSTICS_ENABLED
+        value: "false"
+      - key: N8N_PERSONALIZATION_ENABLED
+        value: "false"
+      - key: N8N_BLOCK_ENV_ACCESS_IN_NODE
+        value: "false"                  # los workflows leen ENTRELIBROS_* con $env
+      - key: EXECUTIONS_DATA_PRUNE
+        value: "true"
+      - key: EXECUTIONS_DATA_MAX_AGE
+        value: "336"                    # 14 días de historial de ejecuciones
+      # --- Base de datos de n8n: Postgres de Supabase (Session pooler) ---
+      - key: DB_TYPE
+        value: postgresdb
+      - key: DB_POSTGRESDB_HOST
+        sync: false                     # aws-0-<región>.pooler.supabase.com
+      - key: DB_POSTGRESDB_PORT
+        value: "5432"
+      - key: DB_POSTGRESDB_DATABASE
+        value: postgres
+      - key: DB_POSTGRESDB_USER
+        sync: false                     # postgres.<ref-del-proyecto>
+      - key: DB_POSTGRESDB_PASSWORD
+        sync: false
+      - key: DB_POSTGRESDB_SCHEMA
+        value: n8n
+      - key: DB_POSTGRESDB_SSL_ENABLED
+        value: "true"
+      - key: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
+        value: "false"
+      - key: DB_POSTGRESDB_POOL_SIZE
+        value: "4"
+      # --- Configuración de Entrelibros (no secreta) ---
+      - key: ENTRELIBROS_SUPABASE_URL
+        sync: false                     # https://<ref>.supabase.co
+      - key: ENTRELIBROS_OPS_CHAT_ID
+        sync: false                     # chat de Telegram de quien revisa (ver guía)
+      - key: ENTRELIBROS_BOT_USERNAME
+        sync: false                     # sin @

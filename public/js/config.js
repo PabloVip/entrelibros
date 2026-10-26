@@ -7,3 +7,7 @@ export const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_4cK1DWZaU9lCOMwYoE6lQA_C
 
 export const APP_NAME = 'Entrelibros';
 export const TAX_RATE = 21; // IVA general (%) — solo para mostrar; el cálculo real lo hace el servidor
+
+// Bot de Telegram de soporte (Tarea 2). Solo el nombre de usuario, sin @ (no es un secreto).
+// Vacío = no se ofrece seguir la incidencia por Telegram.
+export const TELEGRAM_BOT = '';

@@ -12,6 +12,7 @@ const ICON = {
   clientes:  '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
   soporte:   '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
   eventos:   '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  integracion: '<path d="M16 3h5v5M8 21H3v-5M21 3l-7 7M3 21l7-7M14 21h7v-7M10 3H3v7"/>',
   ajustes:   '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',
   tienda:    '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3"/>',
 };
@@ -24,6 +25,7 @@ const NAV = [
   { id: 'clientes',  href: 'admin-clientes.html',  label: 'Clientes' },
   { id: 'soporte',   href: 'admin-soporte.html',   label: 'Soporte' },
   { id: 'eventos',   href: 'admin-eventos.html',   label: 'Eventos' },
+  { id: 'integracion', href: 'admin-integracion.html', label: 'Integración' },
   { id: 'ajustes',   href: 'admin-ajustes.html',   label: 'Ajustes' },
 ];
 

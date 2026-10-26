@@ -1,6 +1,7 @@
 // Soporte postventa: crea una incidencia con create_support_request (emite support.requested).
 import { renderLayout } from '../core/layout.js';
-import { createSupportRequest } from '../repositories/supportRepository.js';
+import { createSupportRequest, telegramToken } from '../repositories/supportRepository.js';
+import { TELEGRAM_BOT } from '../config.js';
 import { REASONS, MESSAGE_MAX, validateSupport } from '../services/supportService.js';
 import { escapeHtml, param } from '../core/utils.js';
 import { prefillSupport } from '../components/supportAccount.js';
@@ -82,9 +83,27 @@ function renderDone(result, values) {
           : `<p class="note">No hemos podido asociar el pedido ${escapeHtml(values.orderNumber)}: el número no coincide
                con el email indicado. La incidencia se ha registrado igualmente.</p>`)
         : ''}
-      <p class="muted">Es un prototipo: nadie va a contestar, pero la incidencia queda guardada y visible en el back-office.</p>
+      <div id="telegram-follow"></div>
+      <p class="muted">Es un prototipo: la incidencia pasa al CRM interno, un agente de IA propone la respuesta y una persona la revisa antes de enviarla.</p>
       <p><a href="index.html">Volver a la tienda</a></p>
     </div>`;
+  offerTelegram(result.ticket_number, values.email);
+}
+
+/** Tarea 2: seguir la incidencia en Telegram (el bot recibe /start <token> y vincula el chat). */
+async function offerTelegram(ticket, email) {
+  if (!TELEGRAM_BOT) return;
+  try {
+    const token = await telegramToken(ticket, email);
+    if (!token) return;
+    document.getElementById('telegram-follow').innerHTML = `
+      <p>¿Quieres recibir la respuesta por Telegram?</p>
+      <p><a class="btn" href="https://t.me/${encodeURIComponent(TELEGRAM_BOT)}?start=${encodeURIComponent(token)}"
+            target="_blank" rel="noopener">Seguir la incidencia en Telegram</a></p>
+      <p class="muted small">Se abre el bot de soporte de Entrelibros (prueba). Solo se guarda el identificador del chat.</p>`;
+  } catch {
+    /* sin Telegram: la incidencia ya está registrada */
+  }
 }
 
 /** Errores del servidor: los de validación (22023) ya vienen en español. */

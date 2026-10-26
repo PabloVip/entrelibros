@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Integración · Back-office · Entrelibros</title>
+  <meta name="theme-color" content="#10182B">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..700,0..100,0..1&family=Instrument+Sans:wght@400..700&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="img/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+</head>
+<body data-page="integracion" class="admin">
+  <div class="academic-banner" role="note">
+    <strong>Prototipo académico</strong>
+    <span class="banner-long">del Grado en Ingeniería Informática (UCAM). Tienda ficticia: no introduzcas datos personales ni medios de pago reales.</span>
+    <span class="banner-short">(UCAM): no uses datos reales.</span>
+  </div>
+  <header id="site-header" class="site-header"></header>
+  <main class="container" id="contenido">
+    <div class="page-head">
+      <div>
+        <h1>Integración</h1>
+        <p class="lead">Tienda → n8n → ERP/CRM: cola de eventos, ejecuciones, agente de IA y métricas.</p>
+      </div>
+      <div class="page-head-actions">
+        <label class="sort">Periodo
+          <select id="period">
+            <option value="1">Último día</option>
+            <option value="7">Últimos 7 días</option>
+            <option value="30" selected>Últimos 30 días</option>
+          </select>
+        </label>
+        <button type="button" id="reload" class="btn btn-secondary btn-small">Actualizar</button>
+      </div>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="Integración">
+      <button type="button" role="tab" id="tab-mando" aria-controls="panel-mando" aria-selected="true">Cuadro de mando</button>
+      <button type="button" role="tab" id="tab-erp" aria-controls="panel-erp" aria-selected="false">ERP / CRM</button>
+      <button type="button" role="tab" id="tab-agente" aria-controls="panel-agente" aria-selected="false">Agente de IA</button>
+      <button type="button" role="tab" id="tab-traza" aria-controls="panel-traza" aria-selected="false">Cola y log</button>
+    </div>
+
+    <section id="panel-mando" role="tabpanel" aria-labelledby="tab-mando">
+      <div id="int-kpis" class="kpis" aria-label="Indicadores"><p>Cargando…</p></div>
+      <div class="panel-grid">
+        <section class="panel span-2">
+          <h2 class="h3">Pedidos integrados en el ERP por día</h2>
+          <div id="int-chart"></div>
+        </section>
+        <section class="panel">
+          <h2 class="h3">Pedidos del ERP por estado</h2>
+          <div id="int-status"></div>
+        </section>
+        <section class="panel">
+          <h2 class="h3">Errores de integración por tipo</h2>
+          <div id="int-errors"></div>
+        </section>
+        <section class="panel">
+          <h2 class="h3">Agente: propuestas y revisión humana</h2>
+          <div id="int-agent"></div>
+        </section>
+        <section class="panel">
+          <h2 class="h3">Productos más pedidos (ERP)</h2>
+          <div id="int-top"></div>
+        </section>
+        <section class="panel span-2">
+          <h2 class="h3">Conversión del flujo (eventos de la tienda)</h2>
+          <div id="int-funnel"></div>
+        </section>
+      </div>
+      <p class="muted small">Todas las cifras se calculan en el momento a partir de las tablas de la tienda, de la cola
+        <code>integration_outbox</code>, del log <code>integration_log</code>, del ERP y de <code>agent_decisions</code>.</p>
+    </section>
+
+    <section id="panel-erp" role="tabpanel" aria-labelledby="tab-erp" hidden>
+      <p class="muted">Lo que ve el sistema interno (esquema <code>erp</code>). Solo lo escribe n8n por API; la tienda no puede escribir aquí.</p>
+      <h2 class="h3">Pedidos de venta</h2>
+      <div class="table-wrap"><table class="data-table">
+        <thead><tr><th>Pedido</th><th>Cliente</th><th>Estado ERP</th><th>Pago</th><th>Líneas</th><th>Importe</th><th>Versión</th><th>Actualizado</th></tr></thead>
+        <tbody id="erp-orders"></tbody>
+      </table></div>
+      <h2 class="h3">Incidencias (CRM)</h2>
+      <div id="erp-tickets" class="ticket-list"></div>
+      <h2 class="h3">Inventario sincronizado</h2>
+      <div class="table-wrap"><table class="data-table">
+        <thead><tr><th>SKU</th><th>Descripción</th><th>Stock</th><th>Actualizado</th></tr></thead>
+        <tbody id="erp-inventory"></tbody>
+      </table></div>
+    </section>
+
+    <section id="panel-agente" role="tabpanel" aria-labelledby="tab-agente" hidden>
+      <p class="muted">Salida estructurada del agente para cada incidencia. Ninguna respuesta llega al cliente sin aprobación humana en Telegram.</p>
+      <div id="decisions" class="decision-list"></div>
+    </section>
+
+    <section id="panel-traza" role="tabpanel" aria-labelledby="tab-traza" hidden>
+      <h2 class="h3">Cola de salida (tienda → n8n)</h2>
+      <div class="table-wrap"><table class="data-table">
+        <thead><tr><th>#</th><th>Evento</th><th>Referencia</th><th>Estado</th><th>Intentos</th><th>Creado</th><th>Procesado</th><th>Error</th><th><span class="visually-hidden">Acciones</span></th></tr></thead>
+        <tbody id="outbox"></tbody>
+      </table></div>
+      <h2 class="h3">Log de ejecuciones (n8n)</h2>
+      <div class="table-wrap"><table class="data-table">
+        <thead><tr><th>Fecha</th><th>Workflow</th><th>Paso</th><th>Evento</th><th>Referencia</th><th>Resultado</th><th>Mensaje</th><th>Ejecución</th></tr></thead>
+        <tbody id="intlog"></tbody>
+      </table></div>
+    </section>
+  </main>
+  <script type="module" src="js/core/i18n.js"></script>
+  <script type="module" src="js/pages/admin/integration.js"></script>
+</body>
+</html>
