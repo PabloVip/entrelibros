@@ -470,7 +470,7 @@
       "typeVersion": 4.2,
       "position": [
         2480,
-        100
+        40
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -498,7 +498,7 @@
       "typeVersion": 4.2,
       "position": [
         2240,
-        300
+        420
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -557,7 +557,7 @@
       "typeVersion": 4.2,
       "position": [
         560,
-        520
+        720
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -582,7 +582,7 @@
       "typeVersion": 1.2,
       "position": [
         800,
-        520
+        720
       ],
       "credentials": {
         "telegramApi": {

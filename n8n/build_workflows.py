@@ -419,8 +419,8 @@ a.add('Telegram · respuesta al cliente', 'n8n-nodes-base.telegram', 1.2, {
     'text': "=📦 <b>Entrelibros · incidencia {{ $json.ticket_ref }}</b>\n\n{{ $json.customer_message" + ESC + " }}",
     'additionalFields': {'appendAttribution': False, 'parse_mode': 'HTML'}},
     (2240, 120), creds=['telegram'], onError='continueErrorOutput', webhookId=nid('agent/customer'))
-rpc(a, 'Marcar enviada', 'erp_mark_delivered', "{ p_id: " + P_ID + ", p_simulated: false }", (2480, 100))
-rpc(a, 'Marcar como simulada', 'erp_mark_delivered', "{ p_id: " + P_ID + ", p_simulated: true }", (2240, 300),
+rpc(a, 'Marcar enviada', 'erp_mark_delivered', "{ p_id: " + P_ID + ", p_simulated: false }", (2480, 40))
+rpc(a, 'Marcar como simulada', 'erp_mark_delivered', "{ p_id: " + P_ID + ", p_simulated: true }", (2240, 420),
     notes='Sin chat vinculado: queda aprobada y se enviará cuando el cliente vincule Telegram.')
 rpc(a, 'Log · revisión', 'erp_log', log_body('agente-soporte', 'revision_humana',
     "event_id: " + D + ".event_id, entity_type: 'ticket', entity_ref: " + D + ".ticket_ref, status: 'ok', "
@@ -429,10 +429,10 @@ rpc(a, 'Log · revisión', 'erp_log', log_body('agente-soporte', 'revision_human
 rpc(a, 'Log · error del agente', 'erp_log', log_body('agente-soporte', 'propuesta',
     "event_id: $('Desde el flujo principal').item.json.event?.event_id, entity_type: 'ticket', "
     "entity_ref: $('Desde el flujo principal').item.json.ticket.ticket_number, status: 'error', error_type: 'agente', "
-    "message: String($json.error?.message ?? $json.error ?? 'Fallo del agente').slice(0, 500)"), (560, 520), on_error='continueRegularOutput')
+    "message: String($json.error?.message ?? $json.error ?? 'Fallo del agente').slice(0, 500)"), (560, 720), on_error='continueRegularOutput')
 telegram(a, 'Telegram · revisión manual', OPS,
          "=⚠️ <b>El agente no ha podido analizar {{ $('Desde el flujo principal').item.json.ticket.ticket_number }}</b>\n"
-         "La incidencia está en el CRM: revísala a mano en el back-office.", (800, 520))
+         "La incidencia está en el CRM: revísala a mano en el back-office.", (800, 720))
 rpc(a, 'Log · fallo al enviar', 'erp_log', log_body('agente-soporte', 'envio_cliente',
     "entity_type: 'ticket', entity_ref: " + D + ".ticket_ref, status: 'error', error_type: 'tecnico', "
     "message: 'Telegram no ha entregado la respuesta: ' + String($json.error?.message ?? '').slice(0, 300)"), (2480, 240), on_error='continueRegularOutput')
@@ -485,28 +485,28 @@ if_node(b, '¿Token válido?', [cond('={{ $json.result }}', 'string', 'equals', 
 CH = "={{ $('Interpretar mensaje').item.json.chat_id }}"
 telegram(b, 'Confirmar vinculación', CH,
          "=✅ Listo, {{ $('Interpretar mensaje').item.json.name" + ESC + " }}. Te avisaremos aquí de la incidencia <b>{{ $('Vincular chat con la incidencia').item.json.ticket_ref }}</b>.\n"
-         "Puedes escribirnos por este chat y lo añadiremos a tu incidencia.\n\n<i>Entrelibros es un prototipo académico (UCAM).</i>", (1200, 40))
-telegram(b, 'Enlace no válido', CH, '=El enlace no es válido o ha caducado. Vuelve a abrirlo desde la página de soporte de Entrelibros.', (1200, 200))
+         "Puedes escribirnos por este chat y lo añadiremos a tu incidencia.\n\n<i>Entrelibros es un prototipo académico (UCAM).</i>", (1200, -60))
+telegram(b, 'Enlace no válido', CH, '=El enlace no es válido o ha caducado. Vuelve a abrirlo desde la página de soporte de Entrelibros.', (1200, 140))
 code(b, 'Respuestas pendientes', r"""// Respuestas ya aprobadas por una persona que esperaban a que el cliente vinculara Telegram
 const r = $('Vincular chat con la incidencia').item.json;
 return (r.pending ?? []).map(p => ({ json: { ...p, ticket_ref: r.ticket_ref, chat_id: $('Interpretar mensaje').item.json.chat_id } }));""",
-     (1440, 40))
+     (1440, -60))
 b.add('Enviar pendiente', 'n8n-nodes-base.telegram', 1.2, {
     'chatId': '={{ $json.chat_id }}', 'text': "=📦 <b>Entrelibros · incidencia {{ $json.ticket_ref }}</b>\n\n{{ $json.customer_message" + ESC + " }}",
-    'additionalFields': {'appendAttribution': False, 'parse_mode': 'HTML'}}, (1680, 40), creds=['telegram'],
+    'additionalFields': {'appendAttribution': False, 'parse_mode': 'HTML'}}, (1680, -60), creds=['telegram'],
     onError='continueRegularOutput', webhookId=nid('bot/pending'))
-rpc(b, 'Marcar pendiente enviada', 'erp_mark_delivered', "{ p_id: $('Respuestas pendientes').item.json.decision_id, p_simulated: false }", (1920, 40))
-rpc(b, 'Mensaje al CRM', 'erp_customer_message', '{ p_chat_id: $json.chat_id, p_text: $json.text }', (720, 300))
-if_node(b, '¿Tiene incidencia?', [cond('={{ $json.result }}', 'string', 'equals', 'registrado')], (960, 300))
-telegram(b, 'Acuse de recibo', CH, "=Recibido 👍 Lo hemos añadido a tu incidencia <b>{{ $json.ticket_ref }}</b>. Una persona del equipo lo revisará.", (1200, 280))
+rpc(b, 'Marcar pendiente enviada', 'erp_mark_delivered', "{ p_id: $('Respuestas pendientes').item.json.decision_id, p_simulated: false }", (1920, -60))
+rpc(b, 'Mensaje al CRM', 'erp_customer_message', '{ p_chat_id: $json.chat_id, p_text: $json.text }', (720, 320))
+if_node(b, '¿Tiene incidencia?', [cond('={{ $json.result }}', 'string', 'equals', 'registrado')], (960, 320))
+telegram(b, 'Acuse de recibo', CH, "=Recibido 👍 Lo hemos añadido a tu incidencia <b>{{ $json.ticket_ref }}</b>. Una persona del equipo lo revisará.", (1200, 340))
 telegram(b, 'Aviso a operaciones', OPS,
-         "=💬 <b>Mensaje del cliente</b> · {{ $('Mensaje al CRM').item.json.ticket_ref }}\n{{ $('Interpretar mensaje').item.json.text" + ESC + " }}", (1440, 280))
-telegram(b, 'Sin incidencia', CH, '=No tienes ninguna incidencia vinculada a este chat. Ábrela desde la página de soporte de Entrelibros y pulsa «Seguir la incidencia en Telegram».', (1200, 440))
+         "=💬 <b>Mensaje del cliente</b> · {{ $('Mensaje al CRM').item.json.ticket_ref }}\n{{ $('Interpretar mensaje').item.json.text" + ESC + " }}", (1440, 340))
+telegram(b, 'Sin incidencia', CH, '=No tienes ninguna incidencia vinculada a este chat. Ábrela desde la página de soporte de Entrelibros y pulsa «Seguir la incidencia en Telegram».', (1200, 520))
 telegram(b, 'Bienvenida', CH, '=Hola 👋 Soy el bot de soporte de <b>Entrelibros</b> (prototipo académico de la UCAM).\nPara seguir una incidencia, ábrela desde la web y pulsa «Seguir la incidencia en Telegram».', (720, 520))
 telegram(b, 'Responder con el id', CH, "=Tu chat id es <code>{{ $json.chat_id }}</code> (para configurar ENTRELIBROS_OPS_CHAT_ID).", (720, 680))
 rpc(b, 'Log · bot', 'erp_log', log_body('bot-telegram', 'mensaje',
     "entity_type: 'ticket', entity_ref: $json.ticket_ref ?? null, status: $json.result === 'token_no_valido' || $json.result === 'sin_incidencia' ? 'ignorado' : 'ok', "
-    "message: 'Telegram: ' + $('Interpretar mensaje').item.json.kind + ' → ' + $json.result"), (1200, 600), on_error='continueRegularOutput')
+    "message: 'Telegram: ' + $('Interpretar mensaje').item.json.kind + ' → ' + $json.result"), (1200, 700), on_error='continueRegularOutput')
 
 b.chain('Telegram · mensaje recibido', 'Interpretar mensaje', '¿Qué pide?')
 b.link('¿Qué pide?', 'Vincular chat con la incidencia', 0)
