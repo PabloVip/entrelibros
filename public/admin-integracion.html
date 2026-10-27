@@ -25,7 +25,7 @@
     <div class="page-head">
       <div>
         <h1>Integración</h1>
-        <p class="lead">Tienda → n8n → ERP/CRM: cola de eventos, ejecuciones, agente de IA y métricas.</p>
+        <p class="lead">Salida de la tienda hacia el back-office: cola de eventos que n8n lleva al ERP/CRM y su confirmación.</p>
       </div>
       <div class="page-head-actions">
         <label class="sort">Periodo
@@ -39,78 +39,36 @@
       </div>
     </div>
 
-    <div class="tabs" role="tablist" aria-label="Integración">
-      <button type="button" role="tab" id="tab-mando" aria-controls="panel-mando" aria-selected="true">Cuadro de mando</button>
-      <button type="button" role="tab" id="tab-erp" aria-controls="panel-erp" aria-selected="false">ERP / CRM</button>
-      <button type="button" role="tab" id="tab-agente" aria-controls="panel-agente" aria-selected="false">Agente de IA</button>
-      <button type="button" role="tab" id="tab-traza" aria-controls="panel-traza" aria-selected="false">Cola y log</button>
+    <aside class="panel erp-callout">
+      <p><strong>El ERP/CRM es un sistema aparte</strong> (otro proyecto, con su base de datos y sus usuarios). La tienda
+        no puede leerlo ni escribir en él: solo publica eventos y n8n los lleva allí. Pedidos de venta, inventario,
+        incidencias, propuestas del agente de IA y su registro se consultan en la web del back-office.</p>
+      <a id="erp-link" class="btn btn-small" href="erp/" target="_blank" rel="noopener">Abrir el back-office ERP/CRM</a>
+    </aside>
+
+    <div id="int-kpis" class="kpis" aria-label="Indicadores"><p>Cargando…</p></div>
+    <div class="panel-grid">
+      <section class="panel span-2">
+        <h2 class="h3">Eventos enviados al back-office por día</h2>
+        <div id="int-chart"></div>
+      </section>
+      <section class="panel">
+        <h2 class="h3">Eventos por tipo</h2>
+        <div id="int-types"></div>
+      </section>
+      <section class="panel">
+        <h2 class="h3">Estado en la cola</h2>
+        <div id="int-status"></div>
+      </section>
     </div>
 
-    <section id="panel-mando" role="tabpanel" aria-labelledby="tab-mando">
-      <div id="int-kpis" class="kpis" aria-label="Indicadores"><p>Cargando…</p></div>
-      <div class="panel-grid">
-        <section class="panel span-2">
-          <h2 class="h3">Pedidos integrados en el ERP por día</h2>
-          <div id="int-chart"></div>
-        </section>
-        <section class="panel">
-          <h2 class="h3">Pedidos del ERP por estado</h2>
-          <div id="int-status"></div>
-        </section>
-        <section class="panel">
-          <h2 class="h3">Errores de integración por tipo</h2>
-          <div id="int-errors"></div>
-        </section>
-        <section class="panel">
-          <h2 class="h3">Agente: propuestas y revisión humana</h2>
-          <div id="int-agent"></div>
-        </section>
-        <section class="panel">
-          <h2 class="h3">Productos más pedidos (ERP)</h2>
-          <div id="int-top"></div>
-        </section>
-        <section class="panel span-2">
-          <h2 class="h3">Conversión del flujo (eventos de la tienda)</h2>
-          <div id="int-funnel"></div>
-        </section>
-      </div>
-      <p class="muted small">Todas las cifras se calculan en el momento a partir de las tablas de la tienda, de la cola
-        <code>integration_outbox</code>, del log <code>integration_log</code>, del ERP y de <code>agent_decisions</code>.</p>
-    </section>
-
-    <section id="panel-erp" role="tabpanel" aria-labelledby="tab-erp" hidden>
-      <p class="muted">Lo que ve el sistema interno (esquema <code>erp</code>). Solo lo escribe n8n por API; la tienda no puede escribir aquí.</p>
-      <h2 class="h3">Pedidos de venta</h2>
-      <div class="table-wrap"><table class="data-table">
-        <thead><tr><th>Pedido</th><th>Cliente</th><th>Estado ERP</th><th>Pago</th><th>Líneas</th><th>Importe</th><th>Versión</th><th>Actualizado</th></tr></thead>
-        <tbody id="erp-orders"></tbody>
-      </table></div>
-      <h2 class="h3">Incidencias (CRM)</h2>
-      <div id="erp-tickets" class="ticket-list"></div>
-      <h2 class="h3">Inventario sincronizado</h2>
-      <div class="table-wrap"><table class="data-table">
-        <thead><tr><th>SKU</th><th>Descripción</th><th>Stock</th><th>Actualizado</th></tr></thead>
-        <tbody id="erp-inventory"></tbody>
-      </table></div>
-    </section>
-
-    <section id="panel-agente" role="tabpanel" aria-labelledby="tab-agente" hidden>
-      <p class="muted">Salida estructurada del agente para cada incidencia. Ninguna respuesta llega al cliente sin aprobación humana en Telegram.</p>
-      <div id="decisions" class="decision-list"></div>
-    </section>
-
-    <section id="panel-traza" role="tabpanel" aria-labelledby="tab-traza" hidden>
-      <h2 class="h3">Cola de salida (tienda → n8n)</h2>
-      <div class="table-wrap"><table class="data-table">
-        <thead><tr><th>#</th><th>Evento</th><th>Referencia</th><th>Estado</th><th>Intentos</th><th>Creado</th><th>Procesado</th><th>Error</th><th><span class="visually-hidden">Acciones</span></th></tr></thead>
-        <tbody id="outbox"></tbody>
-      </table></div>
-      <h2 class="h3">Log de ejecuciones (n8n)</h2>
-      <div class="table-wrap"><table class="data-table">
-        <thead><tr><th>Fecha</th><th>Workflow</th><th>Paso</th><th>Evento</th><th>Referencia</th><th>Resultado</th><th>Mensaje</th><th>Ejecución</th></tr></thead>
-        <tbody id="intlog"></tbody>
-      </table></div>
-    </section>
+    <h2 class="h3">Cola de salida (tienda → n8n → ERP/CRM)</h2>
+    <div class="table-wrap"><table class="data-table">
+      <thead><tr><th>#</th><th>Evento</th><th>Referencia</th><th>Estado</th><th>Intentos</th><th>Creado</th><th>Confirmado</th><th>Error</th><th><span class="visually-hidden">Acciones</span></th></tr></thead>
+      <tbody id="outbox"></tbody>
+    </table></div>
+    <p class="muted small">Cifras calculadas en el momento a partir de la cola <code>integration_outbox</code>. «Confirmado» es cuando n8n
+      avisa (integration_ack) de que el back-office ha aplicado el evento.</p>
   </main>
   <script type="module" src="js/core/i18n.js"></script>
   <script type="module" src="js/pages/admin/integration.js"></script>

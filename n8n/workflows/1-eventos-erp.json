@@ -30,7 +30,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Nodo Code de n8n «Validar y normalizar» (workflow «Entrelibros · Eventos → ERP»).\n// Entrada: el cuerpo del webhook (contrato entrelibros.event.v1, ver docs/tarea2/contrato.md).\n// Salida: un único item con\n//   valid       true / false\n//   errors      [{field, type, message}]   type ∈ contrato | formato | coherencia\n//   route       order | stock | ticket | ignorar\n//   event       {event_id, event_type, occurred_at, source}\n//   normalized  datos ya normalizados para el ERP (solo si valid)\n// Este fichero es la copia legible del código que hay dentro del workflow exportado.\n\nconst body = $input.first().json.body ?? $input.first().json;\nconst errors = [];\nconst fail = (field, type, message) => errors.push({ field, type, message });\n\nconst UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nconst EMAIL = /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/;\nconst ORDER = /^EL-\\d{8}-[A-Z0-9]{4}$/;\nconst TICKET = /^SOP-\\d{8}-[A-Z0-9]{4}$/;\nconst ORDER_STATUS = ['creado', 'pago_simulado', 'pendiente_preparacion', 'enviado', 'entregado', 'cancelado', 'incidencia'];\nconst ROUTES = {\n  'order.created': 'order', 'payment.simulated': 'order', 'order.status_changed': 'order',\n  'stock.adjusted': 'stock', 'support.requested': 'ticket', 'support.status_changed': 'ticket',\n};\nconst money = v => Math.round(Number(v) * 100) / 100;\nconst isNum = v => v !== null && v !== '' && Number.isFinite(Number(v));\nconst isDate = v => typeof v === 'string' && !Number.isNaN(Date.parse(v));\n\n// ---------- 1. Sobre (envelope) ----------\nif (body?.contract !== 'entrelibros.event.v1') fail('contract', 'contrato', 'Contrato desconocido o ausente');\nif (!UUID.test(body?.event_id ?? '')) fail('event_id', 'contrato', 'event_id debe ser un UUID');\nif (!ROUTES[body?.event_type]) fail('event_type', 'contrato', `Tipo de evento no admitido: ${body?.event_type}`);\nif (!isDate(body?.occurred_at)) fail('occurred_at', 'formato', 'occurred_at no es una fecha ISO 8601');\nif (!body?.data || typeof body.data !== 'object') fail('data', 'contrato', 'Falta el objeto data');\n\nconst route = ROUTES[body?.event_type] ?? 'ignorar';\nconst d = body?.data ?? {};\nlet normalized = null;\n\n// ---------- 2. Pedido (escenarios 1 y 2) ----------\nfunction normalizeOrder(o) {\n  if (!o) { fail('data.order', 'contrato', 'Falta el pedido'); return null; }\n  if (!ORDER.test(o.order_number ?? '')) fail('order.order_number', 'formato', 'Número de pedido con formato incorrecto');\n  if (!ORDER_STATUS.includes(o.status)) fail('order.status', 'contrato', `Estado desconocido: ${o.status}`);\n  if (!isDate(o.created_at)) fail('order.created_at', 'formato', 'Fecha del pedido no válida');\n  const email = String(o.customer?.email ?? '').trim().toLowerCase();\n  if (!EMAIL.test(email)) fail('order.customer.email', 'contrato', 'Email del cliente ausente o no válido');\n  if (!Array.isArray(o.lines) || o.lines.length === 0) fail('order.lines', 'contrato', 'El pedido no tiene líneas');\n  for (const k of ['subtotal', 'shipping', 'tax', 'total']) {\n    if (!isNum(o.amounts?.[k])) fail(`order.amounts.${k}`, 'formato', `Importe ${k} ausente o no numérico`);\n  }\n  const lines = (o.lines ?? []).map((l, i) => {\n    if (!l.sku) fail(`order.lines[${i}].sku`, 'contrato', 'Línea sin SKU');\n    if (!Number.isInteger(Number(l.quantity)) || Number(l.quantity) <= 0) fail(`order.lines[${i}].quantity`, 'formato', 'Cantidad no válida');\n    if (isNum(l.unit_price) && isNum(l.line_total) && Math.abs(money(l.unit_price * l.quantity) - money(l.line_total)) > 0.01) {\n      fail(`order.lines[${i}].line_total`, 'coherencia', 'precio × cantidad no coincide con el importe de la línea');\n    }\n    return {\n      sku: String(l.sku ?? '').toUpperCase(),\n      description: [l.product_name, l.variant_name].filter(Boolean).join(' · '),\n      quantity: Number(l.quantity), unit_price: money(l.unit_price), line_total: money(l.line_total),\n    };\n  });\n  const a = o.amounts ?? {};\n  if (lines.length && isNum(a.subtotal)) {\n    const sum = money(lines.reduce((s, l) => s + l.line_total, 0));\n    if (Math.abs(sum - money(a.subtotal)) > 0.01) fail('order.amounts.subtotal', 'coherencia', `Suma de líneas ${sum} ≠ subtotal ${a.subtotal}`);\n  }\n  if ([a.subtotal, a.discount ?? 0, a.shipping, a.total].every(isNum)) {\n    const expected = money(Number(a.subtotal) - Number(a.discount ?? 0) + Number(a.shipping));\n    if (Math.abs(expected - money(a.total)) > 0.01) fail('order.amounts.total', 'coherencia', `subtotal − descuento + envío = ${expected} ≠ total ${a.total}`);\n  }\n  const ship = o.shipping ?? {};\n  const pay = o.payment ?? null;\n  return {\n    order_number: o.order_number, status: o.status, created_at: new Date(o.created_at).toISOString(),\n    currency: (o.currency ?? 'EUR').toUpperCase(),\n    amounts: { subtotal: money(a.subtotal), discount: money(a.discount ?? 0), shipping: money(a.shipping),\n               tax: money(a.tax), total: money(a.total) },\n    customer: {\n      email, shop_id: o.customer?.shop_id ?? null,\n      full_name: String(o.customer?.full_name ?? '').trim().replace(/\\s+/g, ' '),\n      // teléfono normalizado a +34XXXXXXXXX cuando es un móvil o fijo español de 9 cifras\n      phone: (() => { const p = String(o.customer?.phone ?? '').replace(/[^\\d+]/g, '');\n                      return /^[6789]\\d{8}$/.test(p) ? '+34' + p : (p || null); })(),\n    },\n    shipping: {\n      method: ship.method ?? ship.method_code ?? null,\n      pickup_point: ship.pickup_point ?? null,\n      full_address: [ship.address, [ship.postcode, ship.city].filter(Boolean).join(' '), ship.province, ship.country]\n        .filter(Boolean).join(', '),\n    },\n    payment: pay ? {\n      method: { stripe_test: 'Tarjeta (Stripe test)', tarjeta_simulada: 'Tarjeta simulada', bizum_simulado: 'Bizum simulado' }[pay.method] ?? pay.method,\n      reference: pay.reference ?? null,\n      status_erp: pay.status === 'aprobado' ? 'pagado' : pay.status === 'rechazado' ? 'rechazado' : 'pendiente',\n    } : { status_erp: 'pendiente' },\n    lines,\n  };\n}\n\n// ---------- 3. Stock (escenario 2) ----------\nfunction normalizeStock(s) {\n  if (!s?.sku) fail('stock.sku', 'contrato', 'Falta el SKU');\n  if (!Number.isInteger(Number(s?.to)) || Number(s?.to) < 0) fail('stock.to', 'formato', 'Stock final no válido');\n  return { sku: String(s?.sku ?? '').toUpperCase(), on_hand: Number(s?.to), from: s?.from ?? null, description: s?.description ?? null };\n}\n\n// ---------- 4. Incidencia (escenario 3) ----------\nconst CATEGORY = {\n  pieza_faltante: ['Logística · pieza faltante', 'alta', 24],\n  pieza_danada: ['Calidad · pieza dañada', 'alta', 24],\n  retraso_envio: ['Logística · retraso de envío', 'media', 48],\n  duda_montaje: ['Atención · duda de montaje', 'baja', 72],\n  otro: ['Otros', 'media', 72],\n};\nfunction normalizeTicket(t) {\n  if (!t) { fail('data.ticket', 'contrato', 'Falta la incidencia'); return null; }\n  if (!TICKET.test(t.ticket_number ?? '')) fail('ticket.ticket_number', 'formato', 'Número de incidencia con formato incorrecto');\n  const email = String(t.customer_email ?? '').trim().toLowerCase();\n  if (!EMAIL.test(email)) fail('ticket.customer_email', 'contrato', 'Email del cliente ausente o no válido');\n  if (!CATEGORY[t.reason]) fail('ticket.reason', 'contrato', `Motivo desconocido: ${t.reason}`);\n  if (t.order_number && !ORDER.test(t.order_number)) fail('ticket.order_number', 'formato', 'Número de pedido con formato incorrecto');\n  const [category, priority, slaHours] = CATEGORY[t.reason] ?? CATEGORY.otro;\n  const created = isDate(t.created_at) ? new Date(t.created_at) : new Date();\n  return {\n    ticket_number: t.ticket_number, customer_email: email, customer_name: t.customer_name ?? null,\n    order_number: t.order_number ?? null, reason: t.reason, category, priority, status: t.status,\n    subject: `${category}${t.order_number ? ' · ' + t.order_number : ''}`,\n    message: String(t.message ?? '').trim().slice(0, 2000),\n    sla_due_at: new Date(created.getTime() + slaHours * 3600e3).toISOString(),\n    telegram_linked: Boolean(t.telegram_linked),\n  };\n}\n\nif (route === 'order') normalized = normalizeOrder(d.order);\nelse if (route === 'stock') normalized = normalizeStock(d.stock);\nelse if (route === 'ticket') normalized = normalizeTicket(d.ticket);\n\nreturn [{\n  json: {\n    valid: errors.length === 0,\n    errors,\n    error_type: errors[0]?.type ?? null,\n    route,\n    event: { event_id: body?.event_id ?? null, event_type: body?.event_type ?? null,\n             occurred_at: body?.occurred_at ?? null, source: body?.source ?? null },\n    entity_ref: d.ticket?.ticket_number ?? d.order?.order_number ?? d.stock?.sku ?? null,\n    normalized,\n    started_at: Date.now(),\n  },\n}];\n"
+        "jsCode": "// Nodo Code de n8n «Validar y normalizar» (workflow «Entrelibros · Eventos → ERP»).\n// Entrada: el cuerpo del webhook (contrato entrelibros.event.v1, ver docs/tarea2/contrato.md).\n// Salida: un único item con\n//   valid       true / false\n//   errors      [{field, type, message}]   type ∈ contrato | formato | coherencia\n//   route       order | stock | ticket | ignorar\n//   event       {event_id, event_type, occurred_at, source}\n//   normalized  datos ya normalizados para el ERP (solo si valid)\n// Este fichero es la copia legible del código que hay dentro del workflow exportado.\n\nconst body = $input.first().json.body ?? $input.first().json;\nconst errors = [];\nconst fail = (field, type, message) => errors.push({ field, type, message });\n\nconst UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nconst EMAIL = /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/;\nconst ORDER = /^EL-\\d{8}-[A-Z0-9]{4}$/;\nconst TICKET = /^SOP-\\d{8}-[A-Z0-9]{4}$/;\nconst ORDER_STATUS = ['creado', 'pago_simulado', 'pendiente_preparacion', 'enviado', 'entregado', 'cancelado', 'incidencia'];\nconst ROUTES = {\n  'order.created': 'order', 'payment.simulated': 'order', 'order.status_changed': 'order',\n  'stock.adjusted': 'stock', 'support.requested': 'ticket', 'support.status_changed': 'ticket',\n};\nconst money = v => Math.round(Number(v) * 100) / 100;\nconst isNum = v => v !== null && v !== '' && Number.isFinite(Number(v));\nconst isDate = v => typeof v === 'string' && !Number.isNaN(Date.parse(v));\n\n// ---------- 1. Sobre (envelope) ----------\nif (body?.contract !== 'entrelibros.event.v1') fail('contract', 'contrato', 'Contrato desconocido o ausente');\nif (!UUID.test(body?.event_id ?? '')) fail('event_id', 'contrato', 'event_id debe ser un UUID');\nif (!ROUTES[body?.event_type]) fail('event_type', 'contrato', `Tipo de evento no admitido: ${body?.event_type}`);\nif (!isDate(body?.occurred_at)) fail('occurred_at', 'formato', 'occurred_at no es una fecha ISO 8601');\nif (!body?.data || typeof body.data !== 'object') fail('data', 'contrato', 'Falta el objeto data');\n\nconst route = ROUTES[body?.event_type] ?? 'ignorar';\nconst d = body?.data ?? {};\nlet normalized = null;\n\n// ---------- 2. Pedido (escenarios 1 y 2) ----------\nfunction normalizeOrder(o) {\n  if (!o) { fail('data.order', 'contrato', 'Falta el pedido'); return null; }\n  if (!ORDER.test(o.order_number ?? '')) fail('order.order_number', 'formato', 'Número de pedido con formato incorrecto');\n  if (!ORDER_STATUS.includes(o.status)) fail('order.status', 'contrato', `Estado desconocido: ${o.status}`);\n  if (!isDate(o.created_at)) fail('order.created_at', 'formato', 'Fecha del pedido no válida');\n  const email = String(o.customer?.email ?? '').trim().toLowerCase();\n  if (!EMAIL.test(email)) fail('order.customer.email', 'contrato', 'Email del cliente ausente o no válido');\n  if (!Array.isArray(o.lines) || o.lines.length === 0) fail('order.lines', 'contrato', 'El pedido no tiene líneas');\n  for (const k of ['subtotal', 'shipping', 'tax', 'total']) {\n    if (!isNum(o.amounts?.[k])) fail(`order.amounts.${k}`, 'formato', `Importe ${k} ausente o no numérico`);\n  }\n  const lines = (o.lines ?? []).map((l, i) => {\n    if (!l.sku) fail(`order.lines[${i}].sku`, 'contrato', 'Línea sin SKU');\n    if (!Number.isInteger(Number(l.quantity)) || Number(l.quantity) <= 0) fail(`order.lines[${i}].quantity`, 'formato', 'Cantidad no válida');\n    if (isNum(l.unit_price) && isNum(l.line_total) && Math.abs(money(l.unit_price * l.quantity) - money(l.line_total)) > 0.01) {\n      fail(`order.lines[${i}].line_total`, 'coherencia', 'precio × cantidad no coincide con el importe de la línea');\n    }\n    return {\n      sku: String(l.sku ?? '').toUpperCase(),\n      description: [l.product_name, l.variant_name].filter(Boolean).join(' · '),\n      quantity: Number(l.quantity), unit_price: money(l.unit_price), line_total: money(l.line_total),\n    };\n  });\n  const a = o.amounts ?? {};\n  if (lines.length && isNum(a.subtotal)) {\n    const sum = money(lines.reduce((s, l) => s + l.line_total, 0));\n    if (Math.abs(sum - money(a.subtotal)) > 0.01) fail('order.amounts.subtotal', 'coherencia', `Suma de líneas ${sum} ≠ subtotal ${a.subtotal}`);\n  }\n  if ([a.subtotal, a.discount ?? 0, a.shipping, a.total].every(isNum)) {\n    const expected = money(Number(a.subtotal) - Number(a.discount ?? 0) + Number(a.shipping));\n    if (Math.abs(expected - money(a.total)) > 0.01) fail('order.amounts.total', 'coherencia', `subtotal − descuento + envío = ${expected} ≠ total ${a.total}`);\n  }\n  const ship = o.shipping ?? {};\n  const pay = o.payment ?? null;\n  return {\n    order_number: o.order_number, status: o.status, created_at: new Date(o.created_at).toISOString(),\n    currency: (o.currency ?? 'EUR').toUpperCase(),\n    amounts: { subtotal: money(a.subtotal), discount: money(a.discount ?? 0), shipping: money(a.shipping),\n               tax: money(a.tax), total: money(a.total) },\n    customer: {\n      email, shop_id: o.customer?.shop_id ?? null,\n      full_name: String(o.customer?.full_name ?? '').trim().replace(/\\s+/g, ' '),\n      // teléfono normalizado a +34XXXXXXXXX cuando es un móvil o fijo español de 9 cifras\n      phone: (() => { const p = String(o.customer?.phone ?? '').replace(/[^\\d+]/g, '');\n                      return /^[6789]\\d{8}$/.test(p) ? '+34' + p : (p || null); })(),\n    },\n    shipping: {\n      method: ship.method ?? ship.method_code ?? null,\n      pickup_point: ship.pickup_point ?? null,\n      full_address: [ship.address, [ship.postcode, ship.city].filter(Boolean).join(' '), ship.province, ship.country]\n        .filter(Boolean).join(', '),\n    },\n    payment: pay ? {\n      method: { stripe_test: 'Tarjeta (Stripe test)', tarjeta_simulada: 'Tarjeta simulada', bizum_simulado: 'Bizum simulado' }[pay.method] ?? pay.method,\n      reference: pay.reference ?? null,\n      status_erp: pay.status === 'aprobado' ? 'pagado' : pay.status === 'rechazado' ? 'rechazado' : 'pendiente',\n    } : { status_erp: 'pendiente' },\n    lines,\n  };\n}\n\n// ---------- 3. Stock (escenario 2) ----------\nfunction normalizeStock(s) {\n  if (!s?.sku) fail('stock.sku', 'contrato', 'Falta el SKU');\n  if (!Number.isInteger(Number(s?.to)) || Number(s?.to) < 0) fail('stock.to', 'formato', 'Stock final no válido');\n  return { sku: String(s?.sku ?? '').toUpperCase(), on_hand: Number(s?.to), from: s?.from ?? null, description: s?.description ?? null };\n}\n\n// ---------- 4. Incidencia (escenario 3) ----------\nconst CATEGORY = {\n  pieza_faltante: ['Logística · pieza faltante', 'alta', 24],\n  pieza_danada: ['Calidad · pieza dañada', 'alta', 24],\n  retraso_envio: ['Logística · retraso de envío', 'media', 48],\n  duda_montaje: ['Atención · duda de montaje', 'baja', 72],\n  otro: ['Otros', 'media', 72],\n};\nfunction normalizeTicket(t) {\n  if (!t) { fail('data.ticket', 'contrato', 'Falta la incidencia'); return null; }\n  if (!TICKET.test(t.ticket_number ?? '')) fail('ticket.ticket_number', 'formato', 'Número de incidencia con formato incorrecto');\n  const email = String(t.customer_email ?? '').trim().toLowerCase();\n  if (!EMAIL.test(email)) fail('ticket.customer_email', 'contrato', 'Email del cliente ausente o no válido');\n  if (!CATEGORY[t.reason]) fail('ticket.reason', 'contrato', `Motivo desconocido: ${t.reason}`);\n  if (t.order_number && !ORDER.test(t.order_number)) fail('ticket.order_number', 'formato', 'Número de pedido con formato incorrecto');\n  const [category, priority, slaHours] = CATEGORY[t.reason] ?? CATEGORY.otro;\n  const created = isDate(t.created_at) ? new Date(t.created_at) : new Date();\n  return {\n    ticket_number: t.ticket_number, customer_email: email, customer_name: t.customer_name ?? null,\n    order_number: t.order_number ?? null, reason: t.reason, category, priority, status: t.status,\n    subject: `${category}${t.order_number ? ' · ' + t.order_number : ''}`,\n    message: String(t.message ?? '').trim().slice(0, 2000),\n    sla_due_at: new Date(created.getTime() + slaHours * 3600e3).toISOString(),\n    // token que la tienda enseña al cliente para vincular Telegram; el CRM lo guarda con el ticket\n    telegram_token: /^[a-f0-9]{8,40}$/i.test(t.telegram_token ?? '') ? t.telegram_token : null,\n  };\n}\n\nif (route === 'order') normalized = normalizeOrder(d.order);\nelse if (route === 'stock') normalized = normalizeStock(d.stock);\nelse if (route === 'ticket') normalized = normalizeTicket(d.ticket);\n\nreturn [{\n  json: {\n    valid: errors.length === 0,\n    errors,\n    error_type: errors[0]?.type ?? null,\n    route,\n    event: { event_id: body?.event_id ?? null, event_type: body?.event_type ?? null,\n             occurred_at: body?.occurred_at ?? null, source: body?.source ?? null },\n    entity_ref: d.ticket?.ticket_number ?? d.order?.order_number ?? d.stock?.sku ?? null,\n    normalized,\n    started_at: Date.now(),\n  },\n}];\n"
       },
       "id": "2c9f3d9e-5a67-50b4-ac34-9f67f617c670",
       "name": "Validar y normalizar",
@@ -170,12 +170,12 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/erp_upsert_order",
+        "url": "={{ $env.ENTRELIBROS_ERP_URL }}/rest/v1/rpc/erp_upsert_order",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ p_event_id: $('Validar y normalizar').item.json.event.event_id, p_occurred_at: $('Validar y normalizar').item.json.event.occurred_at, p_order: $('Validar y normalizar').item.json.normalized }) }}",
+        "jsonBody": "={{ JSON.stringify({ p_event_id: $('Validar y normalizar').item.json.event.event_id, p_occurred_at: $('Validar y normalizar').item.json.event.occurred_at, p_order: $('Validar y normalizar').item.json.normalized, p_event_type: $('Validar y normalizar').item.json.event.event_type }) }}",
         "options": {
           "timeout": 15000
         }
@@ -190,8 +190,8 @@
       ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "entrelibrosSupabase",
-          "name": "Entrelibros · Supabase (secret key)"
+          "id": "entrelibrosERP",
+          "name": "Entrelibros · ERP (secret key)"
         }
       },
       "onError": "continueErrorOutput",
@@ -201,7 +201,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/erp_set_stock",
+        "url": "={{ $env.ENTRELIBROS_ERP_URL }}/rest/v1/rpc/erp_set_stock",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
@@ -221,8 +221,8 @@
       ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "entrelibrosSupabase",
-          "name": "Entrelibros · Supabase (secret key)"
+          "id": "entrelibrosERP",
+          "name": "Entrelibros · ERP (secret key)"
         }
       },
       "onError": "continueErrorOutput",
@@ -232,7 +232,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/erp_upsert_ticket",
+        "url": "={{ $env.ENTRELIBROS_ERP_URL }}/rest/v1/rpc/erp_upsert_ticket",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
@@ -252,8 +252,8 @@
       ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "entrelibrosSupabase",
-          "name": "Entrelibros · Supabase (secret key)"
+          "id": "entrelibrosERP",
+          "name": "Entrelibros · ERP (secret key)"
         }
       },
       "onError": "continueErrorOutput",
@@ -262,7 +262,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Une la respuesta del ERP con los datos del evento y decide los pasos siguientes.\nconst v = $('Validar y normalizar').item.json;\nconst r = $json;                                   // respuesta de la función erp_*\nconst result = r.result ?? 'ok';\nconst status = ['duplicado', 'obsoleto'].includes(result) ? result : 'ok';\nconst ev = v.event.event_type;\nconst paid = ev === 'payment.simulated' && v.normalized?.payment?.status_erp === 'pagado';\nconst fmt = n => Number(n).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });\nconst esc = t => String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nlet notice = null;\nif (status === 'ok' && paid) {\n  notice = `🧾 <b>Pedido pagado integrado en el ERP</b>\\n${v.entity_ref} · ${fmt(v.normalized.amounts.total)} · ${v.normalized.lines.length} líneas\\nCliente: ${esc(v.normalized.customer.email)}`;\n} else if (status === 'ok' && ev === 'order.status_changed') {\n  notice = `🔄 <b>Estado sincronizado</b>\\n${v.entity_ref}: ${r.previous_status ?? '—'} → ${r.status}`;\n} else if (status === 'ok' && ev === 'stock.adjusted') {\n  notice = `📦 <b>Stock sincronizado</b>\\n${v.entity_ref}: ${r.from ?? '—'} → ${r.on_hand} uds.`;\n} else if (status === 'ok' && ev === 'support.requested') {\n  notice = `🆘 <b>Nueva incidencia en el CRM</b>\\n${v.entity_ref} · ${esc(v.normalized.category)} · prioridad ${v.normalized.priority}\\nEl agente de IA la está analizando…`;\n}\nreturn [{ json: {\n  status, result, erp: r,\n  event_id: v.event.event_id, event_type: ev, entity_ref: v.entity_ref, route: v.route,\n  launch_agent: status === 'ok' && result === 'creado' && ev === 'support.requested',\n  agent_input: { event: v.event, ticket: v.normalized, parent_execution: $execution.id },\n  notice,\n  duration_ms: Date.now() - v.started_at,\n} }];"
+        "jsCode": "// Une la respuesta del ERP con los datos del evento y decide los pasos siguientes.\nconst v = $('Validar y normalizar').item.json;\nconst r = $json;                                   // respuesta de la función erp_*\nconst result = r.result ?? 'ok';\nconst status = ['duplicado', 'obsoleto'].includes(result) ? result : 'ok';\nconst ev = v.event.event_type;\nconst paid = ev === 'payment.simulated' && v.normalized?.payment?.status_erp === 'pagado';\nconst fmt = n => Number(n).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });\nconst esc = t => String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nlet notice = null;\nif (status === 'ok' && paid) {\n  notice = `🧾 <b>Pedido pagado integrado en el ERP</b>\\n${v.entity_ref} · ${fmt(v.normalized.amounts.total)} · ${v.normalized.lines.length} líneas\\nCliente: ${esc(v.normalized.customer.email)}`;\n} else if (status === 'ok' && ev === 'order.status_changed') {\n  notice = `🔄 <b>Estado sincronizado</b>\\n${v.entity_ref}: ${r.previous_status ?? '—'} → ${r.status}`;\n} else if (status === 'ok' && ev === 'stock.adjusted') {\n  notice = `📦 <b>Stock sincronizado</b>\\n${v.entity_ref}: ${r.from ?? '—'} → ${r.on_hand} uds.`;\n} else if (status === 'ok' && ev === 'support.requested') {\n  notice = `🆘 <b>Nueva incidencia en el CRM</b>\\n${v.entity_ref} · ${esc(v.normalized.category)} · prioridad ${v.normalized.priority}\\nEl agente de IA la está analizando…`;\n}\nreturn [{ json: {\n  status, result, erp: r,\n  event_id: v.event.event_id, event_type: ev, occurred_at: v.event.occurred_at, entity_ref: v.entity_ref, route: v.route,\n  launch_agent: status === 'ok' && result === 'creado' && ev === 'support.requested',\n  agent_input: { event: v.event, ticket: v.normalized, parent_execution: $execution.id },\n  notice,\n  duration_ms: Date.now() - v.started_at,\n} }];"
       },
       "id": "23710aed-2e77-5300-a4a9-257cffe121cb",
       "name": "Preparar resultado",
@@ -276,12 +276,12 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/erp_log",
+        "url": "={{ $env.ENTRELIBROS_ERP_URL }}/rest/v1/rpc/erp_log",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ p_entry: { execution_id: $execution.id, workflow: 'eventos-erp', step: 'resultado', event_id: $json.event_id, event_type: $json.event_type, entity_type: $json.route, entity_ref: $json.entity_ref, status: $json.status, message: 'ERP: ' + $json.result, details: $json.erp, duration_ms: $json.duration_ms } }) }}",
+        "jsonBody": "={{ JSON.stringify({ p_entry: { execution_id: $execution.id, workflow: 'eventos-erp', step: 'resultado', event_id: $json.event_id, event_type: $json.event_type, occurred_at: $json.occurred_at, entity_type: $json.route, entity_ref: $json.entity_ref, status: $json.status, message: 'ERP: ' + $json.result, details: $json.erp, duration_ms: $json.duration_ms } }) }}",
         "options": {
           "timeout": 15000
         }
@@ -296,8 +296,8 @@
       ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "entrelibrosSupabase",
-          "name": "Entrelibros · Supabase (secret key)"
+          "id": "entrelibrosERP",
+          "name": "Entrelibros · ERP (secret key)"
         }
       },
       "onError": "continueRegularOutput"
@@ -305,7 +305,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/erp_ack",
+        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/integration_ack",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
@@ -315,8 +315,8 @@
           "timeout": 15000
         }
       },
-      "id": "8fda0c5e-a903-509f-b9bd-59879519c8d9",
-      "name": "ACK correcto",
+      "id": "6301be8f-7447-5b1d-8915-89e417347e59",
+      "name": "ACK a la tienda",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -329,7 +329,9 @@
           "name": "Entrelibros · Supabase (secret key)"
         }
       },
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "notes": "Confirma a la tienda: su cola marca el evento como procesado.",
+      "notesInFlow": true
     },
     {
       "parameters": {
@@ -481,7 +483,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const v = $json;\nreturn [{ json: {\n  event_id: v.event.event_id, event_type: v.event.event_type, entity_ref: v.entity_ref,\n  error_type: v.error_type ?? 'contrato', retry: false, http_code: 422,\n  message: v.errors.map(e => `${e.field}: ${e.message}`).join(' · '),\n  details: { errors: v.errors }, duration_ms: Date.now() - v.started_at,\n} }];"
+        "jsCode": "const v = $json;\nreturn [{ json: {\n  event_id: v.event.event_id, event_type: v.event.event_type, occurred_at: v.event.occurred_at, entity_ref: v.entity_ref,\n  error_type: v.error_type ?? 'contrato', retry: false, http_code: 422,\n  message: v.errors.map(e => `${e.field}: ${e.message}`).join(' · '),\n  details: { errors: v.errors }, duration_ms: Date.now() - v.started_at,\n} }];"
       },
       "id": "12e814db-0484-5cb4-8409-9d9c30b0227d",
       "name": "Error de validación",
@@ -494,7 +496,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Error de la llamada al ERP: 4xx con prefijo de negocio = datos (no se reintenta);\n// sin respuesta, 5xx o timeout = técnico (se reintenta desde la cola de Supabase).\nconst v = $('Validar y normalizar').item.json;\nconst err = $json.error ?? {};\nconst msg = String(err.message ?? err.description ?? JSON.stringify(err)).slice(0, 500);\nconst code = Number(err.httpCode ?? err.status ?? 0);\nconst m = msg.match(/(contrato|formato|coherencia|negocio):/);\nconst type = m ? m[1] : (code >= 400 && code < 500 ? 'negocio' : 'tecnico');\nreturn [{ json: {\n  event_id: v.event.event_id, event_type: v.event.event_type, entity_ref: v.entity_ref,\n  error_type: type, retry: type === 'tecnico', http_code: type === 'tecnico' ? 503 : 422,\n  message: msg, details: { http_code: code || null }, duration_ms: Date.now() - v.started_at,\n} }];"
+        "jsCode": "// Error de la llamada al ERP: 4xx con prefijo de negocio = datos (no se reintenta);\n// sin respuesta, 5xx o timeout = técnico (se reintenta desde la cola de Supabase).\nconst v = $('Validar y normalizar').item.json;\nconst err = $json.error ?? {};\nconst msg = String(err.message ?? err.description ?? JSON.stringify(err)).slice(0, 500);\nconst code = Number(err.httpCode ?? err.status ?? 0);\nconst m = msg.match(/(contrato|formato|coherencia|negocio):/);\nconst type = m ? m[1] : (code >= 400 && code < 500 ? 'negocio' : 'tecnico');\nreturn [{ json: {\n  event_id: v.event.event_id, event_type: v.event.event_type, occurred_at: v.event.occurred_at, entity_ref: v.entity_ref,\n  error_type: type, retry: type === 'tecnico', http_code: type === 'tecnico' ? 503 : 422,\n  message: msg, details: { http_code: code || null }, duration_ms: Date.now() - v.started_at,\n} }];"
       },
       "id": "72e78625-bac3-506e-8b3d-a027dd252cbe",
       "name": "Clasificar error del ERP",
@@ -508,12 +510,12 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/erp_log",
+        "url": "={{ $env.ENTRELIBROS_ERP_URL }}/rest/v1/rpc/erp_log",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ p_entry: { execution_id: $execution.id, workflow: 'eventos-erp', step: 'resultado', event_id: $('Unir errores').item.json.event_id, event_type: $('Unir errores').item.json.event_type, entity_ref: $('Unir errores').item.json.entity_ref, status: 'error', error_type: $('Unir errores').item.json.error_type, message: $('Unir errores').item.json.message, details: $('Unir errores').item.json.details, duration_ms: $('Unir errores').item.json.duration_ms } }) }}",
+        "jsonBody": "={{ JSON.stringify({ p_entry: { execution_id: $execution.id, workflow: 'eventos-erp', step: 'resultado', event_id: $('Unir errores').item.json.event_id, event_type: $('Unir errores').item.json.event_type, occurred_at: $('Unir errores').item.json.occurred_at, entity_ref: $('Unir errores').item.json.entity_ref, status: 'error', error_type: $('Unir errores').item.json.error_type, message: $('Unir errores').item.json.message, details: $('Unir errores').item.json.details, duration_ms: $('Unir errores').item.json.duration_ms } }) }}",
         "options": {
           "timeout": 15000
         }
@@ -528,8 +530,8 @@
       ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "entrelibrosSupabase",
-          "name": "Entrelibros · Supabase (secret key)"
+          "id": "entrelibrosERP",
+          "name": "Entrelibros · ERP (secret key)"
         }
       },
       "onError": "continueRegularOutput"
@@ -537,7 +539,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/erp_ack",
+        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/integration_ack",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
@@ -547,8 +549,8 @@
           "timeout": 15000
         }
       },
-      "id": "4998faa8-2149-587f-8a07-815eab514416",
-      "name": "ACK con error",
+      "id": "20ce63a1-d7af-5d46-8434-cdd0d656a703",
+      "name": "ACK con error a la tienda",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -753,14 +755,14 @@
       "main": [
         [
           {
-            "node": "ACK correcto",
+            "node": "ACK a la tienda",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "ACK correcto": {
+    "ACK a la tienda": {
       "main": [
         [
           {
@@ -864,14 +866,14 @@
       "main": [
         [
           {
-            "node": "ACK con error",
+            "node": "ACK con error a la tienda",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "ACK con error": {
+    "ACK con error a la tienda": {
       "main": [
         [
           {
@@ -902,5 +904,5 @@
     "templateCredsSetupCompleted": false
   },
   "tags": [],
-  "description": "Recibe los eventos de la tienda (webhook), valida el contrato, crea o actualiza el pedido, el stock o la incidencia en el ERP/CRM, registra el resultado y confirma a Supabase. Rama de error con log y alerta."
+  "description": "Recibe los eventos de la tienda (webhook), valida el contrato, crea o actualiza el pedido, el stock o la incidencia en el back-office ERP/CRM (otro sistema), registra el resultado allí y confirma a la tienda. Rama de error con log y alerta."
 }

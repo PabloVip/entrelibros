@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Genera los tres workflows de n8n de Entrelibros (Tarea 2) en n8n/workflows/*.json.
+"""Genera los cuatro workflows de n8n de Entrelibros (Tarea 2) en n8n/workflows/*.json.
+
+n8n conecta dos sistemas independientes: la TIENDA (proyecto de Supabase del eCommerce) y el
+BACK-OFFICE ERP/CRM (otro proyecto de Supabase, con su propia base de datos y claves). Cada llamada
+indica a cuál va (target='shop' o 'erp') y usa la credencial de ese sistema.
 
 Se mantienen como código para poder revisarlos en el repositorio (diff legible) y regenerarlos;
 lo que se importa en n8n son los .json. Las credenciales van por nombre: al importar, n8n pide
@@ -17,13 +21,17 @@ OUT = ROOT / 'workflows'
 OUT.mkdir(exist_ok=True)
 
 CRED = {
-    'supabase': {'httpHeaderAuth': {'id': 'entrelibrosSupabase', 'name': 'Entrelibros · Supabase (secret key)'}},
+    'supabase': {'httpHeaderAuth': {'id': 'entrelibrosSupabase', 'name': 'Entrelibros · Supabase (secret key)'}},   # tienda
+    'erp': {'httpHeaderAuth': {'id': 'entrelibrosERP', 'name': 'Entrelibros · ERP (secret key)'}},              # back-office
     'webhook': {'httpHeaderAuth': {'id': 'entrelibrosWebhookKey', 'name': 'Entrelibros · Webhook key'}},
     'telegram': {'telegramApi': {'id': 'entrelibrosTelegram', 'name': 'Entrelibros · Telegram bot'}},
     'gemini': {'googlePalmApi': {'id': 'entrelibrosGemini', 'name': 'Entrelibros · Gemini'}},
 }
-WF_IDS = {'main': 'EntrelibrosEventosERP', 'agent': 'EntrelibrosAgenteSoporte', 'bot': 'EntrelibrosBotTelegram'}
-SUPA = '{{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/'
+WF_IDS = {'main': 'EntrelibrosEventosERP', 'agent': 'EntrelibrosAgenteSoporte', 'bot': 'EntrelibrosBotTelegram',
+          'stock': 'EntrelibrosCargaInventario'}
+BASE = {'shop': '{{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/',   # tienda (eCommerce)
+        'erp': '{{ $env.ENTRELIBROS_ERP_URL }}/rest/v1/rpc/'}          # back-office ERP/CRM
+CRED_OF = {'shop': 'supabase', 'erp': 'erp'}
 # Escapa texto dinámico para los mensajes de Telegram en HTML (un "<" sin escapar hace fallar el envío)
 ESC = ".replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')"
 OPS = '={{ $env.ENTRELIBROS_OPS_CHAT_ID }}'
@@ -68,8 +76,8 @@ class WF:
 
 
 # ---------------------------------------------------------------- utilidades de nodos
-def rpc(wf, name, fn, body_expr, pos, on_error=None, notes=None):
-    """POST a una función de Supabase (PostgREST /rpc) con la clave secreta (credencial Header Auth)."""
+def rpc(wf, name, fn, body_expr, pos, on_error=None, notes=None, target='erp'):
+    """POST a una función (PostgREST /rpc) de la tienda o del back-office, con la clave secreta de ese sistema."""
     extra = {}
     if on_error:
         extra['onError'] = on_error
@@ -77,11 +85,11 @@ def rpc(wf, name, fn, body_expr, pos, on_error=None, notes=None):
         extra['notes'] = notes
         extra['notesInFlow'] = True
     return wf.add(name, 'n8n-nodes-base.httpRequest', 4.2, {
-        'method': 'POST', 'url': '=' + SUPA + fn,
+        'method': 'POST', 'url': '=' + BASE[target] + fn,
         'authentication': 'genericCredentialType', 'genericAuthType': 'httpHeaderAuth',
         'sendBody': True, 'specifyBody': 'json', 'jsonBody': '={{ JSON.stringify(' + body_expr + ') }}',
         'options': {'timeout': 15000},
-    }, pos, creds=['supabase'], **extra)
+    }, pos, creds=[CRED_OF[target]], **extra)
 
 
 def code(wf, name, js, pos, **extra):
@@ -145,7 +153,7 @@ m.add('Según el tipo de evento', 'n8n-nodes-base.switch', 3.2, {
 
 V = "$('Validar y normalizar').item.json"
 rpc(m, 'ERP · pedido de venta', 'erp_upsert_order',
-    '{ p_event_id: ' + V + '.event.event_id, p_occurred_at: ' + V + '.event.occurred_at, p_order: ' + V + '.normalized }',
+    '{ p_event_id: ' + V + '.event.event_id, p_occurred_at: ' + V + '.event.occurred_at, p_order: ' + V + '.normalized, p_event_type: ' + V + '.event.event_type }',
     (980, 60), on_error='continueErrorOutput', notes='Escenarios 1 y 2: crea o actualiza el pedido (idempotente).')
 rpc(m, 'ERP · inventario', 'erp_set_stock',
     '{ p_event_id: ' + V + '.event.event_id, p_sku: ' + V + '.normalized.sku, p_on_hand: ' + V
@@ -176,7 +184,7 @@ if (status === 'ok' && paid) {
 }
 return [{ json: {
   status, result, erp: r,
-  event_id: v.event.event_id, event_type: ev, entity_ref: v.entity_ref, route: v.route,
+  event_id: v.event.event_id, event_type: ev, occurred_at: v.event.occurred_at, entity_ref: v.entity_ref, route: v.route,
   launch_agent: status === 'ok' && result === 'creado' && ev === 'support.requested',
   agent_input: { event: v.event, ticket: v.normalized, parent_execution: $execution.id },
   notice,
@@ -184,12 +192,12 @@ return [{ json: {
 } }];""", (1240, 220))
 
 rpc(m, 'Log · resultado', 'erp_log',
-    log_body('eventos-erp', 'resultado', "event_id: $json.event_id, event_type: $json.event_type, entity_type: $json.route, "
+    log_body('eventos-erp', 'resultado', "event_id: $json.event_id, event_type: $json.event_type, occurred_at: $json.occurred_at, entity_type: $json.route, "
              "entity_ref: $json.entity_ref, status: $json.status, message: 'ERP: ' + $json.result, details: $json.erp, "
              "duration_ms: $json.duration_ms"), (1480, 220), on_error='continueRegularOutput')
-rpc(m, 'ACK correcto', 'erp_ack',
+rpc(m, 'ACK a la tienda', 'integration_ack',
     "{ p_event_id: $('Preparar resultado').item.json.event_id, p_ok: true, p_detail: $('Preparar resultado').item.json.result }",
-    (1720, 220), on_error='continueRegularOutput')
+    (1720, 220), on_error='continueRegularOutput', target='shop', notes='Confirma a la tienda: su cola marca el evento como procesado.')
 m.add('Responder 200', 'n8n-nodes-base.respondToWebhook', 1.1, {
     'respondWith': 'json',
     'responseBody': "={{ JSON.stringify({ result: $('Preparar resultado').item.json.result, event_id: $('Preparar resultado').item.json.event_id, execution_id: $execution.id }) }}",
@@ -205,7 +213,7 @@ code(m, 'Datos para el agente', "return [{ json: $('Preparar resultado').item.js
 # --- errores ---
 code(m, 'Error de validación', r"""const v = $json;
 return [{ json: {
-  event_id: v.event.event_id, event_type: v.event.event_type, entity_ref: v.entity_ref,
+  event_id: v.event.event_id, event_type: v.event.event_type, occurred_at: v.event.occurred_at, entity_ref: v.entity_ref,
   error_type: v.error_type ?? 'contrato', retry: false, http_code: 422,
   message: v.errors.map(e => `${e.field}: ${e.message}`).join(' · '),
   details: { errors: v.errors }, duration_ms: Date.now() - v.started_at,
@@ -219,19 +227,19 @@ const code = Number(err.httpCode ?? err.status ?? 0);
 const m = msg.match(/(contrato|formato|coherencia|negocio):/);
 const type = m ? m[1] : (code >= 400 && code < 500 ? 'negocio' : 'tecnico');
 return [{ json: {
-  event_id: v.event.event_id, event_type: v.event.event_type, entity_ref: v.entity_ref,
+  event_id: v.event.event_id, event_type: v.event.event_type, occurred_at: v.event.occurred_at, entity_ref: v.entity_ref,
   error_type: type, retry: type === 'tecnico', http_code: type === 'tecnico' ? 503 : 422,
   message: msg, details: { http_code: code || null }, duration_ms: Date.now() - v.started_at,
 } }];""", (1240, 560))
 U = "$('Unir errores').item.json"
 rpc(m, 'Log · error', 'erp_log', log_body('eventos-erp', 'resultado',
-    "event_id: " + U + ".event_id, event_type: " + U + ".event_type, entity_ref: " + U + ".entity_ref, status: 'error', "
+    "event_id: " + U + ".event_id, event_type: " + U + ".event_type, occurred_at: " + U + ".occurred_at, entity_ref: " + U + ".entity_ref, status: 'error', "
     "error_type: " + U + ".error_type, message: " + U + ".message, details: " + U + ".details, duration_ms: " + U + ".duration_ms"),
     (1480, 560), on_error='continueRegularOutput')
-rpc(m, 'ACK con error', 'erp_ack',
+rpc(m, 'ACK con error a la tienda', 'integration_ack',
     "{ p_event_id: " + U + ".event_id || '00000000-0000-0000-0000-000000000000', p_ok: false, "
     "p_detail: " + U + ".error_type + ': ' + " + U + ".message, p_retry: " + U + ".retry }",
-    (1720, 560), on_error='continueRegularOutput')
+    (1720, 560), on_error='continueRegularOutput', target='shop')
 m.add('Unir errores', 'n8n-nodes-base.noOp', 1, {}, (1360, 660))
 telegram(m, 'Telegram · alerta de error', OPS,
          "=⚠️ <b>Error de integración</b> ({{ $('Unir errores').item.json.error_type }})\n"
@@ -251,9 +259,9 @@ for i, n in enumerate(('ERP · pedido de venta', 'ERP · inventario', 'CRM · in
     m.link('Según el tipo de evento', n, i)
     m.link(n, 'Preparar resultado', 0)
     m.link(n, 'Clasificar error del ERP', 1)
-m.chain('Preparar resultado', 'Log · resultado', 'ACK correcto')
-m.link('ACK correcto', 'Responder 200')
-m.link('ACK correcto', '¿Avisar a operaciones?')
+m.chain('Preparar resultado', 'Log · resultado', 'ACK a la tienda')
+m.link('ACK a la tienda', 'Responder 200')
+m.link('ACK a la tienda', '¿Avisar a operaciones?')
 m.link('¿Avisar a operaciones?', 'Telegram · aviso a operaciones', 0)
 m.link('¿Avisar a operaciones?', '¿Incidencia nueva?', 1)
 m.link('Telegram · aviso a operaciones', '¿Incidencia nueva?')
@@ -261,11 +269,12 @@ m.link('¿Incidencia nueva?', 'Datos para el agente', 0)
 m.link('Datos para el agente', 'Lanzar agente de soporte')
 m.link('Error de validación', 'Unir errores')
 m.link('Clasificar error del ERP', 'Unir errores')
-m.chain('Unir errores', 'Log · error', 'ACK con error')
-m.link('ACK con error', 'Responder error')
-m.link('ACK con error', 'Telegram · alerta de error')
+m.chain('Unir errores', 'Log · error', 'ACK con error a la tienda')
+m.link('ACK con error a la tienda', 'Responder error')
+m.link('ACK con error a la tienda', 'Telegram · alerta de error')
 m.save('1-eventos-erp.json', 'Recibe los eventos de la tienda (webhook), valida el contrato, crea o actualiza el pedido, '
-       'el stock o la incidencia en el ERP/CRM, registra el resultado y confirma a Supabase. Rama de error con log y alerta.')
+       'el stock o la incidencia en el back-office ERP/CRM (otro sistema), registra el resultado allí y confirma a la tienda. '
+       'Rama de error con log y alerta.')
 
 # ======================================================================================
 # 2. Agente de soporte (IA agéntica supervisada)
@@ -289,20 +298,20 @@ a.add('Gemini', '@n8n/n8n-nodes-langchain.lmChatGoogleGemini', 1, {
 
 TOOLS = [
     ('consultar_pedido', 'erp_tool_order', "{ p_order_number: $fromAI('order_number', 'Número de pedido con formato EL-AAAAMMDD-XXXX', 'string') }",
-     'Consulta un pedido de la tienda y del ERP: estado, líneas (SKU), historial de estados, envío y días desde la compra.'),
+     'Consulta un pedido en el ERP: estado, pago, líneas (SKU), historial de estados, envío y días desde la compra.'),
     ('consultar_cliente', 'erp_tool_customer', "{ p_email: $fromAI('email', 'Email del cliente', 'string') }",
-     'Consulta el historial del cliente por email: pedidos anteriores e incidencias previas.'),
+     'Consulta el cliente en el ERP/CRM por email: pedidos e incidencias anteriores.'),
     ('consultar_stock', 'erp_tool_stock', "{ p_query: $fromAI('query', 'SKU o nombre del producto o recambio', 'string') }",
-     'Consulta el stock disponible de las variantes cuyo SKU o nombre contiene el texto indicado.'),
+     'Consulta el inventario del ERP: stock de los artículos cuyo SKU o descripción contiene el texto indicado.'),
     ('crear_nota_interna', 'erp_tool_internal_note', "{ p_ticket: $fromAI('ticket', 'Número de incidencia SOP-AAAAMMDD-XXXX', 'string'), p_note: $fromAI('note', 'Resumen breve de lo comprobado', 'string') }",
      'Acción reversible: añade una nota interna (no visible para el cliente) al ticket del CRM con lo que has comprobado.'),
 ]
 for i, (tname, fn, body, desc) in enumerate(TOOLS):
     a.add(tname, 'n8n-nodes-base.httpRequestTool', 4.2, {
-        'toolDescription': desc, 'method': 'POST', 'url': '=' + SUPA + fn,
+        'toolDescription': desc, 'method': 'POST', 'url': '=' + BASE['erp'] + fn,
         'authentication': 'genericCredentialType', 'genericAuthType': 'httpHeaderAuth',
         'sendBody': True, 'specifyBody': 'json', 'jsonBody': '={{ JSON.stringify(' + body + ') }}',
-        'options': {'timeout': 10000}}, (300 + i * 150, 560), creds=['supabase'])
+        'options': {'timeout': 10000}}, (300 + i * 150, 560), creds=['erp'])
     a.link(tname, 'Agente de soporte', kind='ai_tool')
 
 SCHEMA = {
@@ -365,7 +374,6 @@ return [{ json: {
   justification: String(out.justification ?? '').slice(0, 1000),
   risks: [...(out.risks ?? []), ...warnings],
   final_status: 'pendiente_revision', model: 'gemini-3.1-flash-lite', execution_id: $execution.id,
-  telegram_linked: input.ticket.telegram_linked,
   review_text: reviewText(),
 } }];
 
@@ -385,7 +393,7 @@ function reviewText() {
     `*Mensaje para el cliente:*`,
     md(message && action !== 'escalar_a_humano' ? message : '(ninguno: se escala a una persona)'),
     '',
-    input.ticket.telegram_linked ? 'El cliente tiene Telegram vinculado.' : 'El cliente aún no ha vinculado Telegram: si apruebas, se le enviará cuando lo vincule.',
+    'Si apruebas: se envía al cliente por Telegram (o cuando vincule el chat) y la incidencia pasa a «en curso» en la tienda.',
   ];
   return lines.join('\n').slice(0, 3800);
 }""", (560, 300))
@@ -412,11 +420,16 @@ rpc(a, 'Registrar aprobación', 'erp_review_decision',
 rpc(a, 'Registrar rechazo', 'erp_review_decision',
     "{ p_id: " + P_ID + ", p_approved: false, p_reviewer: 'revisor (Telegram)', p_note: $json.data.approved === false ? 'Rechazada en Telegram' : 'Sin respuesta en 24 h' }",
     (1760, 420))
-if_node(a, '¿Cliente con Telegram?', [cond('={{ $json.customer_message }}', 'string', 'notEmpty'),
-                                     cond('={{ $json.chat_id }}', 'string', 'notEmpty')], (2000, 200))
+RA = "$('Registrar aprobación').item.json"
+rpc(a, 'Tienda · incidencia en curso', 'integration_support_status',
+    "{ p_ticket: " + RA + ".ticket_ref, p_to: 'en_curso', p_by: 'back-office (propuesta #' + " + P_ID + " + ' aprobada)' }",
+    (2000, 60), on_error='continueRegularOutput', target='shop',
+    notes='Sincronización inversa: la tienda refleja que la incidencia ya está en curso.')
+if_node(a, '¿Cliente con Telegram?', [cond('={{ ' + RA + '.customer_message }}', 'string', 'notEmpty'),
+                                     cond('={{ ' + RA + '.chat_id }}', 'string', 'notEmpty')], (2000, 260))
 a.add('Telegram · respuesta al cliente', 'n8n-nodes-base.telegram', 1.2, {
-    'chatId': '={{ $json.chat_id }}',
-    'text': "=📦 <b>Entrelibros · incidencia {{ $json.ticket_ref }}</b>\n\n{{ $json.customer_message" + ESC + " }}",
+    'chatId': '={{ ' + RA + '.chat_id }}',
+    'text': "=📦 <b>Entrelibros · incidencia {{ " + RA + ".ticket_ref }}</b>\n\n{{ " + RA + ".customer_message" + ESC + " }}",
     'additionalFields': {'appendAttribution': False, 'parse_mode': 'HTML'}},
     (2240, 120), creds=['telegram'], onError='continueErrorOutput', webhookId=nid('agent/customer'))
 rpc(a, 'Marcar enviada', 'erp_mark_delivered', "{ p_id: " + P_ID + ", p_simulated: false }", (2480, 40))
@@ -432,7 +445,7 @@ rpc(a, 'Log · error del agente', 'erp_log', log_body('agente-soporte', 'propues
     "message: String($json.error?.message ?? $json.error ?? 'Fallo del agente').slice(0, 500)"), (560, 720), on_error='continueRegularOutput')
 telegram(a, 'Telegram · revisión manual', OPS,
          "=⚠️ <b>El agente no ha podido analizar {{ $('Desde el flujo principal').item.json.ticket.ticket_number }}</b>\n"
-         "La incidencia está en el CRM: revísala a mano en el back-office.", (800, 720))
+         "La incidencia está en el CRM: revísala a mano en la web del back-office.", (800, 720))
 rpc(a, 'Log · fallo al enviar', 'erp_log', log_body('agente-soporte', 'envio_cliente',
     "entity_type: 'ticket', entity_ref: " + D + ".ticket_ref, status: 'error', error_type: 'tecnico', "
     "message: 'Telegram no ha entregado la respuesta: ' + String($json.error?.message ?? '').slice(0, 300)"), (2480, 240), on_error='continueRegularOutput')
@@ -444,7 +457,7 @@ a.chain('Log · error del agente', 'Telegram · revisión manual')
 a.chain('Comprobar salida del agente', 'Guardar propuesta', 'Log · propuesta', 'Revisión humana (Telegram)', '¿Aprobada?')
 a.link('¿Aprobada?', 'Registrar aprobación', 0)
 a.link('¿Aprobada?', 'Registrar rechazo', 1)
-a.link('Registrar aprobación', '¿Cliente con Telegram?')
+a.chain('Registrar aprobación', 'Tienda · incidencia en curso', '¿Cliente con Telegram?')
 a.link('¿Cliente con Telegram?', 'Telegram · respuesta al cliente', 0)
 a.link('¿Cliente con Telegram?', 'Marcar como simulada', 1)
 a.link('Telegram · respuesta al cliente', 'Marcar enviada', 0)
@@ -525,3 +538,38 @@ b.link('¿Tiene incidencia?', 'Sin incidencia', 1)
 b.link('Acuse de recibo', 'Aviso a operaciones')
 b.save('3-bot-telegram.json', 'Bot de Telegram del cliente: vincula el chat con la incidencia (/start <token>), entrega las '
        'respuestas aprobadas pendientes y registra en el CRM los mensajes del cliente.')
+
+# ======================================================================================
+# 4. Carga inicial y conciliación del inventario (tienda → back-office)
+# ======================================================================================
+s4 = WF('stock', 'Entrelibros · Carga inicial del inventario (tienda → ERP)')
+s4.add('Ejecutar a mano', 'n8n-nodes-base.manualTrigger', 1, {}, (0, 200))
+s4.add('Cada noche (03:10)', 'n8n-nodes-base.scheduleTrigger', 1.2, {
+    'rule': {'interval': [{'field': 'cronExpression', 'expression': '10 3 * * *'}]}}, (0, 400))
+rpc(s4, 'Tienda · stock del catálogo', 'integration_stock_snapshot', '{}', (260, 300), target='shop',
+    notes='Lee de la tienda el stock de todas las variantes (JSON).')
+code(s4, 'Validar lista', r"""// Contrato mínimo de cada artículo: SKU y stock entero ≥ 0 (los que no cumplen no se cargan)
+const items = $json.items ?? [];
+const ok = [], bad = [];
+for (const i of items) {
+  if (typeof i.sku === 'string' && /^EL-[A-Z0-9-]+$/i.test(i.sku) && Number.isInteger(Number(i.stock)) && Number(i.stock) >= 0)
+    ok.push({ sku: i.sku.toUpperCase(), description: String(i.description ?? '').slice(0, 200), stock: Number(i.stock) });
+  else bad.push(i.sku ?? '(sin SKU)');
+}
+return [{ json: { items: ok, rejected: bad, taken_at: $json.taken_at, started_at: Date.now() } }];""", (520, 300))
+rpc(s4, 'ERP · cargar inventario', 'erp_load_inventory', '{ p_items: $json.items }', (780, 300),
+    notes='Crea o actualiza el inventario del back-office (idempotente).')
+rpc(s4, 'Log · carga', 'erp_log', log_body('carga-inventario', 'carga',
+    "event_type: 'inventory.snapshot', occurred_at: $('Validar lista').item.json.taken_at, entity_type: 'stock', "
+    "entity_ref: $json.total + ' SKU', status: 'ok', message: 'Inventario: ' + $json.nuevos + ' nuevos, ' + $json.actualizados + ' actualizados, ' + $json.sin_cambios + ' sin cambios', "
+    "details: { ...$json, rechazados: $('Validar lista').item.json.rejected }, duration_ms: Date.now() - $('Validar lista').item.json.started_at"),
+    (1040, 300), on_error='continueRegularOutput')
+telegram(s4, 'Telegram · resumen', OPS,
+         "=📦 <b>Inventario del ERP conciliado con la tienda</b>\n"
+         "{{ $('ERP · cargar inventario').item.json.total }} SKU · {{ $('ERP · cargar inventario').item.json.nuevos }} nuevos · "
+         "{{ $('ERP · cargar inventario').item.json.actualizados }} actualizados", (1300, 300))
+s4.link('Ejecutar a mano', 'Tienda · stock del catálogo')
+s4.link('Cada noche (03:10)', 'Tienda · stock del catálogo')
+s4.chain('Tienda · stock del catálogo', 'Validar lista', 'ERP · cargar inventario', 'Log · carga', 'Telegram · resumen')
+s4.save('4-carga-inventario.json', 'Lee el stock completo de la tienda y lo carga en el inventario del back-office ERP '
+        '(carga inicial a mano y conciliación cada noche). Registra el resultado y avisa por Telegram.')

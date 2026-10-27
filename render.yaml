@@ -19,6 +19,15 @@ services:
         value: 0.0.0.0                  # sin esto n8n intenta escuchar en IPv6 (::) y puede no arrancar
       - key: N8N_WEBHOOK_URL
         sync: false                     # https://entrelibros-n8n.onrender.com/
+      # --- Ajustes para el plan gratuito (512 MB y 0,1 CPU) ---
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=384  # evita que Node se pase de memoria y aborte (status 134)
+      - key: DB_POSTGRESDB_CONNECTION_TIMEOUT
+        value: "60000"                   # el pooler de Supabase puede tardar en responder al despertar
+      - key: N8N_RUNNERS_MAX_CONCURRENCY
+        value: "2"
+      - key: N8N_PROXY_HOPS
+        value: "1"                       # detrás del proxy de Render
       - key: N8N_ENCRYPTION_KEY
         generateValue: true             # cifra las credenciales guardadas en la BD
       - key: GENERIC_TIMEZONE
@@ -58,7 +67,9 @@ services:
         value: "4"
       # --- Configuración de Entrelibros (no secreta) ---
       - key: ENTRELIBROS_SUPABASE_URL
-        sync: false                     # https://<ref>.supabase.co
+        sync: false                     # TIENDA: https://<ref-tienda>.supabase.co
+      - key: ENTRELIBROS_ERP_URL
+        sync: false                     # BACK-OFFICE ERP/CRM (otro proyecto): https://<ref-erp>.supabase.co
       - key: ENTRELIBROS_OPS_CHAT_ID
         sync: false                     # chat de Telegram de quien revisa (ver guía)
       - key: ENTRELIBROS_BOT_USERNAME

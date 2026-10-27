@@ -1,5 +1,5 @@
-// Integración con el back-office (Tarea 2): métricas, ERP, decisiones del agente, cola y log.
-// Todo se lee con funciones que comprueban que el usuario es administrador (14_integracion.sql).
+// Integración (Tarea 2), lado de la tienda: cola de salida hacia el back-office y reintentos.
+// Se lee con funciones que comprueban que el usuario es administrador (15_backoffice_externo.sql).
 import { supabase } from '../core/supabase.js';
 
 export async function integrationDashboard(days) {

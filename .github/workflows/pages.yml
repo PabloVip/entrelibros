@@ -25,8 +25,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      # La tienda (public/) y, en /erp/, la web del back-office ERP/CRM (erp/web/): son dos aplicaciones
+      # distintas que se publican en el mismo sitio estático, pero cada una con su propio proyecto de Supabase.
+      - name: Montar el sitio
+        run: |
+          mkdir -p _site
+          cp -r public/. _site/
+          mkdir -p _site/erp
+          cp -r erp/web/. _site/erp/
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: public
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4

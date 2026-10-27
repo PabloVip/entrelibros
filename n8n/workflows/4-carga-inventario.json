@@ -1,0 +1,248 @@
+{
+  "id": "EntrelibrosCargaInventario",
+  "name": "Entrelibros · Carga inicial del inventario (tienda → ERP)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d873b161-8c33-5d9d-82b1-b538f3da4859",
+      "name": "Ejecutar a mano",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "10 3 * * *"
+            }
+          ]
+        }
+      },
+      "id": "bef77300-b8f9-5123-b689-659e66455266",
+      "name": "Cada noche (03:10)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/integration_stock_snapshot",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({}) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "84fd8149-1054-5184-81b2-6139d59fb66c",
+      "name": "Tienda · stock del catálogo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "entrelibrosSupabase",
+          "name": "Entrelibros · Supabase (secret key)"
+        }
+      },
+      "notes": "Lee de la tienda el stock de todas las variantes (JSON).",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrato mínimo de cada artículo: SKU y stock entero ≥ 0 (los que no cumplen no se cargan)\nconst items = $json.items ?? [];\nconst ok = [], bad = [];\nfor (const i of items) {\n  if (typeof i.sku === 'string' && /^EL-[A-Z0-9-]+$/i.test(i.sku) && Number.isInteger(Number(i.stock)) && Number(i.stock) >= 0)\n    ok.push({ sku: i.sku.toUpperCase(), description: String(i.description ?? '').slice(0, 200), stock: Number(i.stock) });\n  else bad.push(i.sku ?? '(sin SKU)');\n}\nreturn [{ json: { items: ok, rejected: bad, taken_at: $json.taken_at, started_at: Date.now() } }];"
+      },
+      "id": "c1409f3a-ccd7-5637-ab99-f69d37e75ab6",
+      "name": "Validar lista",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ENTRELIBROS_ERP_URL }}/rest/v1/rpc/erp_load_inventory",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_items: $json.items }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "5ab052c6-6cec-5a8a-aa7f-f3bd197cca3f",
+      "name": "ERP · cargar inventario",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "entrelibrosERP",
+          "name": "Entrelibros · ERP (secret key)"
+        }
+      },
+      "notes": "Crea o actualiza el inventario del back-office (idempotente).",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ENTRELIBROS_ERP_URL }}/rest/v1/rpc/erp_log",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_entry: { execution_id: $execution.id, workflow: 'carga-inventario', step: 'carga', event_type: 'inventory.snapshot', occurred_at: $('Validar lista').item.json.taken_at, entity_type: 'stock', entity_ref: $json.total + ' SKU', status: 'ok', message: 'Inventario: ' + $json.nuevos + ' nuevos, ' + $json.actualizados + ' actualizados, ' + $json.sin_cambios + ' sin cambios', details: { ...$json, rechazados: $('Validar lista').item.json.rejected }, duration_ms: Date.now() - $('Validar lista').item.json.started_at } }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "cccd6fd0-cd15-5224-8e24-c7be281c0521",
+      "name": "Log · carga",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "entrelibrosERP",
+          "name": "Entrelibros · ERP (secret key)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.ENTRELIBROS_OPS_CHAT_ID }}",
+        "text": "=📦 <b>Inventario del ERP conciliado con la tienda</b>\n{{ $('ERP · cargar inventario').item.json.total }} SKU · {{ $('ERP · cargar inventario').item.json.nuevos }} nuevos · {{ $('ERP · cargar inventario').item.json.actualizados }} actualizados",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "4b999916-ed16-50e1-b453-1ad92baeb523",
+      "name": "Telegram · resumen",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1300,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "entrelibrosTelegram",
+          "name": "Entrelibros · Telegram bot"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "webhookId": "e2f74158-8a6d-5cde-90cb-6c183fd0d02c"
+    }
+  ],
+  "connections": {
+    "Ejecutar a mano": {
+      "main": [
+        [
+          {
+            "node": "Tienda · stock del catálogo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cada noche (03:10)": {
+      "main": [
+        [
+          {
+            "node": "Tienda · stock del catálogo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tienda · stock del catálogo": {
+      "main": [
+        [
+          {
+            "node": "Validar lista",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar lista": {
+      "main": [
+        [
+          {
+            "node": "ERP · cargar inventario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ERP · cargar inventario": {
+      "main": [
+        [
+          {
+            "node": "Log · carga",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log · carga": {
+      "main": [
+        [
+          {
+            "node": "Telegram · resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "timezone": "Europe/Madrid",
+    "executionTimeout": 300
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [],
+  "description": "Lee el stock completo de la tienda y lo carga en el inventario del back-office ERP (carga inicial a mano y conciliación cada noche). Registra el resultado y avisa por Telegram."
+}

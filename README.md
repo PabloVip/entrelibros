@@ -243,38 +243,45 @@ En el repositorio, ve a **Settings → Pages → Source: GitHub Actions**. El wo
 
 ## Tarea 2 · Integración con el back-office, automatización e IA agéntica
 
-La tienda se integra con un **ERP/CRM académico** (esquema `erp` de Supabase) a través de **n8n**:
+La tienda (front-office) se integra con un **back-office ERP/CRM independiente** a través de **n8n**. Son dos
+sistemas distintos, cada uno con su **propio proyecto de Supabase** (base de datos, claves y usuarios): la tienda no
+puede leer ni escribir en el back-office, y el back-office no tiene acceso a la tienda. n8n es lo único que los conecta.
 
 ```
-Tienda (Supabase) ── evento ──► integration_outbox ──pg_net──► n8n (Render)
-                                   ▲  reintentos (pg_cron)        │ valida y normaliza (contrato v1)
-                                   └──────── ACK ◄────────────────┤ crea/actualiza pedido, stock o ticket en erp.*
-                                                                  │ registra cada paso en integration_log
-                                                                  ├─► Telegram (avisos internos)
-                                                                  └─► Agente de IA (Gemini) ──► propuesta
-                                                                        └─► revisión humana en Telegram ──► respuesta al cliente
+ SISTEMA 1 · Tienda (Supabase «entrelibros»)            n8n (Render)                 SISTEMA 2 · Back-office ERP/CRM (Supabase «entrelibros-erp»)
+ events ──trigger──► integration_outbox ──pg_net──► 1 · valida y normaliza ──API──► sales_orders · inventory · tickets · customers
+    ▲  reintentos (pg_cron)                            (contrato v1)                    integration_log (registro de integración)
+    └────────── integration_ack ◄──────────────────────┤                                  ▲
+                                                       ├─► Telegram (avisos internos)     │
+                                                       ├─► 2 · agente IA (Gemini) ── consulta / nota interna ──┘
+                                                       │        └─► revisión humana en Telegram ─► respuesta al cliente (bot)
+ support_requests ◄── integration_support_status ──────┤                                         └─► agent_decisions
+ stock completo ──── integration_stock_snapshot ──────► 4 · carga inicial del inventario ──────────► inventory
 ```
 
-| Escenario | Evento de la tienda | Resultado |
+| Escenario | Evento de la tienda | Resultado en el back-office |
 |---|---|---|
-| 1. Pedido integrado | `order.created`, `payment.simulated` | Pedido de venta en `erp.sales_orders` con cliente, líneas, importe, estado y fecha |
-| 2. Sincronización | `order.status_changed`, `stock.adjusted` | Estado del pedido / inventario del ERP actualizados (idempotente, con control de orden) |
-| 3. Postventa | `support.requested` | Ticket en el CRM; el agente consulta pedido, cliente y stock y propone respuesta; una persona la aprueba en Telegram y se envía al cliente por el bot |
+| 1. Pedido integrado | `order.created`, `payment.simulated` | Pedido de venta con cliente, líneas, importe y estado (`pendiente_pago` → `pagado`) e historial |
+| 2. Sincronización | `order.status_changed`, `stock.adjusted` | Estado del pedido e inventario actualizados (idempotente por `event_id`, con control de orden) |
+| 3. Postventa | `support.requested` | Ticket en el CRM enlazado a cliente y pedido; el agente consulta el ERP y propone; una persona aprueba en Telegram; se responde al cliente por el bot y la incidencia de la tienda pasa a «en curso» |
 
 | Qué | Dónde |
 |---|---|
-| SQL (cola, ERP, log, agente, Telegram, métricas) | `supabase/14_integracion.sql` |
+| Back-office: SQL (tablas, API para n8n, herramientas del agente, cuadro de mando, acceso del personal) | `erp/supabase/01_erp.sql` |
+| Back-office: web del personal (login propio, cuadro de mando, pedidos, inventario, clientes, incidencias, agente, registro) | `erp/web/` → publicada en `/erp/` |
+| Tienda: cola de salida, envío a n8n y reintentos | `supabase/14_integracion.sql` y `supabase/15_backoffice_externo.sql` (este quita el back-office de la base de datos de la tienda) |
 | Workflows de n8n (exportados) | `n8n/workflows/*.json` (se generan con `n8n/build_workflows.py`) |
 | Código de validación del payload | `n8n/code/validar-evento.js` |
 | Instrucciones y herramientas del agente | `n8n/prompts/agente-soporte.md` |
 | Contrato de integración | `docs/tarea2/contrato.md` |
 | Payloads de prueba (3 escenarios + error) | `docs/tarea2/payloads/` |
 | Matriz de decisión | `docs/tarea2/matriz-decision.md` |
-| Puesta en marcha (Render, credenciales, Telegram) | `docs/tarea2/despliegue-render.md`, `render.yaml`, `n8n/env.example` |
-| Cuadro de mando | Back-office → **Integración** (`admin-integracion.html`) |
+| Puesta en marcha (dos proyectos, Render, credenciales, Telegram) | `docs/tarea2/despliegue-render.md`, `render.yaml`, `n8n/env.example` |
+| Cola de salida en la tienda | Back-office de la tienda → **Integración** (`admin-integracion.html`) |
 
-Ningún secreto está en el repositorio: la clave secreta de Supabase, el token del bot y la clave de Gemini se
-guardan como credenciales cifradas de n8n; el secreto del webhook, en `integration_settings` (sin acceso por la API).
+Ningún secreto está en el repositorio: las claves secretas de los dos proyectos, el token del bot y la clave de Gemini
+se guardan como credenciales cifradas de n8n; el secreto del webhook, en `integration_settings` de la tienda (sin
+acceso por la API). `public/js/config.js` y `erp/web/config.js` solo llevan URL y clave publicable.
 
 ## 8. Limitaciones conocidas
 

@@ -154,7 +154,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/erp_link_telegram",
+        "url": "={{ $env.ENTRELIBROS_ERP_URL }}/rest/v1/rpc/erp_link_telegram",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
@@ -174,8 +174,8 @@
       ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "entrelibrosSupabase",
-          "name": "Entrelibros · Supabase (secret key)"
+          "id": "entrelibrosERP",
+          "name": "Entrelibros · ERP (secret key)"
         }
       }
     },
@@ -307,7 +307,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/erp_mark_delivered",
+        "url": "={{ $env.ENTRELIBROS_ERP_URL }}/rest/v1/rpc/erp_mark_delivered",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
@@ -327,15 +327,15 @@
       ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "entrelibrosSupabase",
-          "name": "Entrelibros · Supabase (secret key)"
+          "id": "entrelibrosERP",
+          "name": "Entrelibros · ERP (secret key)"
         }
       }
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/erp_customer_message",
+        "url": "={{ $env.ENTRELIBROS_ERP_URL }}/rest/v1/rpc/erp_customer_message",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
@@ -355,8 +355,8 @@
       ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "entrelibrosSupabase",
-          "name": "Entrelibros · Supabase (secret key)"
+          "id": "entrelibrosERP",
+          "name": "Entrelibros · ERP (secret key)"
         }
       }
     },
@@ -527,7 +527,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.ENTRELIBROS_SUPABASE_URL }}/rest/v1/rpc/erp_log",
+        "url": "={{ $env.ENTRELIBROS_ERP_URL }}/rest/v1/rpc/erp_log",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
@@ -547,8 +547,8 @@
       ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "entrelibrosSupabase",
-          "name": "Entrelibros · Supabase (secret key)"
+          "id": "entrelibrosERP",
+          "name": "Entrelibros · ERP (secret key)"
         }
       },
       "onError": "continueRegularOutput"
