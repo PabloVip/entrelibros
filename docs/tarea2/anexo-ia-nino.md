@@ -12,20 +12,26 @@ hacer la tarea: lo explica la memoria.
 ## Para qué la he usado
 
 - **Entender el reparto de tareas** que propuso Pablo y el aviso del profesor del 27 de octubre sobre el back-office.
-  A partir del aviso revisamos `14_integracion.sql`. El ERP es el esquema `erp` dentro de la misma base de datos de la
-  tienda, así que probablemente no cumple lo de «almacenamiento propio y acceso independiente». Se lo he planteado a
-  Pablo con una propuesta, sacar el ERP a un segundo proyecto, y está pendiente de decidir entre los dos.
-- **Traducir al inglés la página Integración** del back-office (`en-admin.js`): 102 textos fijos y 9 reglas para
-  los textos con partes variables (porcentajes, número de propuesta, totales del gráfico…).
+  A partir del aviso revisamos `14_integracion.sql`. El primer ERP era el esquema `erp` dentro de la misma base de datos
+  de la tienda, así que no cumplía lo de «almacenamiento propio y acceso independiente». Se lo planteé a Pablo con una
+  propuesta: sacar el ERP a un segundo proyecto de Supabase. Así se ha hecho (`entrelibros-erp`, con su web en `erp/`).
+- **Traducir al inglés la página Integración** del back-office de la tienda (`en-admin.js`). Primero traduje la página
+  completa (cuadro de mando, ERP/CRM, agente y log). Al separar el ERP, la página se rehízo y ahora solo enseña la cola
+  de salida, así que actualicé la traducción: 29 textos fijos y 3 reglas para los textos con partes variables. También
+  quité las traducciones que ya no se usaban.
 - **Escribir las pruebas del contrato** (`pruebas.md`) y los payloads de error 5 (número de pedido mal formado) y
   6 (evento fuera de orden). La IA leyó la validación de n8n (`validar-evento.js`), la definición del workflow
-  (`build_workflows.py`) y las funciones del ERP para describir, en cada caso, qué responde n8n, qué queda en el log
-  y en qué estado queda la cola.
+  (`build_workflows.py`) y las funciones del ERP para describir, en cada caso, qué responde n8n, qué queda en el registro
+  y en qué estado queda la cola. Con el ERP separado, los resultados son los mismos, porque las funciones no han
+  cambiado. Lo que cambia es dónde se ven, y actualicé el documento.
+- **Preparar mi parte de la memoria:** el borrador de mi columna del reparto del trabajo (apartado 12) y de esta
+  declaración (anexo A.3), que he revisado y corregido yo.
 
 ## Qué he decidido yo
 
-- **El orden de trabajo:** primero las pruebas y este anexo, que no dependen de la arquitectura. La matriz de decisión
-  la dejo para después de acordar con Pablo cómo separamos el ERP, porque su descripción de la alternativa A depende de eso.
+- **El orden de trabajo:** primero las pruebas y este anexo, que no dependían de la arquitectura. La revisión de la
+  matriz de decisión, después de acordar con Pablo cómo separar el ERP, porque la descripción de la alternativa A
+  depende de eso.
 - **Cómo se registra mi trabajo:** en una rama propia (`tarea2-nino`), con un commit por cada punto del reparto, revisado
   por mí antes de hacerlo. No se sube nada a GitHub sin mi permiso.
 - **Quitar la firma de coautoría de la IA de los commits:** el uso de IA se declara aquí, en el anexo.
@@ -44,6 +50,10 @@ hacer la tarea: lo explica la memoria.
     **ejecutando el propio código del nodo de n8n** con Node sobre cada payload. Los mensajes del documento son la salida
     literal.
   - Los casos de duplicado y fuera de orden se dedujeron leyendo `erp_upsert_order`.
+  - Después de separar el ERP volví a ejecutar el nodo sobre todos los payloads: los mensajes no cambian. También
+    comprobé que `erp/supabase/01_erp.sql` mantiene las mismas comprobaciones de duplicado y orden.
+- **Traducciones que dejaron de usarse:** antes de quitarlas, el script buscó cada una en el resto de páginas del
+  back-office, para no romper otra pantalla.
 - **Revisiones antes de cada commit:** los JSON nuevos son válidos, ningún fichero contiene claves y todos los enlaces
   entre documentos funcionan.
 - **Pendiente:**
@@ -62,11 +72,11 @@ hacer la tarea: lo explica la memoria.
 
 ## Problemas detectados y propuestas
 
-- **El ERP no es un sistema separado:** está en la misma base de datos que la tienda (ver arriba). Propuesta: un segundo
-  proyecto de Supabase solo para el ERP, al que únicamente accede n8n.
-- **Eventos fuera de orden:** la protección (`last_event_at`) solo existe para los pedidos. Un ajuste de stock o un
-  cambio de estado de un ticket que llegara tarde sobrescribiría el valor actual con uno antiguo. Propuesta: aplicar a
-  `erp.inventory` y `erp.tickets` la misma comparación que hace `erp_upsert_order`.
+- **El ERP no era un sistema separado** (ver arriba). Resuelto: ahora es un proyecto de Supabase propio, con su base de
+  datos, sus usuarios y su web, y solo n8n escribe en él.
+- **Eventos fuera de orden:** la protección (`last_event_at`) solo existe para los pedidos, también en el ERP nuevo. Un
+  ajuste de stock o un cambio de estado de un ticket que llegara tarde sobrescribiría el valor actual con uno antiguo.
+  Propuesta: aplicar a las tablas `inventory` y `tickets` del ERP la misma comparación que hace `erp_upsert_order`.
 - **Ficheros que sobran en el repositorio:**
   - una copia duplicada del diccionario, `public/js/i18n/en-admin 2.js`;
   - la caché de la herramienta de Supabase, `supabase/.temp/`, que conviene añadir a `.gitignore`.
