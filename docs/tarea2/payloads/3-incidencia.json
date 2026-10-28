@@ -1,79 +1,79 @@
 {
-  "data": {
-    "order": {
-      "lines": [
-        {
-          "sku": "EL-ACC-PINT",
-          "quantity": 1,
-          "line_total": 12.9,
-          "unit_price": 12.9,
-          "product_name": "Set de pintura y acabados",
-          "variant_name": "Set completo"
+    "data": {
+        "order": {
+            "lines": [
+                {
+                    "sku": "EL-REC-PRA",
+                    "quantity": 1,
+                    "line_total": 6.50,
+                    "unit_price": 6.50,
+                    "product_name": "Recambio: piezas pequeñas Callejón de Praga",
+                    "variant_name": "Plancha de piezas pequeñas"
+                },
+                {
+                    "sku": "EL-REC-ACET",
+                    "quantity": 2,
+                    "line_total": 7.80,
+                    "unit_price": 3.90,
+                    "product_name": "Recambio: ventanas de acetato",
+                    "variant_name": "Lámina completa"
+                }
+            ],
+            "status": "pendiente_preparacion",
+            "amounts": {
+                "tax": 3.34,
+                "total": 19.25,
+                "discount": 0.00,
+                "shipping": 4.95,
+                "subtotal": 14.30,
+                "tax_rate": 21.00,
+                "discount_code": null
+            },
+            "payment": {
+                "at": "2026-10-27T15:52:40.461417+00:00",
+                "amount": 19.25,
+                "method": "tarjeta_simulada",
+                "status": "aprobado",
+                "reference": "SIM-20261027-P672ES"
+            },
+            "currency": "EUR",
+            "customer": {
+                "email": "lucia.prueba@example.com",
+                "phone": "600111222",
+                "is_test": true,
+                "shop_id": 5,
+                "full_name": "Lucía Prueba"
+            },
+            "shipping": {
+                "city": "Murcia",
+                "name": "Lucía Prueba",
+                "method": "Envío estándar a domicilio",
+                "address": "Calle Mayor 1",
+                "country": "ES",
+                "postcode": "30001",
+                "province": "Murcia",
+                "method_code": "estandar",
+                "pickup_point": null
+            },
+            "created_at": "2026-10-27T15:52:40.407158+00:00",
+            "order_number": "EL-20261027-ZNDS"
         },
-        {
-          "sku": "EL-ACC-CUP-E",
-          "quantity": 2,
-          "line_total": 39.8,
-          "unit_price": 19.9,
-          "product_name": "Cubierta antipolvo de metacrilato",
-          "variant_name": "Estrecha (hasta 130 mm)"
+        "ticket": {
+            "reason": "pieza_faltante",
+            "status": "abierta",
+            "message": "Me falta una farola pequeña en el kit.",
+            "created_at": "2026-10-27T15:52:44.85145+00:00",
+            "order_number": "EL-20261027-ZNDS",
+            "customer_name": "Lucía Prueba",
+            "ticket_number": "SOP-20261027-3GQ5",
+            "customer_email": "lucia.prueba@example.com",
+            "telegram_token": "e20de2ea96084889ab5b"
         }
-      ],
-      "status": "pago_simulado",
-      "amounts": {
-        "tax": 10.01,
-        "total": 57.65,
-        "discount": 0.0,
-        "shipping": 4.95,
-        "subtotal": 52.7,
-        "tax_rate": 21.0,
-        "discount_code": null
-      },
-      "payment": {
-        "at": "2026-10-26T08:25:37.820753+00:00",
-        "amount": 57.65,
-        "method": "tarjeta_simulada",
-        "status": "aprobado",
-        "reference": "SIM-20261026-YKYNFT"
-      },
-      "currency": "EUR",
-      "customer": {
-        "email": "lucia.prueba@example.com",
-        "phone": "600111222",
-        "is_test": true,
-        "shop_id": 5,
-        "full_name": "Lucía Prueba"
-      },
-      "shipping": {
-        "city": "Murcia",
-        "name": "Lucía Prueba",
-        "method": "Envío estándar a domicilio",
-        "address": "Calle Falsa 1",
-        "country": "ES",
-        "postcode": "30001",
-        "province": "Murcia",
-        "method_code": "estandar",
-        "pickup_point": null
-      },
-      "created_at": "2026-10-26T08:25:37.609499+00:00",
-      "order_number": "EL-20261026-D5GL"
     },
-    "ticket": {
-      "reason": "pieza_faltante",
-      "status": "abierta",
-      "message": "Me falta una pieza del kit, la taza pequeña no venía en la caja.",
-      "created_at": "2026-10-26T08:25:37.897608+00:00",
-      "order_number": "EL-20261026-D5GL",
-      "customer_name": "Lucía Prueba",
-      "ticket_number": "SOP-20261026-DHA6",
-      "customer_email": "lucia.prueba@example.com",
-      "telegram_linked": false
-    }
-  },
-  "source": "servidor",
-  "contract": "entrelibros.event.v1",
-  "event_id": "0be1235c-59ca-46ec-ac88-98b41e8ef560",
-  "event_type": "support.requested",
-  "environment": "prototipo-academico",
-  "occurred_at": "2026-10-26T08:25:37.897608+00:00"
+    "source": "servidor",
+    "contract": "entrelibros.event.v1",
+    "event_id": "10b094e8-2c84-47fb-a2e1-8c6b028a3345",
+    "event_type": "support.requested",
+    "environment": "prototipo-academico",
+    "occurred_at": "2026-10-27T15:52:44.85145+00:00"
 }

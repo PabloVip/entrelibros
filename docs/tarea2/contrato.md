@@ -1,6 +1,7 @@
 # Contrato de integración `entrelibros.event.v1`
 
-La tienda (Supabase) envía a n8n un mensaje por cada evento de negocio integrable. El mensaje
+La tienda (proyecto de Supabase del eCommerce) envía a n8n un mensaje por cada evento de negocio integrable, y n8n lo
+aplica en el back-office ERP/CRM, que es otro sistema (otro proyecto de Supabase; las tablas de destino de abajo son suyas). El mensaje
 se construye en la base de datos (`_integration_build_payload`, `supabase/14_integracion.sql`)
 en la misma transacción que el evento, así que siempre refleja el estado real del pedido o la
 incidencia en ese momento.
@@ -14,7 +15,7 @@ incidencia en ese momento.
 | Cabeceras extra | `X-Entrelibros-Attempt`: número de intento (1, 2, 3…) |
 | Respuesta correcta | `200` `{"result": "...", "event_id": "..."}` |
 | Respuesta de error de datos | `422` con la lista de errores de validación (no se reintenta) |
-| Confirmación (ack) | n8n llama a `erp_ack(event_id, ok, detalle, reintentar)` al terminar |
+| Confirmación (ack) | n8n llama a `integration_ack(event_id, ok, detalle, reintentar)` de la tienda cuando el back-office ha aplicado (o rechazado) el evento |
 | Reintentos | `pg_cron` reenvía cada minuto lo no confirmado, con espera 2, 4, 8, 16… min (máx. 6 intentos) |
 | Idempotencia | `event_id` único en la cola; el ERP guarda `last_event_id` y responde `duplicado` si llega dos veces |
 | Orden | El ERP guarda `last_event_at`; un evento más antiguo que el último aplicado se marca `obsoleto` |
@@ -45,11 +46,11 @@ incidencia en ese momento.
 
 | Evento | Escenario | `data` | Destino en el ERP |
 |---|---|---|---|
-| `order.created` | 1 | `order` | `erp.sales_orders` + líneas (estado `pendiente_pago`) |
+| `order.created` | 1 | `order` | `sales_orders` + líneas + historial (estado `pendiente_pago`) |
 | `payment.simulated` | 1 | `order`, `attempt` | pedido `pagado` (o pago `rechazado`) |
 | `order.status_changed` | 2 | `order`, `change {from, to, by}` | estado del pedido |
-| `stock.adjusted` | 2 | `stock {sku, from, to, description}` | `erp.inventory` |
-| `support.requested` | 3 | `ticket`, `order` (si hay) | `erp.tickets` + agente de IA + Telegram |
+| `stock.adjusted` | 2 | `stock {sku, from, to, description}` | `inventory` |
+| `support.requested` | 3 | `ticket`, `order` (si hay) | `tickets` + agente de IA + Telegram |
 | `support.status_changed` | 3 | `ticket`, `change` | estado del ticket |
 
 ## `data.order`
@@ -77,7 +78,7 @@ incidencia en ese momento.
 | `reason` | sí | `pieza_faltante`, `pieza_danada`, `retraso_envio`, `duda_montaje`, `otro` → categoría, prioridad inicial y SLA (24/48/72 h) |
 | `message` | sí | texto, máx. 2000 caracteres |
 | `order_number` | no | si viene, formato de pedido; el ticket se enlaza al pedido del ERP |
-| `telegram_linked` | no | si el cliente ya vinculó Telegram |
+| `telegram_token` | no | token que la tienda enseña al cliente («Seguir la incidencia en Telegram»); el CRM lo guarda para vincular el chat |
 
 ## Errores
 

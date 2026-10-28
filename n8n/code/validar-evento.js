@@ -128,7 +128,8 @@ function normalizeTicket(t) {
     subject: `${category}${t.order_number ? ' · ' + t.order_number : ''}`,
     message: String(t.message ?? '').trim().slice(0, 2000),
     sla_due_at: new Date(created.getTime() + slaHours * 3600e3).toISOString(),
-    telegram_linked: Boolean(t.telegram_linked),
+    // token que la tienda enseña al cliente para vincular Telegram; el CRM lo guarda con el ticket
+    telegram_token: /^[a-f0-9]{8,40}$/i.test(t.telegram_token ?? '') ? t.telegram_token : null,
   };
 }
 

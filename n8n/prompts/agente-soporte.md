@@ -40,11 +40,13 @@ Motivo: {{reason}}. Mensaje del cliente:
 
 ## Herramientas conectadas
 
-| Herramienta | Tipo | Función en Supabase | Qué devuelve / hace |
+Todas llaman al **back-office ERP/CRM** (proyecto de Supabase independiente de la tienda) con su propia clave; el agente no tiene ningún acceso a la base de datos de la tienda.
+
+| Herramienta | Tipo | Función del back-office (proyecto ERP) | Qué devuelve / hace |
 |---|---|---|---|
-| `consultar_pedido` | consulta | `erp_tool_order(order_number)` | estado en tienda y ERP, líneas, historial, días desde la compra |
-| `consultar_cliente` | consulta | `erp_tool_customer(email)` | pedidos e incidencias anteriores |
-| `consultar_stock` | consulta | `erp_tool_stock(query)` | stock de las variantes que coinciden |
+| `consultar_pedido` | consulta | `erp_tool_order(order_number)` | estado y pago en el ERP, líneas, historial de estados, días desde la compra |
+| `consultar_cliente` | consulta | `erp_tool_customer(email)` | ficha del CRM: pedidos e incidencias anteriores |
+| `consultar_stock` | consulta | `erp_tool_stock(query)` | stock del inventario del ERP para los SKU o descripciones que coinciden |
 | `crear_nota_interna` | acción reversible | `erp_tool_internal_note(ticket, note)` | añade una nota interna al ticket del CRM (no la ve el cliente) |
 
 ## Salida estructurada (validada en el nodo «Comprobar salida del agente»)

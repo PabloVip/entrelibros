@@ -1500,3 +1500,7 @@ html.cambiando-tema .shop-header, html.cambiando-tema .main-nav { view-transitio
 .decision blockquote { margin: 0; padding: 8px 12px; border-left: 3px solid var(--accent); background: var(--bg); border-radius: 6px; }
 pre.json { max-height: 320px; overflow: auto; font-size: .8rem; background: var(--bg); padding: 10px; border-radius: 6px; }
 @media (max-width: 640px) { .decision-grid { grid-template-columns: minmax(0, 1fr); } .decision-grid dd { margin-bottom: 6px; } }
+
+/* Integración (Tarea 2): aviso de que el ERP/CRM es otro sistema */
+.erp-callout { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; margin-bottom: 20px; }
+.erp-callout p { margin: 0; max-width: 72ch; }
