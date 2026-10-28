@@ -5,16 +5,17 @@ comprueba en una de estas dos capas:
 
 1. **n8n · «Validar y normalizar»** ([`n8n/code/validar-evento.js`](../../n8n/code/validar-evento.js)): campos
    obligatorios, formatos y cuadre de importes. Si falla, el evento no llega al ERP.
-2. **ERP · funciones `erp_upsert_*`** ([`supabase/14_integracion.sql`](../../supabase/14_integracion.sql)):
-   idempotencia (`last_event_id`) y orden (`last_event_at`). Además repiten las comprobaciones básicas
-   (email, líneas, subtotal) por si alguien llamara al ERP sin pasar por n8n.
+2. **ERP · funciones `erp_upsert_*`** ([`erp/supabase/01_erp.sql`](../../erp/supabase/01_erp.sql)), en el proyecto
+   de Supabase del back-office (`entrelibros-erp`), separado del de la tienda: idempotencia (`last_event_id`) y
+   orden (`last_event_at`). Además repiten las comprobaciones básicas (email, líneas, subtotal) por si alguien
+   llamara al ERP sin pasar por n8n.
 
-La respuesta HTTP del webhook sirve para depurar. El estado de la cola **no** depende de ella:
-lo cambia la llamada `erp_ack` que n8n hace al final de cada ejecución.
+La respuesta HTTP del webhook sirve para depurar. El estado de la cola de la tienda **no** depende de ella:
+lo cambia la llamada `integration_ack` que n8n hace a la tienda al final de cada ejecución.
 
 ## Resumen
 
-| # | Caso | Payload | Lo detecta | Respuesta de n8n | Log (`integration_log`) | Cola tras el ACK |
+| # | Caso | Payload | Lo detecta | Respuesta de n8n | Registro del ERP (`integration_log`) | Cola de la tienda tras el ACK |
 |---|---|---|---|---|---|---|
 | 1 | Evento válido | [`1-pedido-pagado.json`](payloads/1-pedido-pagado.json) | — | `200` `result: actualizado` | `ok` · «ERP: actualizado» | `procesado` |
 | 2 | Sin email del cliente | `1-pedido-pagado.json` sin `customer.email` | n8n | `422` `error_type: contrato` | `error` · `contrato` | `error` (no se reintenta) |
@@ -23,8 +24,10 @@ lo cambia la llamada `erp_ack` que n8n hace al final de cada ejecución.
 | 5 | Evento duplicado | el mismo evento enviado dos veces | ERP | `200` `result: duplicado` | `duplicado` · «ERP: duplicado» | `procesado` |
 | 6 | Evento fuera de orden | [`6-evento-fuera-de-orden.json`](payloads/6-evento-fuera-de-orden.json) después de [`2-cambio-estado.json`](payloads/2-cambio-estado.json) | ERP | `200` `result: obsoleto` | `obsoleto` · «ERP: obsoleto» | `procesado` |
 
-En todos los casos el log se escribe con `workflow = eventos-erp` y `step = resultado`, y se ve en el back-office,
-en **Integración → Cola y log**. La respuesta siempre incluye `event_id` y `execution_id` (el id de la ejecución en n8n).
+En todos los casos n8n escribe la fila del registro en el ERP (`erp_log`) con `workflow = eventos-erp` y
+`step = resultado`. Se ve en la web del back-office ERP/CRM, en **Registro de integración**. El estado de la cola
+se ve en la tienda, en **Back-office → Integración**. La respuesta siempre incluye `event_id` y `execution_id`
+(el id de la ejecución en n8n).
 
 ## Detalle de cada caso
 
@@ -53,10 +56,11 @@ en **Integración → Cola y log**. La respuesta siempre incluye `event_id` y `e
   - `status = error`, `error_type = contrato`, con el mismo mensaje;
   - en `details.errors`, la lista de errores con su campo.
 - **Cola:** `error`, con `last_error = "contrato: order.customer.email: …"`. **No se reintenta**, porque reenviar el
-  mismo dato incorrecto daría el mismo error. El botón «Reintentar» del back-office reenvía el mismo payload guardado
-  en la cola, así que con un error de datos solo sirve si lo equivocado era la regla de n8n o del ERP y ya se ha corregido.
+  mismo dato incorrecto daría el mismo error. El botón «Reintentar» de la tienda (**Back-office → Integración**)
+  reenvía el mismo payload guardado en la cola, así que con un error de datos solo sirve si lo equivocado era la
+  regla de n8n o del ERP y ya se ha corregido.
 - **Telegram:** alerta «⚠️ Error de integración (contrato) … No se reintenta: revisar los datos.»
-- **ERP:** no se escribe nada.
+- **ERP:** no se crea ni se cambia ningún pedido. Solo queda la fila del registro.
 
 ### 3. Importes que no cuadran
 
@@ -100,8 +104,8 @@ cola sigue en `enviado`. `pg_cron` reenvía entonces el mismo mensaje con el mis
 
 Resultado:
 - **Respuesta:** `200` `{"result": "duplicado", …}`.
-- **Log:** `status = duplicado`. El cuadro de mando lo cuenta como ejecución correcta y lo muestra además aparte, en
-  «Ejecuciones correctas»: «N de M · K duplicados».
+- **Log:** `status = duplicado`. El cuadro de mando del ERP lo cuenta como evento aplicado y lo muestra además aparte,
+  en «Eventos aplicados»: «N de M · K duplicados · J obsoletos».
 - **Cola:** `procesado`, porque ya no hay nada pendiente.
 - **Telegram:** no hay aviso al canal interno.
 - **Si es un `support.requested` repetido:** el agente **no** se lanza otra vez, porque solo se lanza cuando el ticket
@@ -121,7 +125,7 @@ llega tarde.
 - **ERP:** `last_event_at` del pedido (08:28:51) es posterior a `occurred_at` (08:27:10), así que `erp_upsert_order`
   devuelve `obsoleto`. El pedido **sigue en `enviado`** y `sync_version` no cambia.
 - **Respuesta:** `200` `{"result": "obsoleto", …}`.
-- **Log:** `status = obsoleto`. Cuenta como ejecución correcta: el sistema ha hecho lo que debía.
+- **Log:** `status = obsoleto`. Cuenta como evento aplicado: el sistema ha hecho lo que debía.
 - **Cola:** `procesado`. No se reintenta, porque reintentarlo daría el mismo resultado.
 
 ## Fallos de transporte
@@ -139,7 +143,7 @@ La protección contra eventos fuera de orden (`last_event_at`) solo existe para 
 `stock.adjusted` o un `support.status_changed` antiguo llegara tarde, sobrescribiría el stock o el estado del ticket
 con un valor ya superado.
 
-**Mejora propuesta:** guardar `last_event_at` en `erp.inventory` y `erp.tickets`, y aplicar la misma
+**Mejora propuesta:** guardar `last_event_at` en las tablas `inventory` y `tickets` del ERP, y aplicar la misma
 comparación que en `erp_upsert_order`.
 
 ## Cómo se ha comprobado y cómo repetirlo
@@ -159,6 +163,7 @@ curl -s -X POST https://entrelibros-n8n.onrender.com/webhook/entrelibros/eventos
 
 - **Caso 5 por esta vía:** se reenvía el último evento aplicado a un pedido, por ejemplo `2-cambio-estado.json` si
   `EL-20261026-D5GL` sigue en `enviado` en el ERP.
-- **Límite de curl:** un evento enviado así no existe en la cola, así que `erp_ack` devuelve `desconocido` y la cola no
-  cambia. La respuesta y la fila del log sí aparecen. Para ver la cola y los reintentos (caso 5 y fallos de transporte),
-  hay que generar el evento desde la tienda y usar **Integración → Cola y log**.
+- **Límite de curl:** un evento enviado así no existe en la cola de la tienda, así que `integration_ack` devuelve
+  `desconocido` y la cola no cambia. La respuesta y la fila del registro del ERP sí aparecen. Para ver la cola y los
+  reintentos (caso 5 y fallos de transporte), hay que generar el evento desde la tienda y usar
+  **Back-office → Integración**.
