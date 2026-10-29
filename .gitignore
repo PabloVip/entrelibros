@@ -3,3 +3,6 @@
 node_modules/
 .env
 .env.*
+
+# Caché local de la CLI de Supabase
+supabase/.temp/
