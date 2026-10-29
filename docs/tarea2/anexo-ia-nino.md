@@ -2,8 +2,12 @@
 
 Mi parte de la declaración de uso de inteligencia artificial de la Tarea 2, con el mismo esquema que en la Tarea 1.
 
-**Herramienta:** Claude Code (Anthropic, modelo Claude Opus 5.5) en Visual Studio Code, con acceso a mi copia local
-del repositorio. No he usado ninguna otra herramienta de IA.
+**Herramientas:**
+- Claude Code (Anthropic, modelo Claude Opus 5.5) en Visual Studio Code, con acceso a mi copia local del repositorio.
+- Claude en Word (complemento de Anthropic para Microsoft Word, modelo Claude Opus 5.5), solo para revisar la redacción
+  y el formato de mis partes de la memoria.
+
+No he usado ninguna otra herramienta de IA.
 
 La IA no tuvo acceso a n8n, al panel de Supabase ni a Render, y nunca se le dieron las claves de Supabase, Gemini,
 Telegram ni la del webhook. Gemini, el modelo del agente de soporte, es parte del sistema y no una ayuda para
@@ -30,6 +34,11 @@ hacer la tarea: lo explica la memoria.
   estuviera antes del domingo. La IA escribió el SQL, el cambio de los workflows y las pruebas automáticas.
 - **Preparar mi parte de la memoria:** el borrador de mi columna del reparto del trabajo (apartado 12) y de esta
   declaración (anexo A.3), que he revisado y corregido yo.
+- **Revisar esas partes con Claude en Word:** propuso correcciones de estilo y dejó un comentario que detectó una
+  contradicción: la fila «n8n y despliegue» decía que el duplicado y el fuera de orden se probaron en n8n, cuando los
+  controla el back-office. Como Pablo regenera la memoria desde su script, la corrección se le pasó como texto.
+- **Preparar la defensa:** una guía con lo que digo en cada diapositiva, dónde está cada evidencia que puede pedir el
+  profesor y respuestas a las preguntas probables, comprobadas contra el código.
 
 ## Qué he decidido yo
 
@@ -69,9 +78,14 @@ hacer la tarea: lo explica la memoria.
     solo cambian esos nodos.
 - **Revisiones antes de cada commit:** los JSON nuevos son válidos, ningún fichero contiene claves y todos los enlaces
   entre documentos funcionan.
-- **Pendiente:**
-  - probar yo la página Integración en inglés (`?lang=en`) con el usuario administrador;
-  - repetir los casos de duplicado y fuera de orden en el n8n desplegado, con Pablo.
+- **Página Integración en inglés:** se abrió `admin-integracion.html` en español y en inglés con Chrome sin interfaz,
+  con una sesión de administrador simulada y datos de ejemplo. Todas las llamadas a Supabase se interceptaron, así que
+  no hizo falta contraseña ni se tocó la base de datos. Resultado:
+  - todos los textos de la página salen en inglés; solo quedan iguales los códigos y datos (tipos de evento,
+    referencias, mensajes del servidor) y palabras que son iguales en los dos idiomas;
+  - sin errores de JavaScript y sin scroll horizontal en el móvil (375 px).
+- **Pendiente:** repetir en el n8n desplegado los casos de duplicado y de fuera de orden (5, 6 y 7). Los lanza Pablo,
+  que tiene la clave del webhook.
 
 ## Errores que salieron en el proceso
 
@@ -88,6 +102,9 @@ hacer la tarea: lo explica la memoria.
   detrás.
 - **Una prueba mal escrita:** la primera versión de las pruebas usaba una hora inexistente (30:00) y falló al
   ejecutarse. Se corrigió la prueba, no el SQL.
+- **Las propuestas sin respuesta:** en la guía de la defensa, la IA escribió que una propuesta sin respuesta en 24 h
+  queda «caducada». Al comprobarlo en el workflow se vio que se registra como rechazada («Sin respuesta en 24 h»), y se
+  corrigió.
 
 ## Problemas detectados y propuestas
 
