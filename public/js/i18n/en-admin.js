@@ -534,6 +534,44 @@ const exact = {
   'Inicia sesión para editar tus datos': 'Sign in to edit your details',
   'Confirma tu email antes de editar tus datos': 'Confirm your email before editing your details',
   'Ese email está enlazado a otra cuenta': 'That email is linked to another account',
+
+  // ---------- Integración (Tarea 2: admin-integracion.html + integration.js) ----------
+  // Desde que el ERP/CRM es un sistema aparte, la página solo enseña la cola de salida de la tienda.
+  'Integración': 'Integration',
+  'Salida de la tienda hacia el back-office: cola de eventos que n8n lleva al ERP/CRM y su confirmación.':
+    'What the shop sends to the back-office: the event queue that n8n delivers to the ERP/CRM, and its confirmation.',
+  'Último día': 'Last 24 hours',
+  'Actualizar': 'Refresh',
+  'El ERP/CRM es un sistema aparte': 'The ERP/CRM is a separate system',
+  '(otro proyecto, con su base de datos y sus usuarios). La tienda no puede leerlo ni escribir en él: solo publica eventos y n8n los lleva allí. Pedidos de venta, inventario, incidencias, propuestas del agente de IA y su registro se consultan en la web del back-office.':
+    '(another project, with its own database and users). The shop cannot read it or write to it: it only publishes events, and n8n takes them there. Sales orders, inventory, support requests, AI agent proposals and their log are viewed on the back-office website.',
+  'Abrir el back-office ERP/CRM': 'Open the ERP/CRM back-office',
+  // indicadores y gráficos
+  'Eventos enviados': 'Events sent',
+  'Confirmados por el back-office': 'Confirmed by the back-office',
+  'Con error': 'Failed',
+  'Pendientes de confirmar': 'Awaiting confirmation',
+  'Necesitaron reintento': 'Needed a retry',
+  'Tiempo medio hasta confirmar': 'Average time to confirmation',
+  'Eventos enviados al back-office por día': 'Events sent to the back-office per day',
+  'Eventos en el periodo:': 'Events in the period:',
+  'Eventos por tipo': 'Events by type',
+  'Estado en la cola': 'Queue status',
+  'Sin eventos en el periodo.': 'No events in the period.',
+  // cola de salida
+  'Cola de salida (tienda → n8n → ERP/CRM)': 'Outbox queue (shop → n8n → ERP/CRM)',
+  'Evento': 'Event',
+  'Intentos': 'Attempts',
+  'Confirmado': 'Confirmed',
+  'Reintentar': 'Retry',
+  'La cola está vacía.': 'The queue is empty.',
+  'Cifras calculadas en el momento a partir de la cola': 'Figures calculated live from the queue',
+  '. «Confirmado» es cuando n8n avisa (integration_ack) de que el back-office ha aplicado el evento.':
+    '. “Confirmed” is when n8n reports (integration_ack) that the back-office has applied the event.',
+  // estados de la cola (LABELS de integration.js)
+  'Enviado (sin confirmar)': 'Sent (not confirmed)',
+  'Procesado': 'Processed',
+  'Descartado': 'Discarded',
 };
 
 const plural = (n, one, many) => `${n} ${Number(n) === 1 ? one : many}`;
@@ -633,6 +671,11 @@ const patterns = [
   [/^Ya existe un código (.+)$/, 'A code $1 already exists'],
   [/^(Producto|Variante|Código|Método de envío|Temática) (\d+) no encontrad[oa]$/,
     m => `${({ Producto: 'Product', Variante: 'Version', Código: 'Code', 'Método de envío': 'Shipping method', Temática: 'Theme' })[m[1]]} ${m[2]} not found`],
+
+  // integración (integration.js)
+  [/^(\d+) de (\d+)$/, '$1 of $2'],
+  [/^(.+): (\d+) eventos · (\d+) confirmados$/, m => `${m[1]}: ${plural(m[2], 'event', 'events')} · ${m[3]} confirmed`],
+  [/^No se han podido cargar los datos de integración: (.+)$/, (m, tr) => `The integration data could not be loaded: ${tr(m[1])}`],
 ];
 
 export default { exact, patterns };
