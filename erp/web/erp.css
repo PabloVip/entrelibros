@@ -65,6 +65,18 @@ input, select { font: 15px var(--f); padding: 8px 10px; border: 1px solid var(--
 .bar { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; }
 .bar span { display: block; width: 100%; background: var(--brand); border-radius: 3px 3px 0 0; }
 .bar em { text-align: center; font: 600 12px var(--mono); font-style: normal; color: var(--ink); }
+.bar.stack span + span { border-radius: 0; }
+.bar .s-rep, .legend .s-rep { background: #7FA7B0; }
+.bar .s-err, .legend .s-err { background: var(--bad); border-radius: 3px 3px 0 0; }
+.bars.lat { position: relative; }
+.bars.lat .bar.over span { background: var(--bad); }
+.bars .target { position: absolute; left: 0; right: 0; border-top: 2px dashed var(--warn); pointer-events: none; }
+.bars .target b { position: absolute; right: 0; top: -18px; font: 600 11px var(--mono); color: var(--warn); background: var(--panel); padding: 0 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 10px 0 0; font-size: 12px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 12px; height: 12px; border-radius: 3px; background: var(--brand); display: inline-block; }
+.why summary { cursor: pointer; font-weight: 600; }
+.why .table-wrap { margin-top: 10px; }
 .bars-axis { display: flex; gap: 3px; font-size: 11px; color: var(--ink-2); }
 .bars-axis span { flex: 1; text-align: center; white-space: nowrap; overflow: visible; }
 

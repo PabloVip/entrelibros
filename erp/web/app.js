@@ -33,6 +33,18 @@ const TONE = {
 const label = k => LABEL[k] ?? k;
 const pill = (k, text = label(k)) => `<span class="pill ${TONE[k] ?? ''}">${esc(text)}</span>`;
 
+// Indicadores del cuadro de mando: qué miden, por qué los medimos (qué decisión permiten) y el objetivo
+const INDICADORES = [
+  ['Pedidos de venta e importe', 'Que el ERP refleje la venta real de la tienda; es la base de la facturación y la contabilidad.', 'Igual que en la tienda (0 pedidos sin integrar)'],
+  ['Eventos aplicados (%)', 'Fiabilidad de la integración: si baja, hay datos de la tienda que no han llegado al ERP.', '≥ 99 %'],
+  ['Errores registrados, por tipo', 'Dice dónde actuar: contrato o formato = datos de la tienda; técnico = n8n o la red; agente = Gemini.', '0 técnicos sin reintentar; contrato revisado el mismo día'],
+  ['Latencia tienda → ERP', 'Cuánto tarda el back-office en ver un pedido o un cambio de stock; con mucha latencia se prepara tarde.', '< 60 s (Render gratis tarda ~50 s en despertar)'],
+  ['Incidencias abiertas y resolución media', 'Carga de soporte y cumplimiento del plazo prometido al cliente.', 'Dentro del plazo de cada incidencia (24, 48 o 72 h según el tipo)'],
+  ['Propuestas del agente (aprobadas / rechazadas)', 'Calidad del agente de IA: muchas rechazadas = revisar sus instrucciones o herramientas.', '≥ 80 % aprobadas'],
+  ['Inventario (SKU con menos de 5 uds.)', 'Alerta de reposición antes de quedarse sin stock y cancelar pedidos.', '0 SKU por debajo de 5 uds.'],
+];
+const LATENCIA_OBJETIVO_S = 60;
+
 const TITLES = {
   mando: ['Cuadro de mando', 'Métricas calculadas en el momento a partir de las tablas de este sistema.'],
   pedidos: ['Pedidos de venta', 'Pedidos recibidos de la tienda por la integración, con su historial de estados en el ERP.'],
@@ -115,7 +127,12 @@ function hbars(entries, empty) {
 const VIEWS = {
   async mando() {
     const days = Number($('days').value);
-    const d = await q(db.rpc('erp_dashboard', { p_days: days }));
+    const since = new Date(Date.now() - days * 864e5).toISOString();
+    const [d, log] = await Promise.all([
+      q(db.rpc('erp_dashboard', { p_days: days })),
+      q(db.from('integration_log').select('created_at, occurred_at, step, status, event_type, entity_ref')
+        .gte('created_at', since).or('step.eq.resultado,status.eq.error').order('created_at')),
+    ]);
     const it = d.integration ?? {}, ag = d.agent ?? {}, inv = d.inventory ?? {};
     const kpi = (lbl, val, sub = '') => `<div class="kpi"><span>${esc(lbl)}</span><strong>${val}</strong>${sub ? `<small>${sub}</small>` : ''}</div>`;
     const kpis = [
@@ -144,7 +161,44 @@ const VIEWS = {
       </div>
       <div class="bars-axis" aria-hidden="true">${buckets.map((b, i) => `<span>${(days - 1 - i) % every === 0 ? esc(fmt.format(b.date)) : ''}</span>`).join('')}</div>`;
 
+    // gráfico: eventos de integración por día (aplicados, duplicados u obsoletos, con error)
+    const ev = buckets.map(b => ({ date: b.date, ok: 0, rep: 0, err: 0, lat: [] }));
+    for (const r of log) {
+      const i = Math.floor((new Date(new Date(r.created_at).toDateString()) - buckets[0].date) / DAY + 0.5);
+      const b = ev[i]; if (!b) continue;
+      if (r.status === 'error') b.err++;
+      else if (r.step === 'resultado') {
+        r.status === 'ok' ? b.ok++ : b.rep++;
+        if (r.occurred_at) b.lat.push((new Date(r.created_at) - new Date(r.occurred_at)) / 1000);
+      }
+    }
+    const evMax = Math.max(1, ...ev.map(b => b.ok + b.rep + b.err));
+    const avg = a => a.length ? Math.round((a.reduce((s, x) => s + x, 0) / a.length) * 10) / 10 : null;
+    const evChart = `<div class="bars" role="img" aria-label="Eventos de integración por día: aplicados, duplicados u obsoletos y con error">
+        ${ev.map(b => { const n = b.ok + b.rep + b.err; return `<div class="bar stack" title="${esc(fmt.format(b.date))}: ${b.ok} aplicados · ${b.rep} duplicados u obsoletos · ${b.err} con error${b.lat.length ? ` · latencia media ${avg(b.lat)} s` : ''}">${n ? `<em>${n}</em>` : ''}
+          <span class="s-err" style="height:${(b.err / evMax) * 85}%"></span><span class="s-rep" style="height:${(b.rep / evMax) * 85}%"></span><span style="height:${(b.ok / evMax) * 85}%"></span></div>`; }).join('')}
+      </div>
+      <div class="bars-axis" aria-hidden="true">${ev.map((b, i) => `<span>${(days - 1 - i) % every === 0 ? esc(fmt.format(b.date)) : ''}</span>`).join('')}</div>
+      <p class="legend"><span><i></i>Aplicados</span><span><i class="s-rep"></i>Duplicados u obsoletos</span><span><i class="s-err"></i>Errores (eventos, agente o envío)</span></p>`;
+
+    // gráfico: latencia de los últimos eventos frente al objetivo
+    const lat = log.filter(r => r.step === 'resultado' && r.occurred_at).slice(-20)
+      .map(r => ({ r, s: Math.round((new Date(r.created_at) - new Date(r.occurred_at)) / 100) / 10 }));
+    const latMax = Math.max(LATENCIA_OBJETIVO_S * 1.25, ...lat.map(x => x.s));
+    const latChart = lat.length ? `<div class="bars lat" role="img" aria-label="Latencia de los últimos eventos frente al objetivo de ${LATENCIA_OBJETIVO_S} segundos">
+        <span class="target" style="bottom:${(LATENCIA_OBJETIVO_S / latMax) * 100}%"><b>objetivo ${LATENCIA_OBJETIVO_S} s</b></span>
+        ${lat.map(({ r, s }) => `<div class="bar ${s > LATENCIA_OBJETIVO_S ? 'over' : ''}" title="${esc(r.event_type)} · ${esc(r.entity_ref ?? '')} · ${esc(fmtDate(r.created_at))}: ${s} s"><em>${s}</em><span style="height:${(s / latMax) * 100}%"></span></div>`).join('')}
+      </div>
+      <div class="bars-axis" aria-hidden="true">${lat.map(({ r }) => `<span>${esc((r.event_type ?? '').split('.')[0])}</span>`).join('')}</div>`
+      : '<p class="empty">Sin eventos en el periodo.</p>';
+
     return `<section class="kpis">${kpis.join('')}</section>
+      <div class="grid-2">
+        <section class="card"><h2>Eventos de integración por día</h2>
+          <p class="muted">Aplicados: <strong>${pct(it.ok, it.received)} %</strong> (objetivo ≥ 99 %)</p>${evChart}</section>
+        <section class="card"><h2>Latencia de los últimos eventos (s)</h2>
+          <p class="muted">Media: <strong>${it.avg_latency_s != null ? esc(it.avg_latency_s) + ' s' : '—'}</strong> (objetivo &lt; ${LATENCIA_OBJETIVO_S} s)</p>${latChart}</section>
+      </div>
       <section class="card"><h2>Pedidos de venta recibidos por día</h2>
         <p class="muted">Total del periodo: <strong>${buckets.reduce((s, b) => s + b.n, 0)}</strong></p>${chart}</section>
       <div class="grid-2">
@@ -153,6 +207,9 @@ const VIEWS = {
         <section class="card"><h2>Incidencias abiertas por prioridad</h2>${hbars(Object.entries(d.tickets_by_priority ?? {}).map(([k, n]) => [label(k), n]), 'No hay incidencias abiertas.')}</section>
         <section class="card"><h2>Productos más vendidos</h2>${hbars((d.top_products ?? []).map(p => [p.description, p.qty, p.sku]), 'Sin pedidos pagados.')}</section>
       </div>
+      <details class="card why"><summary>Por qué medimos estos indicadores</summary>
+        ${table(['Indicador', 'Por qué lo medimos', 'Objetivo'], INDICADORES.map(([a, b, c]) => `<tr><td><strong>${esc(a)}</strong></td><td>${esc(b)}</td><td>${esc(c)}</td></tr>`), '')}
+      </details>
       <p class="muted small">Confianza media declarada por el agente: ${ag.avg_confidence != null ? esc(Math.round(ag.avg_confidence * 100)) + ' %' : '—'} · ${esc(num(d.customers))} clientes en el CRM.</p>`;
   },
 
