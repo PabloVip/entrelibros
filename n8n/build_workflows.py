@@ -157,11 +157,11 @@ rpc(m, 'ERP · pedido de venta', 'erp_upsert_order',
     (980, 60), on_error='continueErrorOutput', notes='Escenarios 1 y 2: crea o actualiza el pedido (idempotente).')
 rpc(m, 'ERP · inventario', 'erp_set_stock',
     '{ p_event_id: ' + V + '.event.event_id, p_sku: ' + V + '.normalized.sku, p_on_hand: ' + V
-    + '.normalized.on_hand, p_description: ' + V + '.normalized.description }',
-    (980, 220), on_error='continueErrorOutput', notes='Escenario 2: sincroniza el stock.')
+    + '.normalized.on_hand, p_description: ' + V + '.normalized.description, p_occurred_at: ' + V + '.event.occurred_at }',
+    (980, 220), on_error='continueErrorOutput', notes='Escenario 2: sincroniza el stock (idempotente y en orden).')
 rpc(m, 'CRM · incidencia', 'erp_upsert_ticket',
-    '{ p_event_id: ' + V + '.event.event_id, p_ticket: ' + V + '.normalized }',
-    (980, 380), on_error='continueErrorOutput', notes='Escenario 3: ticket asociado a cliente y pedido.')
+    '{ p_event_id: ' + V + '.event.event_id, p_ticket: ' + V + '.normalized, p_occurred_at: ' + V + '.event.occurred_at }',
+    (980, 380), on_error='continueErrorOutput', notes='Escenario 3: ticket asociado a cliente y pedido (en orden).')
 
 code(m, 'Preparar resultado', r"""// Une la respuesta del ERP con los datos del evento y decide los pasos siguientes.
 const v = $('Validar y normalizar').item.json;
@@ -557,17 +557,19 @@ for (const i of items) {
   else bad.push(i.sku ?? '(sin SKU)');
 }
 return [{ json: { items: ok, rejected: bad, taken_at: $json.taken_at, started_at: Date.now() } }];""", (520, 300))
-rpc(s4, 'ERP · cargar inventario', 'erp_load_inventory', '{ p_items: $json.items }', (780, 300),
-    notes='Crea o actualiza el inventario del back-office (idempotente).')
+rpc(s4, 'ERP · cargar inventario', 'erp_load_inventory', '{ p_items: $json.items, p_taken_at: $json.taken_at }', (780, 300),
+    notes='Crea o actualiza el inventario del back-office (idempotente; no pisa ajustes posteriores a la foto).')
 rpc(s4, 'Log · carga', 'erp_log', log_body('carga-inventario', 'carga',
     "event_type: 'inventory.snapshot', occurred_at: $('Validar lista').item.json.taken_at, entity_type: 'stock', "
-    "entity_ref: $json.total + ' SKU', status: 'ok', message: 'Inventario: ' + $json.nuevos + ' nuevos, ' + $json.actualizados + ' actualizados, ' + $json.sin_cambios + ' sin cambios', "
+    "entity_ref: $json.total + ' SKU', status: 'ok', message: 'Inventario: ' + $json.nuevos + ' nuevos, ' + $json.actualizados + ' actualizados, ' + $json.sin_cambios + ' sin cambios' + ($json.omitidos ? ', ' + $json.omitidos + ' con un ajuste más reciente' : ''), "
     "details: { ...$json, rechazados: $('Validar lista').item.json.rejected }, duration_ms: Date.now() - $('Validar lista').item.json.started_at"),
     (1040, 300), on_error='continueRegularOutput')
 telegram(s4, 'Telegram · resumen', OPS,
          "=📦 <b>Inventario del ERP conciliado con la tienda</b>\n"
          "{{ $('ERP · cargar inventario').item.json.total }} SKU · {{ $('ERP · cargar inventario').item.json.nuevos }} nuevos · "
-         "{{ $('ERP · cargar inventario').item.json.actualizados }} actualizados", (1300, 300))
+         "{{ $('ERP · cargar inventario').item.json.actualizados }} actualizados"
+         "{{ $('ERP · cargar inventario').item.json.omitidos ? ' · ' + $('ERP · cargar inventario').item.json.omitidos + ' con un ajuste más reciente' : '' }}",
+         (1300, 300))
 s4.link('Ejecutar a mano', 'Tienda · stock del catálogo')
 s4.link('Cada noche (03:10)', 'Tienda · stock del catálogo')
 s4.chain('Tienda · stock del catálogo', 'Validar lista', 'ERP · cargar inventario', 'Log · carga', 'Telegram · resumen')
