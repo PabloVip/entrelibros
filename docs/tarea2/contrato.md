@@ -18,7 +18,7 @@ incidencia en ese momento.
 | Confirmación (ack) | n8n llama a `integration_ack(event_id, ok, detalle, reintentar)` de la tienda cuando el back-office ha aplicado (o rechazado) el evento |
 | Reintentos | `pg_cron` reenvía cada minuto lo no confirmado, con espera 2, 4, 8, 16… min (máx. 6 intentos) |
 | Idempotencia | `event_id` único en la cola; el ERP guarda `last_event_id` y responde `duplicado` si llega dos veces |
-| Orden | El ERP guarda `last_event_at`; un evento más antiguo que el último aplicado se marca `obsoleto` |
+| Orden | El ERP guarda `last_event_at` en pedidos, inventario e incidencias; un evento más antiguo que el último aplicado se marca `obsoleto`. La conciliación nocturna del inventario no pisa un ajuste posterior a la foto del stock de la tienda |
 
 ## Sobre (todos los eventos)
 

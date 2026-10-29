@@ -5,7 +5,7 @@ Hay **dos sistemas** y cada uno es un proyecto de Supabase distinto:
 | Sistema | Proyecto de Supabase | SQL | Web |
 |---|---|---|---|
 | Tienda (front-office, Tarea 1) | `entrelibros` | `supabase/01 … 15` | `public/` |
-| Back-office ERP/CRM | `entrelibros-erp` | `erp/supabase/01_erp.sql` | `erp/web/` (publicada en `/erp/`) |
+| Back-office ERP/CRM | `entrelibros-erp` | `erp/supabase/01_erp.sql` y `02_orden_eventos.sql` | `erp/web/` (publicada en `/erp/`) |
 
 n8n (Render) es lo único que conecta los dos. Ningún secreto se guarda en el repositorio: las claves van en
 Render (variables) o dentro de n8n (credenciales cifradas con `N8N_ENCRYPTION_KEY`).
@@ -25,7 +25,8 @@ Render (variables) o dentro de n8n (credenciales cifradas con `N8N_ENCRYPTION_KE
 ## 1. Back-office ERP/CRM (proyecto nuevo)
 
 1. supabase.com → **New project** → nombre `entrelibros-erp` (misma región que la tienda).
-2. SQL Editor → ejecuta `erp/supabase/01_erp.sql`.
+2. SQL Editor → ejecuta `erp/supabase/01_erp.sql` y **después** `erp/supabase/02_orden_eventos.sql`
+   (si alguna vez vuelves a ejecutar el 01, ejecuta otra vez el 02).
 3. Authentication → Users → **Add user** (email y contraseña del personal del back-office) y después, en el SQL Editor:
    ```sql
    insert into public.staff (user_id, email, full_name)
