@@ -24,6 +24,10 @@ hacer la tarea: lo explica la memoria.
   (`build_workflows.py`) y las funciones del ERP para describir, en cada caso, qué responde n8n, qué queda en el registro
   y en qué estado queda la cola. Con el ERP separado, los resultados son los mismos, porque las funciones no han
   cambiado. Lo que cambia es dónde se ven, y actualicé el documento.
+- **Corregir los eventos fuera de orden en stock e incidencias** (`erp/supabase/02_orden_eventos.sql`, los workflows 1 y
+  4 en `build_workflows.py` y el caso 7 de las pruebas), con las tres condiciones que puso Pablo: que la conciliación
+  nocturna del inventario tampoco pise un ajuste más reciente, que el cambio de n8n vaya en `build_workflows.py` y que
+  estuviera antes del domingo. La IA escribió el SQL, el cambio de los workflows y las pruebas automáticas.
 - **Preparar mi parte de la memoria:** el borrador de mi columna del reparto del trabajo (apartado 12) y de esta
   declaración (anexo A.3), que he revisado y corregido yo.
 
@@ -37,6 +41,8 @@ hacer la tarea: lo explica la memoria.
 - **Quitar la firma de coautoría de la IA de los commits:** el uso de IA se declara aquí, en el anexo.
 - **Las traducciones:** por ejemplo, «Último día» se traduce «Last 24 hours», porque la consulta del cuadro de mando
   mira las últimas 24 horas y no el día natural.
+- **Arreglar el problema de orden que encontré en las pruebas**, en lugar de dejarlo solo como propuesta, y hacerlo con
+  parámetros opcionales para que Pablo pudiera aplicar el SQL sin parar n8n.
 
 ## Cómo lo he comprobado
 
@@ -54,6 +60,13 @@ hacer la tarea: lo explica la memoria.
     comprobé que `erp/supabase/01_erp.sql` mantiene las mismas comprobaciones de duplicado y orden.
 - **Traducciones que dejaron de usarse:** antes de quitarlas, el script buscó cada una en el resto de páginas del
   back-office, para no romper otra pantalla.
+- **Corrección del orden:** sin tocar el Supabase de producción.
+  - Se cargaron `01_erp.sql` y `02_orden_eventos.sql` en un PostgreSQL desechable en memoria (PGlite) y se pasaron
+    35 comprobaciones automáticas: duplicado, obsoleto, foto del inventario anterior y posterior a un ajuste, llamadas
+    sin los parámetros nuevos (como hace n8n antes de reimportar), permisos y volver a ejecutar los ficheros.
+  - Los payloads 2b y 7 pasaron por el nodo de validación y luego por el ERP, en los dos órdenes.
+  - Las expresiones de n8n de los nodos cambiados se evaluaron con datos de ejemplo, y al regenerar los workflows
+    solo cambian esos nodos.
 - **Revisiones antes de cada commit:** los JSON nuevos son válidos, ningún fichero contiene claves y todos los enlaces
   entre documentos funcionan.
 - **Pendiente:**
@@ -69,14 +82,19 @@ hacer la tarea: lo explica la memoria.
   payload guardado en la cola, y se corrigió.
 - **Los duplicados en el cuadro de mando:** el borrador decía que se contaban aparte de las ejecuciones correctas.
   La consulta del cuadro de mando muestra que cuentan como correctas y además se enseñan aparte. Se corrigió el texto.
+- **Las versiones antiguas de las funciones:** al añadir un parámetro, PostgreSQL crea una función nueva y deja la
+  antigua, y la API no sabría cuál elegir. Por eso el 02 borra las antiguas. Las pruebas mostraron además que, si se
+  vuelve a ejecutar el 01, las antiguas reaparecen; se avisa en el 01 y en la guía de despliegue de que el 02 va siempre
+  detrás.
+- **Una prueba mal escrita:** la primera versión de las pruebas usaba una hora inexistente (30:00) y falló al
+  ejecutarse. Se corrigió la prueba, no el SQL.
 
 ## Problemas detectados y propuestas
 
 - **El ERP no era un sistema separado** (ver arriba). Resuelto: ahora es un proyecto de Supabase propio, con su base de
   datos, sus usuarios y su web, y solo n8n escribe en él.
-- **Eventos fuera de orden:** la protección (`last_event_at`) solo existe para los pedidos, también en el ERP nuevo. Un
-  ajuste de stock o un cambio de estado de un ticket que llegara tarde sobrescribiría el valor actual con uno antiguo.
-  Propuesta: aplicar a las tablas `inventory` y `tickets` del ERP la misma comparación que hace `erp_upsert_order`.
-- **Ficheros que sobran en el repositorio:**
-  - una copia duplicada del diccionario, `public/js/i18n/en-admin 2.js`;
-  - la caché de la herramienta de Supabase, `supabase/.temp/`, que conviene añadir a `.gitignore`.
+- **Eventos fuera de orden:** la protección (`last_event_at`) solo existía para los pedidos, también en el ERP nuevo.
+  Un ajuste de stock o un cambio de estado de un ticket que llegara tarde sobrescribía el valor actual con uno antiguo.
+  Corregido en `erp/supabase/02_orden_eventos.sql` y en los workflows 1 y 4 (caso 7 de `pruebas.md`).
+- **Ficheros que sobraban en el repositorio:** una copia duplicada del diccionario (`public/js/i18n/en-admin 2.js`) y la
+  caché de la herramienta de Supabase (`supabase/.temp/`). Pablo los borró y añadió la caché a `.gitignore`.
