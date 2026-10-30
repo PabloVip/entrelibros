@@ -69,6 +69,10 @@ input, select { font: 15px var(--f); padding: 8px 10px; border: 1px solid var(--
 .bar .s-rep, .legend .s-rep { background: #7FA7B0; }
 .bar .s-err, .legend .s-err { background: var(--bad); border-radius: 3px 3px 0 0; }
 .bars.lat { position: relative; }
+.bar { min-width: 0; }
+.bar em { overflow: visible; white-space: nowrap; }
+.bars.lat + .bars-axis span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 600px) { .bars.lat .bar em { font-size: 10px; } }
 .bars.lat .bar.over span { background: var(--bad); }
 .bars .target { position: absolute; left: 0; right: 0; border-top: 2px dashed var(--warn); pointer-events: none; }
 .bars .target b { position: absolute; right: 0; top: -18px; font: 600 11px var(--mono); color: var(--warn); background: var(--panel); padding: 0 4px; }

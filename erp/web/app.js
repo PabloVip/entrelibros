@@ -38,7 +38,7 @@ const INDICADORES = [
   ['Pedidos de venta e importe', 'Que el ERP refleje la venta real de la tienda; es la base de la facturación y la contabilidad.', 'Igual que en la tienda (0 pedidos sin integrar)'],
   ['Eventos aplicados (%)', 'Fiabilidad de la integración: si baja, hay datos de la tienda que no han llegado al ERP.', '≥ 99 %'],
   ['Errores registrados, por tipo', 'Dice dónde actuar: contrato o formato = datos de la tienda; técnico = n8n o la red; agente = Gemini.', '0 técnicos sin reintentar; contrato revisado el mismo día'],
-  ['Latencia tienda → ERP', 'Cuánto tarda el back-office en ver un pedido o un cambio de stock; con mucha latencia se prepara tarde.', '< 60 s (Render gratis tarda ~50 s en despertar)'],
+  ['Latencia tienda → ERP (mediana)', 'Cuánto tarda el back-office en ver un pedido o un cambio de stock; con mucha latencia se prepara tarde. Se usa la mediana porque un reenvío manual o un reintento de horas después dispararía la media.', '< 60 s (Render gratis tarda ~50 s en despertar)'],
   ['Incidencias abiertas y resolución media', 'Carga de soporte y cumplimiento del plazo prometido al cliente.', 'Dentro del plazo de cada incidencia (24, 48 o 72 h según el tipo)'],
   ['Propuestas del agente (aprobadas / rechazadas)', 'Calidad del agente de IA: muchas rechazadas = revisar sus instrucciones o herramientas.', '≥ 80 % aprobadas'],
   ['Inventario (SKU con menos de 5 uds.)', 'Alerta de reposición antes de quedarse sin stock y cancelar pedidos.', '0 SKU por debajo de 5 uds.'],
@@ -134,13 +134,21 @@ const VIEWS = {
         .gte('created_at', since).or('step.eq.resultado,status.eq.error').order('created_at')),
     ]);
     const it = d.integration ?? {}, ag = d.agent ?? {}, inv = d.inventory ?? {};
+    // latencia de cada evento aplicado (s) y su mediana: robusta frente a reenvíos y reintentos tardíos
+    const lats = log.filter(r => r.step === 'resultado' && r.occurred_at)
+      .map(r => ({ r, s: Math.round((new Date(r.created_at) - new Date(r.occurred_at)) / 100) / 10 }));
+    const sorted = lats.map(x => x.s).sort((a, b) => a - b);
+    const median = sorted.length ? (sorted.length % 2 ? sorted[(sorted.length - 1) / 2]
+      : Math.round(((sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2) * 10) / 10) : null;
+    const overTarget = sorted.filter(x => x > LATENCIA_OBJETIVO_S).length;
+    const fmtS = s => s >= 3600 ? `${Math.round(s / 3600)} h` : s >= 120 ? `${Math.round(s / 60)} min` : `${s} s`;
     const kpi = (lbl, val, sub = '') => `<div class="kpi"><span>${esc(lbl)}</span><strong>${val}</strong>${sub ? `<small>${sub}</small>` : ''}</div>`;
     const kpis = [
       kpi('Pedidos de venta', esc(num(d.orders))),
-      kpi('Importe pagado', esc(money(d.orders_amount)), 'pagos simulados'),
+      kpi('Importe pagado', esc(money(d.orders_amount)), 'pagos de prueba, sin cobro real'),
       kpi('Eventos aplicados', `${pct(it.ok, it.received)} %`, `${esc(num(it.ok))} de ${esc(num(it.received))} · ${esc(num(it.duplicates))} duplicados · ${esc(num(it.obsolete))} obsoletos`),
       kpi('Errores registrados', esc(Object.values(d.errors_by_type ?? {}).reduce((s, n) => s + num(n), 0)), `${esc(num(it.error))} al aplicar eventos · resto del agente o del envío`),
-      kpi('Latencia tienda → ERP', it.avg_latency_s != null ? `${esc(it.avg_latency_s)} s` : '—', 'del evento a su aplicación'),
+      kpi('Latencia tienda → ERP', median != null ? `${esc(median)} s` : '—', `mediana del evento a su aplicación · ${overTarget} por encima de ${LATENCIA_OBJETIVO_S} s`),
       kpi('Incidencias abiertas', esc(num(d.open_tickets)), `resolución media: ${d.avg_resolution_h != null ? esc(d.avg_resolution_h) + ' h' : '—'}`),
       kpi('Propuestas del agente', esc(num(ag.proposals)), `${esc(num(ag.approved))} aprobadas · ${esc(num(ag.rejected))} rechazadas · ${esc(num(ag.pending))} pendientes`),
       kpi('Inventario', `${esc(num(inv.skus))} SKU`, `${esc(num(inv.units))} uds. · ${esc(num(inv.low))} con menos de 5`),
@@ -182,12 +190,11 @@ const VIEWS = {
       <p class="legend"><span><i></i>Aplicados</span><span><i class="s-rep"></i>Duplicados u obsoletos</span><span><i class="s-err"></i>Errores (eventos, agente o envío)</span></p>`;
 
     // gráfico: latencia de los últimos eventos frente al objetivo
-    const lat = log.filter(r => r.step === 'resultado' && r.occurred_at).slice(-20)
-      .map(r => ({ r, s: Math.round((new Date(r.created_at) - new Date(r.occurred_at)) / 100) / 10 }));
-    const latMax = Math.max(LATENCIA_OBJETIVO_S * 1.25, ...lat.map(x => x.s));
+    const lat = lats.slice(-20);
+    const latMax = LATENCIA_OBJETIVO_S * 1.25;   // escala fija: lo que pasa del objetivo se ve como excepción
     const latChart = lat.length ? `<div class="bars lat" role="img" aria-label="Latencia de los últimos eventos frente al objetivo de ${LATENCIA_OBJETIVO_S} segundos">
         <span class="target" style="bottom:${(LATENCIA_OBJETIVO_S / latMax) * 100}%"><b>objetivo ${LATENCIA_OBJETIVO_S} s</b></span>
-        ${lat.map(({ r, s }) => `<div class="bar ${s > LATENCIA_OBJETIVO_S ? 'over' : ''}" title="${esc(r.event_type)} · ${esc(r.entity_ref ?? '')} · ${esc(fmtDate(r.created_at))}: ${s} s"><em>${s}</em><span style="height:${(s / latMax) * 100}%"></span></div>`).join('')}
+        ${lat.map(({ r, s }) => `<div class="bar ${s > LATENCIA_OBJETIVO_S ? 'over' : ''}" title="${esc(r.event_type)} · ${esc(r.entity_ref ?? '')} · ${esc(fmtDate(r.created_at))}: ${esc(fmtS(s))}${s > LATENCIA_OBJETIVO_S ? ' (reenvío o reintento tardío)' : ''}"><em>${esc(s > LATENCIA_OBJETIVO_S ? fmtS(s) : s)}</em><span style="height:${Math.min(s / latMax, 1) * 100}%"></span></div>`).join('')}
       </div>
       <div class="bars-axis" aria-hidden="true">${lat.map(({ r }) => `<span>${esc((r.event_type ?? '').split('.')[0])}</span>`).join('')}</div>`
       : '<p class="empty">Sin eventos en el periodo.</p>';
@@ -197,7 +204,7 @@ const VIEWS = {
         <section class="card"><h2>Eventos de integración por día</h2>
           <p class="muted">Aplicados: <strong>${pct(it.ok, it.received)} %</strong> (objetivo ≥ 99 %)</p>${evChart}</section>
         <section class="card"><h2>Latencia de los últimos eventos (s)</h2>
-          <p class="muted">Media: <strong>${it.avg_latency_s != null ? esc(it.avg_latency_s) + ' s' : '—'}</strong> (objetivo &lt; ${LATENCIA_OBJETIVO_S} s)</p>${latChart}</section>
+          <p class="muted">Mediana: <strong>${median != null ? esc(median) + ' s' : '—'}</strong> (objetivo &lt; ${LATENCIA_OBJETIVO_S} s)${overTarget ? ` · ${overTarget} por encima, en rojo` : ''}</p>${latChart}</section>
       </div>
       <section class="card"><h2>Pedidos de venta recibidos por día</h2>
         <p class="muted">Total del periodo: <strong>${buckets.reduce((s, b) => s + b.n, 0)}</strong></p>${chart}</section>

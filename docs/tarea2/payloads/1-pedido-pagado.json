@@ -3,72 +3,64 @@
     "order": {
       "lines": [
         {
-          "sku": "EL-ACC-PINT",
+          "sku": "EL-REC-FAR6",
           "quantity": 1,
-          "line_total": 12.9,
-          "unit_price": 12.9,
-          "product_name": "Set de pintura y acabados",
-          "variant_name": "Set completo"
-        },
-        {
-          "sku": "EL-ACC-CUP-E",
-          "quantity": 2,
-          "line_total": 39.8,
-          "unit_price": 19.9,
-          "product_name": "Cubierta antipolvo de metacrilato",
-          "variant_name": "Estrecha (hasta 130 mm)"
+          "line_total": 4.9,
+          "unit_price": 4.9,
+          "product_name": "Recambio: farolillos de papel",
+          "variant_name": "Pack 6 farolillos"
         }
       ],
       "status": "pago_simulado",
       "amounts": {
-        "tax": 10.01,
-        "total": 57.65,
+        "tax": 1.71,
+        "total": 9.85,
         "discount": 0.0,
         "shipping": 4.95,
-        "subtotal": 52.7,
+        "subtotal": 4.9,
         "tax_rate": 21.0,
         "discount_code": null
       },
       "payment": {
-        "at": "2026-10-26T08:25:37.820753+00:00",
-        "amount": 57.65,
-        "method": "tarjeta_simulada",
+        "at": "2026-10-30T18:59:46.645099+00:00",
+        "amount": 9.85,
+        "method": "stripe_test",
         "status": "aprobado",
-        "reference": "SIM-20261026-YKYNFT"
+        "reference": "cs_test_a1yAfJ5bvjsDdhCU0jE2JTK3H0F5IF67eDDwzNVv1E0lW47hUYlHsW0uMA"
       },
       "currency": "EUR",
       "customer": {
-        "email": "lucia.prueba@example.com",
-        "phone": "600111222",
+        "email": "pablo@entrelibros.test",
+        "phone": null,
         "is_test": true,
-        "shop_id": 5,
-        "full_name": "Lucía Prueba"
+        "shop_id": 14,
+        "full_name": "Pablo Vicente"
       },
       "shipping": {
         "city": "Murcia",
-        "name": "Lucía Prueba",
+        "name": "Pablo Vicente",
         "method": "Envío estándar a domicilio",
-        "address": "Calle Falsa 1",
+        "address": "Calle de Prueba 1",
         "country": "ES",
-        "postcode": "30001",
+        "postcode": "30107",
         "province": "Murcia",
         "method_code": "estandar",
         "pickup_point": null
       },
-      "created_at": "2026-10-26T08:25:37.609499+00:00",
-      "order_number": "EL-20261026-D5GL"
+      "created_at": "2026-10-30T18:58:49.055521+00:00",
+      "order_number": "EL-20261030-NAXL"
     },
     "attempt": {
-      "amount": 57.65,
-      "method": "tarjeta_simulada",
+      "amount": 9.85,
+      "method": "stripe_test",
       "status": "aprobado",
-      "order_number": "EL-20261026-D5GL"
+      "order_number": "EL-20261030-NAXL"
     }
   },
   "source": "servidor",
   "contract": "entrelibros.event.v1",
-  "event_id": "e07a6588-195a-4d2c-8bef-04da053a66a8",
+  "event_id": "e50a43e3-fa60-4ece-8b68-9c8a27e2404e",
   "event_type": "payment.simulated",
   "environment": "prototipo-academico",
-  "occurred_at": "2026-10-26T08:25:37.820753+00:00"
+  "occurred_at": "2026-10-30T18:59:46.645099+00:00"
 }
