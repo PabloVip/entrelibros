@@ -1,0 +1,18 @@
+{
+  "data": {
+    "stock": {
+      "by": "Admin pruebas",
+      "to": 29,
+      "sku": "EL-ACC-PINT",
+      "from": 30,
+      "note": "Recuento",
+      "description": "Set de pintura y acabados · Set completo"
+    }
+  },
+  "source": "backoffice",
+  "contract": "entrelibros.event.v1",
+  "event_id": "00000000-0000-4000-8000-00000000e701",
+  "event_type": "stock.adjusted",
+  "environment": "prototipo-academico",
+  "occurred_at": "2026-10-26T08:27:40.508311+00:00"
+}

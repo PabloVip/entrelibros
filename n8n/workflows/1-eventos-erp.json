@@ -206,7 +206,7 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ p_event_id: $('Validar y normalizar').item.json.event.event_id, p_sku: $('Validar y normalizar').item.json.normalized.sku, p_on_hand: $('Validar y normalizar').item.json.normalized.on_hand, p_description: $('Validar y normalizar').item.json.normalized.description }) }}",
+        "jsonBody": "={{ JSON.stringify({ p_event_id: $('Validar y normalizar').item.json.event.event_id, p_sku: $('Validar y normalizar').item.json.normalized.sku, p_on_hand: $('Validar y normalizar').item.json.normalized.on_hand, p_description: $('Validar y normalizar').item.json.normalized.description, p_occurred_at: $('Validar y normalizar').item.json.event.occurred_at }) }}",
         "options": {
           "timeout": 15000
         }
@@ -226,7 +226,7 @@
         }
       },
       "onError": "continueErrorOutput",
-      "notes": "Escenario 2: sincroniza el stock.",
+      "notes": "Escenario 2: sincroniza el stock (idempotente y en orden).",
       "notesInFlow": true
     },
     {
@@ -237,7 +237,7 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ p_event_id: $('Validar y normalizar').item.json.event.event_id, p_ticket: $('Validar y normalizar').item.json.normalized }) }}",
+        "jsonBody": "={{ JSON.stringify({ p_event_id: $('Validar y normalizar').item.json.event.event_id, p_ticket: $('Validar y normalizar').item.json.normalized, p_occurred_at: $('Validar y normalizar').item.json.event.occurred_at }) }}",
         "options": {
           "timeout": 15000
         }
@@ -257,7 +257,7 @@
         }
       },
       "onError": "continueErrorOutput",
-      "notes": "Escenario 3: ticket asociado a cliente y pedido.",
+      "notes": "Escenario 3: ticket asociado a cliente y pedido (en orden).",
       "notesInFlow": true
     },
     {

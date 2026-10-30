@@ -267,7 +267,7 @@ puede leer ni escribir en el back-office, y el back-office no tiene acceso a la 
 
 | Qué | Dónde |
 |---|---|
-| Back-office: SQL (tablas, API para n8n, herramientas del agente, cuadro de mando, acceso del personal) | `erp/supabase/01_erp.sql` |
+| Back-office: SQL (tablas, API para n8n, herramientas del agente, cuadro de mando, acceso del personal) | `erp/supabase/01_erp.sql` y `02_orden_eventos.sql` (control de orden en stock e incidencias) |
 | Back-office: web del personal (login propio, cuadro de mando, pedidos, inventario, clientes, incidencias, agente, registro) | `erp/web/` → publicada en `/erp/` |
 | Tienda: cola de salida, envío a n8n y reintentos | `supabase/14_integracion.sql` y `supabase/15_backoffice_externo.sql` (este quita el back-office de la base de datos de la tienda) |
 | Workflows de n8n (exportados) | `n8n/workflows/*.json` (se generan con `n8n/build_workflows.py`) |

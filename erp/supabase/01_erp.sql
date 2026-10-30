@@ -3,7 +3,7 @@
 -- Se ejecuta en un proyecto de Supabase DISTINTO al de la tienda («entrelibros-erp»):
 -- base de datos, claves y usuarios propios. La tienda no tiene acceso a este sistema;
 -- solo n8n escribe aquí, por la API, con la clave secreta de ESTE proyecto.
--- Se puede ejecutar varias veces.
+-- Se puede ejecutar varias veces. Después, ejecuta siempre 02_orden_eventos.sql.
 --
 -- Contenido:
 --   1. Datos maestros y transaccionales del back-office: clientes, pedidos de venta (+ líneas
