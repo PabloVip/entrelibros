@@ -32,6 +32,11 @@ hacer la tarea: lo explica la memoria.
   4 en `build_workflows.py` y el caso 7 de las pruebas), con las tres condiciones que puso Pablo: que la conciliación
   nocturna del inventario tampoco pise un ajuste más reciente, que el cambio de n8n vaya en `build_workflows.py` y que
   estuviera antes del domingo. La IA escribió el SQL, el cambio de los workflows y las pruebas automáticas.
+- **Quitar los pagos simulados de la tienda**, después del aviso del profesor sobre los servicios externos (siempre el
+  sandbox del propio servicio, nunca una simulación nuestra). La página de pago deja solo Stripe en modo prueba, el
+  estado del pedido pagado pasa de «Pagado (simulado)» a «Pagado», y se actualizaron el README y la política de
+  privacidad, que ahora nombra a Stripe. También se actualizaron las pruebas del contrato con el payload 1 nuevo, que
+  Pablo rehízo con un pago real de Stripe en modo prueba.
 - **Preparar mi parte de la memoria:** el borrador de mi columna del reparto del trabajo (apartado 12) y de esta
   declaración (anexo A.3), que he revisado y corregido yo.
 - **Revisar esas partes con Claude en Word:** propuso correcciones de estilo y dejó un comentario que detectó una
@@ -84,8 +89,20 @@ hacer la tarea: lo explica la memoria.
   - todos los textos de la página salen en inglés; solo quedan iguales los códigos y datos (tipos de evento,
     referencias, mensajes del servidor) y palabras que son iguales en los dos idiomas;
   - sin errores de JavaScript y sin scroll horizontal en el móvil (375 px).
-- **Pendiente:** repetir en el n8n desplegado los casos de duplicado y de fuera de orden (5, 6 y 7). Los lanza Pablo,
-  que tiene la clave del webhook.
+- **Página de pago:** con el mismo método (Chrome sin interfaz y Supabase interceptado), 31 comprobaciones en español y
+  en inglés:
+  - solo aparece Stripe y el botón lleva a la página de Stripe;
+  - si Stripe no está disponible, el aviso ya no ofrece la tarjeta simulada ni Bizum;
+  - la confirmación de un pedido pagado con Stripe dice «Pagado» («Paid»);
+  - la política de privacidad sale traducida;
+  - sin errores de JavaScript y sin scroll horizontal en el móvil.
+  Antes de quitar cada traducción, se comprobó que ningún otro fichero de la web la usaba. Se mantienen las de los
+  motivos de rechazo que guarda el servidor, porque siguen en los pedidos antiguos.
+- **Pruebas del contrato con el payload 1 nuevo:** se volvió a ejecutar el nodo de validación sobre el payload y sus
+  variantes; los mensajes de `pruebas.md` son la salida literal.
+- **En producción:** Pablo, que tiene la clave del webhook, envió los casos 5, 6 y 7 al n8n desplegado el 30/10 y
+  salieron como se esperaba (`duplicado`, `obsoleto` y `obsoleto`).
+- **Pendiente:** abrir la página Integración en inglés con el usuario administrador y los datos reales.
 
 ## Errores que salieron en el proceso
 
@@ -113,5 +130,8 @@ hacer la tarea: lo explica la memoria.
 - **Eventos fuera de orden:** la protección (`last_event_at`) solo existía para los pedidos, también en el ERP nuevo.
   Un ajuste de stock o un cambio de estado de un ticket que llegara tarde sobrescribía el valor actual con uno antiguo.
   Corregido en `erp/supabase/02_orden_eventos.sql` y en los workflows 1 y 4 (caso 7 de `pruebas.md`).
+- **Pagos simulados por nosotros:** la tienda ofrecía una tarjeta y un Bizum simulados, y el aviso del profesor no
+  los admite. Resuelto: la página de pago solo ofrece Stripe en modo prueba, y el payload 1 y las capturas del ERP se
+  rehicieron con un pago de Stripe.
 - **Ficheros que sobraban en el repositorio:** una copia duplicada del diccionario (`public/js/i18n/en-admin 2.js`) y la
   caché de la herramienta de Supabase (`supabase/.temp/`). Pablo los borró y añadió la caché a `.gitignore`.
