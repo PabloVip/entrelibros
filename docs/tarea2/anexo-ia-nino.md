@@ -37,6 +37,11 @@ hacer la tarea: lo explica la memoria.
   estado del pedido pagado pasa de «Pagado (simulado)» a «Pagado», y se actualizaron el README y la política de
   privacidad, que ahora nombra a Stripe. También se actualizaron las pruebas del contrato con el payload 1 nuevo, que
   Pablo rehízo con un pago real de Stripe en modo prueba.
+- **Revisar la matriz de decisión** (`matriz-decision.md`): la IA comprobó los cálculos, que son correctos, y comparó
+  los textos con el sistema actual. Encontró dos textos desfasados:
+  - la alternativa A describía el ERP como un esquema dentro de la base de datos de la tienda;
+  - la justificación del coste decía que solo B paga comisiones de pasarela, pero A también las pagaría con Stripe
+    fuera del modo prueba.
 - **Preparar mi parte de la memoria:** el borrador de mi columna del reparto del trabajo (apartado 12) y de esta
   declaración (anexo A.3), que he revisado y corregido yo.
 - **Revisar esas partes con Claude en Word:** propuso correcciones de estilo y dejó un comentario que detectó una
@@ -55,6 +60,8 @@ hacer la tarea: lo explica la memoria.
 - **Quitar la firma de coautoría de la IA de los commits:** el uso de IA se declara aquí, en el anexo.
 - **Las traducciones:** por ejemplo, «Último día» se traduce «Last 24 hours», porque la consulta del cuadro de mando
   mira las últimas 24 horas y no el día natural.
+- **La matriz:** corregir solo esos dos textos y mantener las puntuaciones. Ninguno de los dos cambia la comparación:
+  el ERP separado ya estaba en la descripción de la memoria, y la comisión de Stripe la pagan todas las alternativas.
 - **Arreglar el problema de orden que encontré en las pruebas**, en lugar de dejarlo solo como propuesta, y hacerlo con
   parámetros opcionales para que Pablo pudiera aplicar el SQL sin parar n8n.
 
@@ -102,7 +109,8 @@ hacer la tarea: lo explica la memoria.
   variantes; los mensajes de `pruebas.md` son la salida literal.
 - **En producción:** Pablo, que tiene la clave del webhook, envió los casos 5, 6 y 7 al n8n desplegado el 30/10 y
   salieron como se esperaba (`duplicado`, `obsoleto` y `obsoleto`).
-- **Pendiente:** abrir la página Integración en inglés con el usuario administrador y los datos reales.
+- **Página Integración en inglés con datos reales:** la abrí yo con el usuario administrador el 2/11 y todos los textos
+  salen en inglés.
 
 ## Errores que salieron en el proceso
 
