@@ -302,34 +302,8 @@ const exact = {
   'El envío de correos no está activado en la tienda: descarga la factura con el botón de arriba.': 'Email sending is not enabled in the shop: download the invoice with the button above.',
   'No hemos podido enviar el correo ahora. Descarga la factura o inténtalo más tarde.': 'We could not send the email right now. Download the invoice or try again later.',
 
-  // ---------- Sandbox de Bizum (pago.html) ----------
-  'Bizum en sandbox:': 'Bizum sandbox:',
-  'es una simulación, no se cobra nada y no se usan teléfonos reales. Usa uno de estos teléfonos de prueba:': 'it is a simulation: nothing is charged and no real phone numbers are used. Use one of these test phones:',
-  'recibe la solicitud en el móvil: la aceptas o la rechazas': 'gets the request on the phone: you accept or reject it',
-  'no tiene Bizum activado': 'does not have Bizum enabled',
-  'supera el límite de Bizum': 'goes over the Bizum limit',
-  '→ recibe la solicitud en el móvil: la aceptas o la rechazas': '→ gets the request on the phone: you accept or reject it',
-  '→ no tiene Bizum activado': '→ does not have Bizum enabled',
-  '→ supera el límite de Bizum': '→ goes over the Bizum limit',
-  'Enviando la solicitud de pago al': 'Sending the payment request to',
-  'Recibes la solicitud en el móvil del sandbox y la aceptas.': 'You get the request on the sandbox phone and accept it.',
-  'Teléfono de prueba (Bizum)': 'Test phone (Bizum)',
-  'Enviar solicitud de Bizum': 'Send Bizum request',
-  'Usa uno de los teléfonos de prueba indicados arriba.': 'Use one of the test phones listed above.',
-  'Sandbox de Bizum': 'Bizum sandbox',
-  'simulación de la tienda': 'shop simulation',
-  'No es Bizum ni la app de tu banco: es un entorno de pruebas ficticio y no se cobra nada.': 'This is not Bizum or your banking app: it is a fictitious test environment and nothing is charged.',
-  'Ahora · Banco Sandbox': 'Now · Sandbox Bank',
-  'Solicitud de pago': 'Payment request',
-  'Entrelibros te pide un pago por Bizum.': 'Entrelibros is requesting a Bizum payment.',
-  'Importe del pedido': 'Order amount',
-  'Rechazar': 'Reject',
-  'Aceptar y pagar': 'Accept and pay',
-  'Registrando el pago en la tienda…': 'Recording the payment in the shop…',
-  'Pago aceptado': 'Payment accepted',
-  'Pago no realizado': 'Payment not made',
-  'Volver a la tienda': 'Back to the shop',
-  'Cerrar': 'Close',
+  // ---------- Pagos antiguos con Bizum simulado ----------
+  // La página de pago ya no ofrece Bizum, pero los motivos de rechazo siguen en los pedidos anteriores.
   'Has rechazado el pago en el móvil (sandbox)': 'You rejected the payment on the phone (sandbox)',
   'La solicitud de Bizum ha caducado sin respuesta (sandbox)': 'The Bizum request expired without an answer (sandbox)',
   'Ese número no tiene Bizum activado (sandbox)': 'That number does not have Bizum enabled (sandbox)',
@@ -470,10 +444,10 @@ const exact = {
   'Política de privacidad': 'Privacy policy',
   'política de privacidad': 'privacy policy',
   'Más información en la': 'More information in the',
-  'Última actualización: 19 de octubre de 2026': 'Last updated: 19 October 2026',
+  'Última actualización: 30 de octubre de 2026': 'Last updated: 30 October 2026',
   'Quiénes somos': 'Who we are',
-  'Entrelibros es una tienda ficticia creada como proyecto de la asignatura Soluciones Informáticas para la Empresa del Grado en Ingeniería Informática de la Universidad Católica de Murcia (UCAM). No vende productos reales ni cobra ningún importe: los pagos son simulados.':
-    'Entrelibros is a fictitious shop created as a project for the course Business IT Solutions of the Computer Engineering degree at the Catholic University of Murcia (UCAM). It does not sell real products or charge any amount: payments are simulated.',
+  'Entrelibros es una tienda ficticia creada como proyecto de la asignatura Soluciones Informáticas para la Empresa del Grado en Ingeniería Informática de la Universidad Católica de Murcia (UCAM). No vende productos reales ni cobra ningún importe: los pagos se hacen con Stripe en modo prueba y solo con tarjetas de prueba.':
+    'Entrelibros is a fictitious shop created as a project for the course Business IT Solutions of the Computer Engineering degree at the Catholic University of Murcia (UCAM). It does not sell real products or charge any amount: payments go through Stripe in test mode, with test cards only.',
   'Responsables del proyecto: Pablo Vicente Juan y Nino Iraci, estudiantes de la UCAM.': 'Project owners: Pablo Vicente Juan and Nino Iraci, UCAM students.',
   'Qué datos tratamos': 'What data we process',
   'Si creas una cuenta: tu nombre, tu email y, si lo indicas, tu teléfono.': 'If you create an account: your name, your email and, if you provide it, your phone number.',
@@ -488,8 +462,8 @@ const exact = {
   'Solo para que la tienda funcione: crear tu cuenta, mostrarte tus pedidos, simular el envío y atender incidencias, y para estudiar el funcionamiento del prototipo dentro de la asignatura. No los usamos para publicidad, no los vendemos y no los compartimos con nadie más.':
     'Only to make the shop work: creating your account, showing your orders, simulating shipping and handling support requests, and to study how the prototype works as part of the course. We do not use it for advertising, we do not sell it and we do not share it with anyone else.',
   'Dónde se guardan': 'Where it is stored',
-  'Los datos se guardan en Supabase, el servicio de base de datos y cuentas que usa la tienda. Los correos de la cuenta (confirmar el email y cambiar la contraseña) se envían a través de Brevo. Si entras con Google, el acceso pasa por Google. La web se publica en GitHub Pages.':
-    'Data is stored in Supabase, the database and accounts service the shop uses. Account emails (email confirmation and password changes) are sent through Brevo. If you sign in with Google, the sign-in goes through Google. The website is hosted on GitHub Pages.',
+  'Los datos se guardan en Supabase, el servicio de base de datos y cuentas que usa la tienda. Los correos de la cuenta (confirmar el email y cambiar la contraseña) se envían a través de Brevo. Si entras con Google, el acceso pasa por Google. El pago se hace en la página de Stripe, en modo prueba: Stripe recibe el email y el importe del pedido, y la tienda nunca ve el número de la tarjeta. La web se publica en GitHub Pages.':
+    'Data is stored in Supabase, the database and accounts service the shop uses. Account emails (email confirmation and password changes) are sent through Brevo. If you sign in with Google, the sign-in goes through Google. Payment happens on the Stripe page, in test mode: Stripe receives the email and the order amount, and the shop never sees the card number. The website is hosted on GitHub Pages.',
   'En tu navegador guardamos el carrito, los favoritos, el idioma elegido y la sesión iniciada (almacenamiento local). No usamos cookies de publicidad ni de seguimiento.':
     'In your browser we store the cart, favourites, chosen language and your signed-in session (local storage). We do not use advertising or tracking cookies.',
   'Cuánto tiempo': 'How long',
@@ -620,13 +594,6 @@ const patterns = [
   // correo con la factura
   [/^Te hemos enviado la confirmación y la factura a (.+)\.$/, 'We have sent the confirmation and the invoice to $1.'],
   [/^La confirmación y la factura se enviaron a (.+)\.$/, 'The confirmation and the invoice were sent to $1.'],
-
-  // sandbox de Bizum
-  [/^Enviando la solicitud de pago al (.+)…$/, 'Sending the payment request to $1…'],
-  [/^Caduca en (\d+) s$/, 'Expires in $1 s'],
-  [/^Concepto: pedido (.+)$/, 'Reference: order $1'],
-  [/^Has pagado (.+) con Bizum\.$/, (m, tr) => `You have paid ${tr(m[1])} with Bizum.`],
-  [/^Pago rechazado: (.+)\. Puedes intentarlo de nuevo\.$/, (m, tr) => `Payment rejected: ${tr(m[1])}. You can try again.`],
 
   // puntos de recogida
   [/^El más cercano está a (.+)\.$/, 'The nearest one is $1 away.'],
