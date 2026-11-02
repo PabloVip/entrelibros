@@ -194,7 +194,7 @@ const VIEWS = {
     const latMax = LATENCIA_OBJETIVO_S * 1.25;   // escala fija: lo que pasa del objetivo se ve como excepción
     const latChart = lat.length ? `<div class="bars lat" role="img" aria-label="Latencia de los últimos eventos frente al objetivo de ${LATENCIA_OBJETIVO_S} segundos">
         <span class="target" style="bottom:${(LATENCIA_OBJETIVO_S / latMax) * 100}%"><b>objetivo ${LATENCIA_OBJETIVO_S} s</b></span>
-        ${lat.map(({ r, s }) => `<div class="bar ${s > LATENCIA_OBJETIVO_S ? 'over' : ''}" title="${esc(r.event_type)} · ${esc(r.entity_ref ?? '')} · ${esc(fmtDate(r.created_at))}: ${esc(fmtS(s))}${s > LATENCIA_OBJETIVO_S ? ' (reenvío o reintento tardío)' : ''}"><em>${esc(s > LATENCIA_OBJETIVO_S ? fmtS(s) : s)}</em><span style="height:${Math.min(s / latMax, 1) * 100}%"></span></div>`).join('')}
+        ${lat.map(({ r, s }) => `<div class="bar ${s > LATENCIA_OBJETIVO_S ? 'over' : ''}" title="${esc(r.event_type)} · ${esc(r.entity_ref ?? '')} · ${esc(fmtDate(r.created_at))}: ${esc(fmtS(s))}${s > LATENCIA_OBJETIVO_S ? ' (reenvío o reintento tardío)' : ''}"><em>${esc(s > LATENCIA_OBJETIVO_S ? fmtS(s).replace(' ', '') : s)}</em><span style="height:${Math.min(s / latMax, 1) * 100}%"></span></div>`).join('')}
       </div>
       <div class="bars-axis" aria-hidden="true">${lat.map(({ r }) => `<span>${esc((r.event_type ?? '').split('.')[0])}</span>`).join('')}</div>`
       : '<p class="empty">Sin eventos en el periodo.</p>';
