@@ -8,7 +8,7 @@ postventa), automatizar el proceso y usar IA de forma supervisada sin perder el 
 
 | | Alternativa | En qué consiste |
 |---|---|---|
-| **A** | Híbrida: tienda propia + n8n + Gemini *(implantada)* | La tienda (GitHub Pages + Supabase) publica eventos; n8n autoalojado los valida y los lleva al ERP/CRM (esquema `erp`), con agente de IA y aprobación en Telegram |
+| **A** | Híbrida: tienda propia + n8n + Gemini *(implantada)* | La tienda (GitHub Pages + Supabase) publica eventos; n8n autoalojado los valida y los lleva al ERP/CRM, un sistema aparte con su propio proyecto de Supabase (`entrelibros-erp`) y su web, con agente de IA y aprobación en Telegram |
 | **B** | SaaS | Tienda en Shopify, CRM HubSpot y automatizaciones en Make, todo como servicio |
 | **C** | ERP parametrizable | Odoo con sus módulos de eCommerce, CRM, inventario y helpdesk; la integración es nativa dentro del ERP |
 | **D** | Desarrollo propio sin plataforma de flujos | La misma tienda, pero toda la integración, reintentos, logs, IA y aprobaciones programadas a mano en Edge Functions |
@@ -32,15 +32,17 @@ postventa), automatizar el proceso y usar IA de forma supervisada sin perder el 
 | **Total ponderado (sobre 100)** | **100 %** | **83.6** | **61.2** | **69.6** | **71.8** |
 
 Total = Σ (peso × puntuación) / 5. Los costes son estimaciones de orden de magnitud para un año, no presupuestos:
-A y D se pueden mantener en planes gratuitos o de pocos euros al mes en esta fase; B suma tres suscripciones y
-comisiones por venta; C requiere licencia por usuario o un servidor propio y consultoría de parametrización.
+A y D se pueden mantener en planes gratuitos o de pocos euros al mes en esta fase; B suma tres suscripciones; C requiere
+licencia por usuario o un servidor propio y consultoría de parametrización. La comisión de la pasarela de pago por cada
+venta (Stripe en A y D) la pagan todas las alternativas, así que no marca la diferencia.
 
 ## Justificación de las puntuaciones más determinantes
 
 - **Integración con el canal actual (A 5, D 5, B 2, C 2).** La tienda ya existe y ya emite los eventos de la Tarea 1.
   A y D los aprovechan tal cual; B y C obligan a migrar la tienda o a construir conectores hacia una plataforma nueva.
-- **Coste (A 5, B 2).** A funciona con Supabase, Render y n8n autoalojado en planes gratuitos y la IA se paga por uso
-  (céntimos con este volumen). B acumula cuotas mensuales de tres proveedores y comisiones de pasarela.
+- **Coste (A 5, B 2).** A funciona en planes gratuitos (dos proyectos de Supabase, n8n autoalojado en Render y la web en
+  GitHub Pages) y la IA se paga por uso (céntimos con este volumen). En producción, A pagaría también la comisión de
+  Stripe por cada venta, como B la de su pasarela; lo que separa a B son las cuotas mensuales de tres proveedores.
 - **Esfuerzo de implantación (B 4, A 4, C 2, D 2).** En B casi todo es configuración; A requiere diseñar el contrato y los
   flujos, pero n8n aporta webhooks, reintentos, historial y nodos de IA ya hechos. C exige parametrizar un ERP completo y
   D programar todo lo que n8n ya trae (por eso D pierde en mantenimiento).
