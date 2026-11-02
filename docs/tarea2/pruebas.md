@@ -34,14 +34,16 @@ se ve en la tienda, en **Back-office → Integración**. La respuesta siempre in
 
 ### 1. Evento válido
 
-`payment.simulated` aprobado del pedido `EL-20261026-D5GL`, que ya estaba en el ERP por su `order.created`.
+`payment.simulated` aprobado del pedido `EL-20261030-NAXL`, pagado desde la tienda con Stripe en modo prueba (tarjeta
+4242). El pedido ya estaba en el ERP por su `order.created`. El nombre del evento viene del contrato de la Tarea 1:
+«simulated» significa que no se mueve dinero real.
 
 - **n8n** normaliza los datos antes de enviarlos al ERP:
-  - el email, a minúsculas y sin espacios (`  Lucia.Prueba@Example.COM ` → `lucia.prueba@example.com`);
-  - el teléfono, a `+34600111222`;
-  - el método de pago, a «Tarjeta simulada»;
+  - el email, a minúsculas y sin espacios (`  Pablo@Entrelibros.TEST ` → `pablo@entrelibros.test`);
+  - el teléfono, si lo hay, a formato internacional (`600 111 222` → `+34600111222`); este pedido no lo trae;
+  - el método de pago `stripe_test`, a «Tarjeta (Stripe test)»;
   - el estado `pago_simulado`, al del ERP, `pagado`.
-- **Respuesta:** `200` `{"result": "actualizado", "event_id": "e07a6588-…", "execution_id": "…"}`. Si el ERP no tenía
+- **Respuesta:** `200` `{"result": "actualizado", "event_id": "e50a43e3-…", "execution_id": "…"}`. Si el ERP no tenía
   el pedido, `result` es `creado`.
 - **Log:**
   - `status = ok`;
@@ -69,9 +71,9 @@ n8n hace tres comprobaciones, con una tolerancia de 0,01 € por redondeo:
 
 | Variante | Cambio en `1-pedido-pagado.json` | Mensaje en la respuesta y en el log |
 |---|---|---|
-| a | `amounts.subtotal = 99.99` | `order.amounts.subtotal: Suma de líneas 52.7 ≠ subtotal 99.99 · order.amounts.total: subtotal − descuento + envío = 104.94 ≠ total 57.65` |
-| b | `lines[1].line_total = 29.8` (2 × 19,90 = 39,80) | `order.lines[1].line_total: precio × cantidad no coincide con el importe de la línea · order.amounts.subtotal: Suma de líneas 42.7 ≠ subtotal 52.7` |
-| c | `amounts.total = 60` | `order.amounts.total: subtotal − descuento + envío = 57.65 ≠ total 60` |
+| a | `amounts.subtotal = 99.99` | `order.amounts.subtotal: Suma de líneas 4.9 ≠ subtotal 99.99 · order.amounts.total: subtotal − descuento + envío = 104.94 ≠ total 9.85` |
+| b | `lines[0].line_total = 3.9` (1 × 4,90 = 4,90) | `order.lines[0].line_total: precio × cantidad no coincide con el importe de la línea · order.amounts.subtotal: Suma de líneas 3.9 ≠ subtotal 4.9` |
+| c | `amounts.total = 12` | `order.amounts.total: subtotal − descuento + envío = 9.85 ≠ total 12` |
 
 - **Respuesta, log, cola y aviso:** igual que en el caso 2, pero con `error_type = coherencia`.
 - **Un error arrastra a otros:** un importe mal puesto descuadra también las comprobaciones que dependen de él,
@@ -80,8 +82,9 @@ n8n hace tres comprobaciones, con una tolerancia de 0,01 € por redondeo:
   `coherencia: la suma de líneas (…) no coincide con el subtotal (…)`. El nodo «Clasificar error del ERP» reconoce
   el prefijo y lo trata también como `coherencia` (`422`, sin reintento).
 
-> El payload [`4-error-contrato.json`](payloads/4-error-contrato.json) junta el caso 2 y la variante 3a. La respuesta trae
-> los tres errores, pero `error_type` es `contrato`, porque n8n informa del tipo del **primer** error encontrado.
+> El payload [`4-error-contrato.json`](payloads/4-error-contrato.json) junta el caso 2 y la variante 3a sobre un pedido
+> anterior (`EL-20261026-D5GL`). La respuesta trae los tres errores, pero `error_type` es `contrato`, porque n8n informa
+> del tipo del **primer** error encontrado.
 
 ### 4. Número de pedido mal formado
 
@@ -171,15 +174,27 @@ Los parámetros nuevos son opcionales: el SQL se puede aplicar antes de reimport
 ## Cómo se ha comprobado y cómo repetirlo
 
 - **Capa n8n (casos 1–4 y validez del 6 y el 7):** se ejecutó `validar-evento.js` con Node sobre cada payload,
-  reproduciendo el nodo Code de n8n. Los mensajes de las tablas son la salida literal.
-- **Capa ERP (casos 5 y 6):** el resultado se deduce de `erp_upsert_order`.
+  reproduciendo el nodo Code de n8n. Los mensajes de las tablas son la salida literal. Se repitió el 30/10 con el
+  payload 1 nuevo (pago con Stripe).
+- **Capa ERP (casos 5 y 6):** el resultado se dedujo primero de `erp_upsert_order` y después se comprobó en producción
+  (ver abajo).
 - **Corrección del orden (caso 7, incidencias y conciliación):** se probó en un PostgreSQL desechable en memoria
   (PGlite), con `01_erp.sql` y `02_orden_eventos.sql`, sin tocar Supabase.
   - 35 comprobaciones: duplicado, obsoleto, misma hora, foto anterior y posterior a un ajuste, llamadas sin los
     parámetros nuevos, errores de contrato, permisos y volver a ejecutar los ficheros.
   - Los payloads 2b y 7, pasando antes por `validar-evento.js`, en los dos órdenes: 28 → `obsoleto` (sigue en 28),
     y 29 → 28 (`actualizado`).
-- **En el n8n desplegado:**
+- **En producción, el 30/10** (n8n desplegado y ERP con el 02 aplicado). Los números son las ejecuciones de n8n que se
+  ven en el **Registro de integración** del ERP ([captura](evidencias/erp-registro.png)):
+
+| Caso | Qué se envió | Resultado | Ejecución |
+|---|---|---|---|
+| 7 | El workflow 4 a mano (la foto del stock queda fechada en ese momento) y después `7-stock-fuera-de-orden.json` | `obsoleto`; `EL-ACC-PINT` conserva su stock | 47 y 48 |
+| 6 | `2-cambio-estado.json` y después `6-evento-fuera-de-orden.json` | `creado` y `obsoleto` | 49 y 50 |
+| 5 | Otra vez `2-cambio-estado.json` | `duplicado` | 51 |
+| 1 | Un pedido de la tienda pagado con Stripe en modo prueba | `order.created` → `creado`; `payment.simulated` → `actualizado` | 52 y 53 |
+
+Los casos 5, 6 y 7 se enviaron con curl. Para repetirlos:
 
 ```bash
 # La clave no está en el repositorio. Con read -s no queda en el historial de la terminal.
@@ -190,11 +205,10 @@ curl -s -X POST https://entrelibros-n8n.onrender.com/webhook/entrelibros/eventos
   --data @docs/tarea2/payloads/6-evento-fuera-de-orden.json
 ```
 
-- **Casos 5 y 6 por esta vía:** el ERP nuevo no tiene `EL-20261026-D5GL`, así que se envían `2-cambio-estado.json`,
-  `6-evento-fuera-de-orden.json` y otra vez el 2. Deben salir `creado`, `obsoleto` y `duplicado`.
-- **Caso 7 por esta vía, sin tocar el stock real:** después de aplicar el 02 y reimportar los workflows, se ejecuta a
-  mano el workflow 4 (la foto queda fechada ahora) y se envía `7-stock-fuera-de-orden.json`. Debe salir `obsoleto` y
-  `EL-ACC-PINT` conserva su stock.
+- **Casos 5 y 6:** se envían `2-cambio-estado.json`, `6-evento-fuera-de-orden.json` y otra vez el 2. Si el ERP todavía
+  no tenía `EL-20261026-D5GL`, salen `creado`, `obsoleto` y `duplicado`.
+- **Caso 7, sin tocar el stock real:** se ejecuta a mano el workflow 4 y después se envía `7-stock-fuera-de-orden.json`.
+  Sale `obsoleto` y `EL-ACC-PINT` conserva su stock.
 - **Límite de curl:** un evento enviado así no existe en la cola de la tienda, así que `integration_ack` devuelve
   `desconocido` y la cola no cambia. La respuesta y la fila del registro del ERP sí aparecen. Para ver la cola y los
   reintentos (caso 5 y fallos de transporte), hay que generar el evento desde la tienda y usar

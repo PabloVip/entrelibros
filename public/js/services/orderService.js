@@ -4,7 +4,7 @@
 
 export const STATUS_LABELS = {
   creado:                'Creado',
-  pago_simulado:         'Pagado (simulado)',
+  pago_simulado:         'Pagado',
   pendiente_preparacion: 'Pendiente de preparación',
   enviado:               'Enviado',
   entregado:             'Entregado',
@@ -28,9 +28,10 @@ export function nextStatuses(status) {
 
 export const PAYMENT_LABELS = { aprobado: 'Aprobado', rechazado: 'Rechazado', pendiente: 'Pendiente' };
 export const METHOD_LABELS  = {
+  stripe_test:      'Tarjeta (Stripe, prueba)', // supabase/10_stripe.sql
+  // métodos antiguos: la página de pago ya no los ofrece, pero quedan en los pedidos anteriores
   tarjeta_simulada: 'Tarjeta (simulada)',
   bizum_simulado:   'Bizum (simulado)',
-  stripe_test:      'Tarjeta (Stripe, prueba)', // supabase/10_stripe.sql
 };
 
 /** Indicadores para la cabecera del back-office */

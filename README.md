@@ -5,7 +5,7 @@ Prototipo académico de canal digital de venta: eCommerce de **escenas en miniat
 **Tarea 1 · Soluciones Informáticas para la Empresa · Grado en Ingeniería Informática (UCAM)**
 Autores: Pablo ([@PabloVip](https://github.com/PabloVip)) y Nino Iraci ([@ninoiraci](https://github.com/ninoiraci))
 
-> ⚠️ **Tienda ficticia, sin actividad comercial.** Todos los datos son de prueba. No introduzcas datos personales reales ni tarjetas reales: el pago es con Stripe en modo prueba o simulado, y solo acepta tarjetas de prueba.
+> ⚠️ **Tienda ficticia, sin actividad comercial.** Todos los datos son de prueba. No introduzcas datos personales reales ni tarjetas reales: el pago es con Stripe en modo prueba y solo acepta tarjetas de prueba.
 
 | | |
 |---|---|
@@ -20,7 +20,7 @@ Autores: Pablo ([@PabloVip](https://github.com/PabloVip)) y Nino Iraci ([@ninoir
 1. Abre la [tienda](https://pablovip.github.io/entrelibros/), filtra el catálogo y entra en una ficha. Si quieres, guarda productos en **Favoritos** con el corazón.
 2. Elige una variante (con o sin iluminación) y añádela al carrito.
 3. Tramita el pedido con **datos inventados** y, si quieres, un código de descuento.
-4. Paga con **Stripe en modo prueba** (te lleva a la página de pago de Stripe) con una tarjeta de prueba, o con la tarjeta simulada o Bizum simulado.
+4. Paga con **Stripe en modo prueba** (te lleva a la página de pago de Stripe) con una tarjeta de prueba.
 5. Verás la confirmación con el número de pedido (`EL-AAAAMMDD-XXXX`).
 6. Opcional: abre una incidencia en **Soporte** indicando ese número y el mismo email.
 7. Opcional: crea una cuenta en **Mi cuenta** (recibirás un correo para confirmarla). Con sesión, el checkout se rellena solo y ves tus pedidos e incidencias.
@@ -40,15 +40,7 @@ Se escriben en la página de pago de Stripe, con cualquier fecha futura y cualqu
 
 El rechazo lo muestra Stripe en su página: el pedido sigue en `creado` y no se registra ningún pago. Si se cancela, se vuelve a `pago.html` con un aviso.
 
-### Tarjetas del simulador (tarjeta simulada y Bizum)
-| Número | Resultado |
-|---|---|
-| `4242 4242 4242 4242` | Pago aprobado |
-| `4000 0000 0000 0002` | Pago rechazado (el pedido sigue en `creado` y se puede reintentar) |
-| Cualquier otro número | No se acepta: el simulador nunca admite tarjetas reales |
-| *Bizum simulado* (sandbox), teléfono `600 000 001` | Se abre un móvil simulado con la solicitud: *Aceptar* → aprobado; *Rechazar* o dejarla caducar (45 s) → rechazado |
-| *Bizum simulado*, teléfono `600 000 002` | Rechazado: el número no tiene Bizum activado |
-| *Bizum simulado*, teléfono `600 000 003` | Rechazado: supera el límite |
+La tarjeta simulada y el Bizum simulado de la Tarea 1 ya no están en la página de pago: en la Tarea 2 los servicios externos tienen que usar el sandbox del propio servicio, nunca una simulación nuestra. La función `simulate_payment` (`05_checkout.sql`) sigue en el servidor, pero la tienda ya no la llama. Los pedidos anteriores conservan esos pagos.
 
 ### Códigos de descuento
 | Código | Condición |
@@ -121,7 +113,7 @@ creado ──pago aprobado──▶ pago_simulado ──▶ pendiente_preparacio
    │                           │                     │                   │            │
    └──▶ cancelado ◀────────────┴─────────────────────┘                   └──▶ incidencia ◀┘
 ```
-El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago (simulado o con Stripe). Si Stripe cobra pero ya no queda stock, el pedido pasa a `incidencia` para revisarlo. El resto de cambios los hace un administrador desde el back-office. La función `admin_update_order_status` valida cada transición y deja constancia en `order_status_history`. `cancelado` es un estado final.
+El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago con Stripe. Si Stripe cobra pero ya no queda stock, el pedido pasa a `incidencia` para revisarlo. El resto de cambios los hace un administrador desde el back-office. La función `admin_update_order_status` valida cada transición y deja constancia en `order_status_history`. `cancelado` es un estado final.
 
 ## 5. Eventos de negocio
 
@@ -132,7 +124,7 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago (s
 | `checkout.started` | Se abre el checkout con productos | web (`log_event`) |
 | `wishlist.item_added` | Se guarda un producto en favoritos | web (`log_event`) |
 | `order.created` | `create_order` crea el pedido | servidor |
-| `payment.simulated` | `simulate_payment` aprueba o rechaza, o `confirm_stripe_payment` registra un pago de Stripe (`method: stripe_test`) | servidor |
+| `payment.simulated` | `confirm_stripe_payment` registra un pago de Stripe en modo prueba (`method: stripe_test`). En los pedidos anteriores, también `simulate_payment` | servidor |
 | `support.requested` | `create_support_request` registra la incidencia | servidor |
 | `order.status_changed` | Un admin cambia el estado de un pedido | back-office |
 | `support.status_changed` | Un admin cambia el estado de una incidencia | back-office |
@@ -162,7 +154,7 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago (s
 | Política de privacidad (la pide Google para el acceso con Google) | `privacidad.html` |
 | Carrito | `carrito.html` |
 | Checkout | `checkout.html` |
-| Pago: Stripe en modo prueba, tarjeta simulada o Bizum simulado | `pago.html?pedido=…` |
+| Pago con Stripe en modo prueba | `pago.html?pedido=…` |
 | Confirmación (pide número de pedido + email; al volver de Stripe confirma el pago) | `pedido.html` |
 | Soporte postventa | `soporte.html` |
 | Back-office: acceso | `admin.html` |
@@ -227,7 +219,7 @@ El paso de `creado` a `pago_simulado` lo hace el sistema al aprobarse el pago (s
 3. Despliega las funciones con la CLI: `supabase functions deploy --project-ref <tu-proyecto>`. `supabase/config.toml` indica qué funciones piden JWT (`stripe-webhook` no: Stripe no tiene uno y la función comprueba su firma).
 4. En Stripe, **Developers → Webhooks**: endpoint `https://<tu-proyecto>.supabase.co/functions/v1/stripe-webhook` con los eventos `checkout.session.completed` y `checkout.session.async_payment_succeeded`. Copia su *signing secret* (`whsec_…`) en `STRIPE_WEBHOOK_SECRET`.
 5. Las direcciones a las que vuelve el cliente están en una lista cerrada en `supabase/functions/_shared/stripe.ts` (la web publicada y `localhost:8000`).
-6. **Correo de confirmación con la factura en PDF** (`supabase/functions/_shared/orderEmail.ts` e `invoicePdf.ts`): cuando un pedido queda pagado, el servidor envía al cliente un correo con las líneas, los totales, la dirección, la entrega estimada, un enlace a su pedido y **la factura en PDF adjunta**, en el idioma en que compró. En los pagos con Stripe lo envía la confirmación del pago; en los simulados (tarjeta y Bizum), la página del pedido llama a la Edge Function `send-order-email`, que solo envía al email del pedido, si está pagado y una vez (`orders.confirmation_email_at`, `13_correo_factura.sql`). El botón *Enviar la factura a mi correo* lo reenvía (cada 2 minutos como mucho). Cada envío queda como evento `email.sent` o `email.failed` (con el motivo) en Back-office → Eventos. Se envía con la API de Brevo; secrets: `BREVO_API_KEY` (Brevo → *SMTP & API* → *API keys*, empieza por `xkeysib-`; no es la clave SMTP), `MAIL_FROM` (un remitente verificado en Brevo) y, opcional, `MAIL_FROM_NAME`. En Brevo, *Security → Authorised IPs* debe permitir IPs desconocidas (las Edge Functions no tienen IP fija). Sin los secrets el pago funciona igual y no se envía el correo.
+6. **Correo de confirmación con la factura en PDF** (`supabase/functions/_shared/orderEmail.ts` e `invoicePdf.ts`): cuando un pedido queda pagado, el servidor envía al cliente un correo con las líneas, los totales, la dirección, la entrega estimada, un enlace a su pedido y **la factura en PDF adjunta**, en el idioma en que compró. En los pagos con Stripe lo envía la confirmación del pago; en los pedidos anteriores pagados con la tarjeta o el Bizum simulados, la página del pedido llama a la Edge Function `send-order-email`, que solo envía al email del pedido, si está pagado y una vez (`orders.confirmation_email_at`, `13_correo_factura.sql`). El botón *Enviar la factura a mi correo* lo reenvía (cada 2 minutos como mucho). Cada envío queda como evento `email.sent` o `email.failed` (con el motivo) en Back-office → Eventos. Se envía con la API de Brevo; secrets: `BREVO_API_KEY` (Brevo → *SMTP & API* → *API keys*, empieza por `xkeysib-`; no es la clave SMTP), `MAIL_FROM` (un remitente verificado en Brevo) y, opcional, `MAIL_FROM_NAME`. En Brevo, *Security → Authorised IPs* debe permitir IPs desconocidas (las Edge Functions no tienen IP fija). Sin los secrets el pago funciona igual y no se envía el correo.
 
 ### Ejecutar en local
 Los módulos ES necesitan servirse por HTTP; no basta con abrir el fichero:
@@ -289,7 +281,7 @@ acceso por la API). `public/js/config.js` y `erp/web/config.js` solo llevan URL 
 - **Sin límite de peticiones.** La API no limita cuántos pedidos o incidencias se pueden crear por minuto. En producción haría falta *rate limiting* o un captcha.
 - **Cuenta opcional.** Se puede comprar sin cuenta (solo con el email). Si un email ya existe y se compra como invitado, no se actualizan su nombre ni su teléfono. No hay borrado de cuenta desde la web.
 - **Correos de Supabase.** Sin SMTP propio, Supabase solo envía a los emails del equipo del proyecto y con un límite de correos por hora.
-- **Pago de pedidos ajenos.** Quien conozca el número de un pedido sin pagar puede pagarlo (simulado o con Stripe).
+- **Pago de pedidos ajenos.** Quien conozca el número de un pedido sin pagar puede pagarlo con Stripe.
 - **Stripe solo en modo prueba y sin reembolsos.** No se aceptan claves ni sesiones reales. Si Stripe cobra un pedido que ya no tiene stock, o el mismo pedido se paga en dos sesiones, el reembolso habría que hacerlo a mano desde Stripe.
 - **Email en la URL.** El email va en la URL de la confirmación (`pedido.html?…&email=…`) y queda en el historial del navegador.
 - **Stock sin reservar.** El stock se comprueba al crear el pedido (y antes de abrir la página de Stripe), pero solo se reserva al pagar: dos clientes pueden crear pedidos por las últimas unidades y solo el primero que pague las consigue.

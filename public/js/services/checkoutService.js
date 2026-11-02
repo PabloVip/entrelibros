@@ -60,28 +60,8 @@ export function validateForm(values) {
   return errors;
 }
 
-// ---------- Pago simulado ----------
+// ---------- Pago ----------
 export const ORDER_NUMBER_RE = /^EL-[0-9]{8}-[A-Z0-9]{4}$/;
-
-// Únicas tarjetas que acepta el simulador (las mismas que comprueba simulate_payment)
-export const TEST_CARDS = [
-  { number: '4242 4242 4242 4242', result: 'aprobada' },
-  { number: '4000 0000 0000 0002', result: 'rechazada' },
-];
-
-// Teléfonos de prueba del sandbox de Bizum (simulate_payment, 05_checkout.sql). Nunca un teléfono real.
-export const BIZUM_TEST_PHONES = [
-  { number: '600 000 001', result: 'recibe la solicitud en el móvil: la aceptas o la rechazas' },
-  { number: '600 000 002', result: 'no tiene Bizum activado' },
-  { number: '600 000 003', result: 'supera el límite de Bizum' },
-];
-
-/** Teléfono escrito → sus 9 cifras si es uno de prueba (admite espacios y +34); si no, null. */
-export function testPhoneDigits(value) {
-  let digits = String(value ?? '').replace(/[\s().+-]/g, '');
-  if (/^34[0-9]{9}$/.test(digits)) digits = digits.slice(2);
-  return BIZUM_TEST_PHONES.some(p => p.number.replaceAll(' ', '') === digits) ? digits : null;
-}
 
 // Tarjetas de prueba de Stripe (modo test). Se escriben en la página de Stripe, no en la nuestra:
 // la tienda nunca ve el número de la tarjeta.
@@ -93,15 +73,6 @@ export const STRIPE_TEST_CARDS = [
 
 // Id de sesión de Stripe que vuelve en la URL de la confirmación (solo modo prueba)
 export const STRIPE_SESSION_RE = /^cs_test_[A-Za-z0-9]{10,200}$/;
-
-/**
- * Devuelve los 16 dígitos si es una tarjeta de prueba, o null.
- * Así un número real nunca sale del navegador: ni siquiera llega al servidor.
- */
-export function testCardDigits(value) {
-  const digits = String(value ?? '').replace(/[\s-]/g, '');
-  return TEST_CARDS.some(c => c.number.replaceAll(' ', '') === digits) ? digits : null;
-}
 
 // Último pedido creado en esta pestaña: pago.html lo usa para enseñar el importe y,
 // al aprobarse, enlazar a la confirmación (que pide el email). sessionStorage se borra al cerrar la pestaña.

@@ -42,18 +42,6 @@ export async function createOrder({ customer, shipping, items, shippingCode, dis
   return data;
 }
 
-/** Pago simulado (tarjeta de prueba o sandbox de Bizum). Devuelve {order_number, status, transaction_ref, amount, failure_reason}. */
-export async function simulatePayment(orderNumber, method, cardNumber, bizumDecision) {
-  const { data, error } = await supabase.rpc('simulate_payment', {
-    p_order_number:   orderNumber,
-    p_method:         method,
-    p_card_number:    cardNumber || null,     // en Bizum, el teléfono de prueba
-    p_bizum_decision: bizumDecision || null,  // lo que hizo el cliente en el sandbox de Bizum
-  });
-  if (error) throw error;
-  return data;
-}
-
 // ---------- Pago con Stripe (Edge Functions en supabase/functions/) ----------
 
 /**

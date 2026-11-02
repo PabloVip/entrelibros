@@ -81,7 +81,7 @@ function render(o, events, tickets) {
       </aside>
 
       <section class="panel">
-        <h2 class="h3">Pagos simulados</h2>
+        <h2 class="h3">Pagos</h2>
         ${o.payments.length ? `<ul class="plain">${o.payments.map(p => `
           <li><span class="status-pill pay-${escapeHtml(p.status)}">${escapeHtml(PAYMENT_LABELS[p.status] ?? p.status)}</span>
             ${escapeHtml(METHOD_LABELS[p.method] ?? p.method)} · ${money(p.amount)}

@@ -245,28 +245,16 @@ const exact = {
   'La nota no puede superar los 500 caracteres.': 'The note cannot exceed 500 characters.',
 
   // ---------- Pago ----------
-  'Pago simulado:': 'Simulated payment:',
-  'no se cobra nada y no se aceptan tarjetas reales. Usa una de estas tarjetas de prueba:':
-    'nothing is charged and real cards are not accepted. Use one of these test cards:',
   '→ aprobada': '→ approved',
   '→ rechazada': '→ declined',
-  'Usar': 'Use',
   'Método de pago': 'Payment method',
   'Tarjeta (simulada)': 'Card (simulated)',
   'Bizum (simulado)': 'Bizum (simulated)',
   'Siempre se aprueba; no hace falta ningún dato.': 'Always approved; no details needed.',
-  'Número de tarjeta de prueba': 'Test card number',
   'Pagar': 'Pay',
-  'Usa una tarjeta de prueba de las indicadas arriba.': 'Use one of the test cards listed above.',
-  'Procesando el pago…': 'Processing payment…',
-  'motivo desconocido': 'unknown reason',
   'Falta el número de pedido o no es válido.': 'The order number is missing or not valid.',
   'Ir al carrito': 'Go to the cart',
   'Ver el pedido': 'View the order',
-  'El pago todavía no está disponible: falta activar la función en el servidor.':
-    'Payment is not available yet: the function still has to be enabled on the server.',
-  'No se ha podido procesar el pago. Revisa tu conexión e inténtalo de nuevo.':
-    'Could not process the payment. Check your connection and try again.',
   // pago con Stripe
   'Has cancelado el pago en Stripe: no se ha cobrado nada. Puedes intentarlo de nuevo.':
     'You cancelled the payment on Stripe: nothing has been charged. You can try again.',
@@ -278,8 +266,8 @@ const exact = {
   'Te llevamos a la página de pago de Stripe.': 'We will take you to the Stripe payment page.',
   'Pagar con Stripe': 'Pay with Stripe',
   'Te llevamos a la página de pago de Stripe…': 'Taking you to the Stripe payment page…',
-  'El pago con Stripe todavía no está disponible: falta activarlo en el servidor. Mientras tanto puedes pagar con la tarjeta simulada o con Bizum.':
-    'Payment with Stripe is not available yet: it still has to be enabled on the server. Meanwhile you can pay with the simulated card or with Bizum.',
+  'El pago con Stripe todavía no está disponible: falta activarlo en el servidor.':
+    'Payment with Stripe is not available yet: it still has to be enabled on the server.',
   'No se ha podido conectar con Stripe. Revisa tu conexión e inténtalo de nuevo.':
     'Could not connect to Stripe. Check your connection and try again.',
   'Este pedido ya está pagado o no admite pagos.': 'This order is already paid or does not accept payments.',
@@ -375,7 +363,7 @@ const exact = {
 
   // ---------- Estados ----------
   'Creado': 'Created',
-  'Pagado (simulado)': 'Paid (simulated)',
+  'Pagado': 'Paid',
   'Pendiente de preparación': 'Awaiting preparation',
   'Enviado': 'Shipped',
   'Entregado': 'Delivered',
@@ -417,7 +405,7 @@ const exact = {
   'p. ej. nº de seguimiento': 'e.g. tracking number',
   'Guardar estado': 'Save status',
   'Nota del cliente:': 'Customer note:',
-  'Pagos simulados': 'Simulated payments',
+  'Pagos': 'Payments',
   'Sin pagos registrados.': 'No payments recorded.',
   'Historial de estados': 'Status history',
   'Incidencias de soporte': 'Support requests',
@@ -649,7 +637,7 @@ const exact = {
 
 // nombres de estados en minúsculas (mensajes del back-office)
 const STATUS = {
-  creado: 'created', pago_simulado: 'paid (simulated)', pendiente_preparacion: 'awaiting preparation',
+  creado: 'created', pago_simulado: 'paid', pendiente_preparacion: 'awaiting preparation',
   enviado: 'shipped', entregado: 'delivered', cancelado: 'cancelled', incidencia: 'issue',
   abierta: 'open', 'en curso': 'in progress', en_curso: 'in progress', resuelta: 'resolved',
 };
@@ -715,8 +703,6 @@ const patterns = [
   [/^No hay stock suficiente de "(.+)" \(quedan (\d+)\)$/, (m, tr) => `Not enough stock of "${tr(m[1])}" (${m[2]} left)`],
 
   // pago y confirmación
-  [/^Pago rechazado: (.+)\. Puedes intentarlo de nuevo con otra tarjeta de prueba o con Bizum\.$/,
-    (m, tr) => `Payment declined: ${tr(m[1])}. You can try again with another test card or with Bizum.`],
   [/^No queda stock suficiente de "(.+)"$/, (m, tr) => `Not enough stock left of "${tr(m[1])}"`],
   [/^(.+): (\d+-\d+) días laborables\.$/, (m, tr) => `${tr(m[1])}: ${m[2]} working days.`],
   [/^entre el (.+) y el (.+)\.$/, 'between $1 and $2.'],
